@@ -68,6 +68,7 @@ data = torch.utils.data.DataLoader(
 
 num_epochs=25
 n_total_steps = len(data)
+criterion = nn.MSELoss(reduction='sum')
 def train(linearAE, data, epochs =num_epochs):
     opt  = torch.optim.Adam(linearAE.parameters())
     for epoch in range(epochs):
@@ -75,7 +76,8 @@ def train(linearAE, data, epochs =num_epochs):
             x=x.to(device) # push it to GPU
             opt.zero_grad() # flush gradients
             xhat = linearAE(x)
-            loss = ((x - xhat)**2).sum()
+            #loss = ((x - xhat)**2).sum()
+            loss=criterion(x,xhat)
             loss.backward()
             opt.step()
             #print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
@@ -84,7 +86,7 @@ def train(linearAE, data, epochs =num_epochs):
 
     return linearAE
 
-latent_dims = 10
+latent_dims = 3
 linearAE = autoencoder(latent_dims).to(device) # GPU
 
 linearAE = train(linearAE, data)
@@ -120,12 +122,18 @@ def plot_latent(linearAE, data, num_batches=100):
     for i, (x, y) in enumerate(data):
         z = linearAE.encoder(x.to(device))
         z = z.to('cpu').detach().numpy()
-        plt.scatter(z[:, 0], z[:, 1], c=y, cmap='tab10')
+        plt.scatter(z[:, 0], z[:, 1],z[:, 2], c=y, cmap='tab10')
         if i > num_batches:
             plt.colorbar()
             break
 plot_latent(linearAE, data)
 
+
+
+x=torch.randn(100,28,28)
+z = linearAE.encoder(x.to(device))
+z = z.to('cpu').detach().numpy()
+plt.scatter(z[:, 0], z[:, 1],z[:, 2])
 
 # ################## extra stuff ##################
 # # plotting images using matplotlib
