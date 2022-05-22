@@ -51,16 +51,37 @@ class decoder(nn.Module):
         z = z.reshape((-1, 1, 28, 28))     
         return z
 
+
+class mlp_classifier(nn.Module):
+    def __init__(self,num_classes,latent_dims):
+        super(mlp_classifier,self).__init__()
+        self.linear1 = nn.Linear(latent_dims,num_classes)
+    
+    def forward(self,x):
+        #x = torch.flatten(x,start_dim=1)
+        x = self.linear1(x)
+        return x
+
+
+
 class autoencoder(nn.Module):
-    def __init__(self, latent_dims):
+    def __init__(self, latent_dims,num_classes):
         super(autoencoder,self).__init__()
         self.encoder = encoder(latent_dims)
         self.decoder = decoder(latent_dims)
+        self.classifier = mlp_classifier(num_classes,latent_dims)
         
     def forward(self,x):
         z=self.encoder(x)
-        z=self.decoder(z)
-        return z
+        z1 = self.classifier(z)
+        z=self.decoder(z)        
+        return z,z1
+    
+
+latent_dims = 2
+num_classes=10
+linearAE = autoencoder(latent_dims,num_classes).to(device) # GPU
+        
     
 # training loop to train on MNIST dataset 
 data = torch.utils.data.DataLoader(
@@ -70,18 +91,25 @@ data = torch.utils.data.DataLoader(
         batch_size=128,
         shuffle=True)
 
+
+
 num_epochs=25
 n_total_steps = len(data)
 criterion = nn.MSELoss(reduction='sum')
+criterion2 = nn.CrossEntropyLoss()
+
 def train(linearAE, data, epochs =num_epochs):
     opt  = torch.optim.Adam(linearAE.parameters())
     for epoch in range(epochs):
         for i,(x,y) in enumerate(data):
             x=x.to(device) # push it to GPU
+            y=y.to(device) # push it to GPU
             opt.zero_grad() # flush gradients
-            xhat = linearAE(x)
+            xhat,xclass = linearAE(x)
             #loss = ((x - xhat)**2).sum()
-            loss=criterion(x,xhat)
+            loss1=criterion(x,xhat)
+            loss2=criterion2(xclass,y)
+            loss=loss1+loss2
             loss.backward()
             opt.step()
             #print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
@@ -90,10 +118,11 @@ def train(linearAE, data, epochs =num_epochs):
 
     return linearAE
 
-latent_dims = 3
-linearAE = autoencoder(latent_dims).to(device) # GPU
 
 linearAE = train(linearAE, data)
+
+# get one training batch of samples
+x,y,=next(iter(data))
 
 # # pytorch engineer method of training 
 # criterion = nn.MSELoss()
@@ -122,11 +151,11 @@ linearAE = train(linearAE, data)
 
 
 # plotting
-def plot_latent(linearAE, data, num_batches=100):
+def plot_latent(linearAE, data, num_batches=10):
     for i, (x, y) in enumerate(data):
         z = linearAE.encoder(x.to(device))
         z = z.to('cpu').detach().numpy()
-        plt.scatter(z[:, 0], z[:, 1],z[:, 2], c=y, cmap='tab10')
+        plt.scatter(z[:, 0], z[:, 1], c=y, cmap='tab10')
         if i > num_batches:
             plt.colorbar()
             break
@@ -189,7 +218,7 @@ def train(ae, data, epochs =num_epochs):
         for i,(x,y) in enumerate(data):
             x=x.to(device) # push it to GPU
             opt.zero_grad() # flush gradients
-            xhat = ae(x)
+            xhat,xclass = ae(x)
             #loss = ((x - xhat)**2).sum()
             loss=criterion(x,xhat) + ae.encoder.kl            
             loss.backward()
@@ -206,7 +235,7 @@ vae = VariationalAutoencoder(latent_dims).to(device) # GPU
 
 vae = train(vae, data)
 
-
+x,y=next(iter(data))
 
 # ################## extra stuff ##################
 # # plotting images using matplotlib
@@ -229,8 +258,6 @@ vae = train(vae, data)
 
 # nn.Linear
 
-x=torch.randn(12,28,28)
-z=torch.flatten(x,start_dim=1)
 
 
 
