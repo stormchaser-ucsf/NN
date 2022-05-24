@@ -87,12 +87,12 @@ data = torch.utils.data.DataLoader(
         torchvision.datasets.MNIST('./data',
                transform=torchvision.transforms.ToTensor(),
                download=True),
-        batch_size=256,
+        batch_size=512,
         shuffle=True)
 
 
 
-num_epochs=15
+num_epochs=175
 n_total_steps = len(data)
 criterion = nn.MSELoss(reduction='sum')
 criterion2 = nn.CrossEntropyLoss()
@@ -108,7 +108,7 @@ def train(linearAE, data, epochs =num_epochs):
             #loss = ((x - xhat)**2).sum()
             loss1=criterion(x,xhat)
             loss2=criterion2(xclass,y)
-            loss=loss2+0.00*loss1
+            loss=loss2+0*loss1
             loss.backward()
             opt.step()
             #print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
