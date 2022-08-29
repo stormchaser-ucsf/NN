@@ -116,7 +116,7 @@ opt = torch.optim.Adam(vae.parameters())
 beta_params=0;
 
 # training loop
-num_epochs=15
+num_epochs=100
 batch_size=64
 num_batches = math.ceil(data.shape[0]/batch_size)
 

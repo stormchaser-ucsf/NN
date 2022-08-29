@@ -52,9 +52,9 @@ class VariationalEncoder(nn.Module):
     
     def forward(self,x):        
         x=self.linear1(x)
-        x=F.elu(x)
+        x=F.gelu(x)
         x=self.linear2(x)
-        x=F.elu(x)        
+        x=F.gelu(x)        
         return x
 
 class decoder(nn.Module):
@@ -66,7 +66,7 @@ class decoder(nn.Module):
         
     def forward(self,z):        
         z = self.linear1(z)
-        z = F.elu(z)
+        z = F.gelu(z)
         z = self.linear2(z)        
         return z
 
@@ -92,8 +92,8 @@ opt = torch.optim.Adam(vae.parameters())
 beta_params=0;
 
 # training loop
-num_epochs=15
-batch_size=64
+num_epochs=50
+batch_size=32
 num_batches = math.ceil(data.shape[0]/batch_size)
 
 for epoch in range(num_epochs):
