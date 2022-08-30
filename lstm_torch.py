@@ -16,7 +16,7 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from torch.autograd import Variable 
 
 
-df = pd.read_csv("C:/Users/Nikhlesh/Documents/GitHub/NN/SBUX.csv", index_col = "Date", parse_dates=True)
+df = pd.read_csv("C:/Users/nikic/Documents/GitHub/NN/SBUX.csv", index_col = "Date", parse_dates=True)
 
 plt.style.use("ggplot")
 #df["Volume"].plot(label="CLOSE", title="Star Bucks Stock Volume")
@@ -64,22 +64,30 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 device
 
 class LSTM1(nn.Module):
-    def __init__(self,num_classes,input_size,hidden_size,num_layers,seq_length):
+    def __init__(self,num_classes,input_size,hidden_size,num_layers,seq_length,projection_size,fc_nodes,bidirectional_flag):
         super(LSTM1,self).__init__()
         self.num_classes = num_classes #number of classes
         self.num_layers = num_layers #number of layers
         self.input_size = input_size #input size
         self.hidden_size = hidden_size #hidden state
         self.seq_length = seq_length #sequence length
+      #  self.projection_size = projection_size #projection length
+        self.fc_nodes = fc_nodes #number of nodes in the forward MLP
+        self.bidirectional_flag=bidirectional_flag # flag if the LSTM is bidirectional 
+        if self.bidirectional :
+            self.layer_ratio = 2         
+        else:
+            self.layer_ratio = 1
         self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size,
-                          num_layers=num_layers, batch_first=True) #lstm
-        self.fc_1 =  nn.Linear(hidden_size, 128) #fully connected 1
-        self.fc = nn.Linear(128, num_classes) #fully connected last layer
+                          num_layers=num_layers, proj_size= projection_size,bidirectional = bidirectional_flag,
+                          batch_first=True) #lstm
+        self.fc_1 =  nn.Linear(hidden_size, fc_nodes) #fully connected 1
+        self.fc = nn.Linear(fc_nodes, num_classes) #fully connected last layer
         self.relu = nn.ReLU()
 
     def forward(self,x):
-        h_0 = Variable(torch.zeros(self.num_layers, x.size(0), self.hidden_size)) #hidden state
-        c_0 = Variable(torch.zeros(self.num_layers, x.size(0), self.hidden_size)) #internal state
+        h_0 = Variable(torch.zeros(self.layer_ratio*self.num_layers, x.size(0), self.hidden_size)) #layers, batch size, hidden size
+        c_0 = Variable(torch.zeros(self.layer_ratio*self.num_layers, x.size(0), self.hidden_size)) #layers, batch size, hidden size
         h_0 = h_0.to(device)
         c_0 = c_0.to(device)
         # Propagate input through LSTM
@@ -152,12 +160,42 @@ plt.show()
 
 
 
+input_size=10
+hidden_size=20
+proj_size=15
+if proj_size>0:
+    hidden_state_size = proj_size
+else:
+    hidden_state_size = hidden_size
+sequence_length=100
+num_layers=2
+batch_size=64
+bidir_flag=True
+if bidir_flag:
+    D=2
+else:
+    D=1
 
-rnn = nn.LSTM(10, 20, 2) #input dim, hidden size, num layers
-input = torch.randn(15, 3, 10) # seq, batch, input size
-h0 = torch.randn(2, 3, 20) # 1*num_layers (not bidirectional), batch, hidden size
-c0 = torch.randn(2, 3, 20) # same as above
+# init the LSTM        
+rnn = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers,
+              batch_first=True,proj_size =proj_size,bidirectional =bidir_flag) #input dim, hidden size, num layers (stacked lstm)
+input = torch.randn(batch_size, sequence_length, input_size) # batch_size, sequence length, features (input_dimension)
+h0 = torch.zeros(D*num_layers, batch_size, hidden_state_size) # 1*num_layers (not bidirectional), batch, hidden size
+c0 = torch.zeros(D*num_layers, batch_size, hidden_size) # same as above
 
-output, (hn, cn) = rnn(input, (h0, c0))
+output, (hn, cn) = rnn(input, (h0, c0)) 
+# out -> batch, seq. length, hidden size of last LSTM layer, concatenated if bilstm
+# hn -> D*num_layers, batch size, out_size. essentially contains the final hidden state alone, and not for each time pt in sequence
+# cn -> D*num_layers, batch_size, cell hidden state containing the final cell state
+tmp = hn[2:,:,:] # get only the activation of the last layer to use in the MLP
+tmp = tmp.view(-1,batch_size)
+
+# =============================================================================
+# # general rule of thumb -> hidden state for bidirectional LSTM contains the final forward and reverse hidden states.
+# # The output in bidirectional LSTMs contains final forward hidden state and the initial reverse hidden state. So when using
+# # stacks of biLSTMs, have to parse out the hidden state and feed it to the MLP -> classifier. In pytroch seems to be difference 
+# between hidden state and output states
+# 
+# =============================================================================
 
 
