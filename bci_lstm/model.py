@@ -13,11 +13,13 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable 
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
+import math
 
 
 # define a bidirection lstm model for classifier 
 class LSTM1(nn.Module):
-    def __init__(self,num_classes,input_size,hidden_size,num_layers,projection_size,fc_nodes,bidirectional_flag,dropout_val):
+    def __init__(self,num_classes,input_size,hidden_size,num_layers,projection_size,fc_nodes,bidirectional_flag,
+                 dropout_val,dim_red):
         super(LSTM1,self).__init__()
         self.num_classes = num_classes #number of classes
         self.num_layers = num_layers #number of layers
@@ -40,10 +42,12 @@ class LSTM1(nn.Module):
         self.linear1 =  nn.Linear(self.hidden_size_output, fc_nodes) #fully connected 1
         self.linear2 = nn.Linear(fc_nodes, num_classes) #fully connected last layer
         self.gelu = nn.GELU()
+        self.dim_red1 = nn.Linear(128,dim_red)
 
     def forward(self,x):              
         
         # dimensionality reduction on hg and LMp separately if needed and concatenate 
+        # data comes in as batch, sequence length, channels 
         
         # Propagate input through LSTM
         output, (hn, cn) = self.lstm(x) 
@@ -70,12 +74,17 @@ dropout_val=0.3
 # load the data from matlab
 
 
-# build a complete training loop with model saving etc. 
-# Here, want to save the model after every epoch, keep track of validation loss and stop for patince =6
-# i.e., if validation loss does not reduce for 6 epochs. 
+# training parameters
 loss_function = nn.CrossEntropyLoss()
 learning_rate = 1e-4
 batch_size = 128
+gradient_clipping = 10
+
+# training loop 
+num_epochs=100
+batch_size=64
+num_batches = math.ceil(data.shape[0]/batch_size)
+
 
 # testing it out with some sample data 
 num_classes =3
