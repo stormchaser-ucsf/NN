@@ -123,3 +123,22 @@ p = ax.plot_surface(X, Y, Z, rstride=4, cstride=4, linewidth=0)
 ax = fig.add_subplot(1, 2, 2, projection='3d')
 p = ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=matplotlib.cm.coolwarm, linewidth=0, antialiased=False)
 cb = fig.colorbar(p, shrink=0.5)
+
+
+# enumerate function
+tmp = np.arange(10) + 2*rnd.randn(10)
+
+for i,val in enumerate(tmp):
+    print (i,val)
+
+
+
+
+
+
+
+
+
+
+
+
