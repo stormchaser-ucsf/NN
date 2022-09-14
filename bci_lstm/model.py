@@ -5,7 +5,6 @@ Created on Mon Aug 29 19:22:32 2022
 @author: nikic
 """
 
-
 import numpy as np
 import numpy.random as rnd
 import torch
@@ -18,6 +17,7 @@ import math
 from scipy import io as sio
 import mat73
 import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
 
 # load the data from matlab
 file_name = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker\decimated_lstm_data_below25Hz.mat'
@@ -29,18 +29,18 @@ Y = data_dict.get('Y')
 # artifact correction
 for i in np.arange(condn_data_new.shape[2]):
     
- 
-    
+    print(i)
     # first 128 features
     xx = condn_data_new[:,0:128,i]
     I = np.abs(xx)>15
     I = np.sum(I,0)
-    aa = list(np.where(I>0))
+    aa = (np.where(I>0))    
     tmp= np.squeeze(xx[:,aa])
     shape_tmp = list(tmp.shape)
     
+    
     if np.size(shape_tmp)==1:
-        shape_tmp.append(1)    
+         shape_tmp.append(1)    
         
     tmp_rand = rnd.randn(shape_tmp[0],shape_tmp[1])    
     xx[:,aa[0]] = 1e-5*tmp_rand    
@@ -50,7 +50,7 @@ for i in np.arange(condn_data_new.shape[2]):
     xx = condn_data_new[:,128:,i]
     I = np.abs(xx)>15
     I = np.sum(I,0)
-    aa = list(np.where(I>0))
+    aa = (np.where(I>0))
     tmp= np.squeeze(xx[:,aa])
     shape_tmp = list(tmp.shape)
     
@@ -60,10 +60,16 @@ for i in np.arange(condn_data_new.shape[2]):
     tmp_rand = rnd.randn(shape_tmp[0],shape_tmp[1])    
     xx[:,aa[0]] = 1e-5*tmp_rand    
     condn_data_new[:,128:,i] = xx    
+    
 
+# look at it 
+tmp = np.squeeze(condn_data_new[:,66,1])
+plt.plot(tmp)
     
 # normalize , min max scaling 
 for i in np.arange(condn_data_new.shape[2]):
+    print(i)
+    
     tmp = np.squeeze(condn_data_new[:,:,i])
     tmp1 = tmp[:,:128]
     tmp1  = (tmp1-tmp1.min())/(tmp1.max()-tmp1.min())
@@ -73,24 +79,149 @@ for i in np.arange(condn_data_new.shape[2]):
     
     tmp = np.concatenate((tmp1,tmp2),axis=1)
     condn_data_new[:,:,i] = tmp
+    
+# look at it 
+tmp = np.squeeze(condn_data_new[:,66,144])
+plt.figure()
+plt.plot(tmp)
+
+# split into testing and training samples randomly
+# len = np.arange(condn_data_new.shape[2])
+# len_cutoff = round(0.85*len[-1])
+# idx = np.random.permutation(condn_data_new.shape[2])
+# train_idx, test_idx = idx[:len_cutoff] , idx[len_cutoff:]
+# Xtrain, Xtest = condn_data_new[:,:,train_idx] , condn_data_new[:,:,test_idx] 
+# Ytrain, Ytest = Y[train_idx] , Y[test_idx]
+
+# # looking at class membership
+# class_mem = np.empty([0])
+# for i in np.arange(7):
+#     class_mem = np.append(class_mem, np.sum(Ytrain==(i+1)))
+
+# plt.Figure()
+# plt.bar(np.arange(7)+1,class_mem)
 
 
-# split into testing and training samples
-len = range(condn_data_new.shape[2])
-len_cutoff = round(0.85*len[-1])
-idx = np.random.choice(len,len_cutoff)
-I = np.zeros((condn_data_new.shape[2],1))
-I[idx]=1
+# split into testing and training samples with balanced sets using dict
+#get the indices for each of the classs first
+class_idx = {'Class':[], 'indices':[], 'size':[]}
+for i in np.arange(7):
+    idx = list(np.where(Y==(i+1)))
+    class_idx['Class'].append(i+1)
+    class_idx['indices'].append(idx)
+    class_idx['size'].append(np.size(idx))
+
+#shuffle training samples with smallest size for balanced distribution
+min_size = round(5.2e3)#np.min(class_idx['size'])                    
+train_idx = np.empty([0],dtype=int)
+test_idx = np.empty([0],dtype=int)
+for i in np.arange(7):
+    idx = class_idx['indices'][i][0]    
+    I = np.random.permutation(idx.shape[0])
+    idx= idx[I]
+    idx1 = idx[:min_size]
+    idx2 = idx[min_size:]
+    train_idx = np.append(train_idx, idx1)
+    test_idx = np.append(test_idx, idx2)
+
+Xtrain, Xtest = condn_data_new[:,:,train_idx] , condn_data_new[:,:,test_idx] 
+Ytrain, Ytest = Y[train_idx] , Y[test_idx]
+
+idx = rnd.permutation(Xtrain.shape[2])
+Xtrain = Xtrain[:,:,idx]
+Ytrain = Ytrain[idx]
+
+class_mem = np.empty([0])
+for i in np.arange(7):
+    class_mem = np.append(class_mem, np.sum(Ytrain==(i+1)))
+
+plt.Figure()
+plt.bar(np.arange(7)+1,class_mem)
 
 
-# data augmentation on the training samples 
+# convert to numpy arrays
+Ytrain = np.array(Ytrain)
+Ytest = np.array(Ytest)
+Xtrain = np.array(Xtrain)
+Xtest = np.array(Xtest)
 
 
+print('done all steps till data augmntation')
 
+# data augmentation on the training samples  -> introduce random noise plus random shift to each 
+Xtrain_aug = np.zeros(Xtrain.shape)
+len = Xtrain.shape[2]
+for i in np.arange(len):
+    
+    print(i)
+    
+    tmp = np.squeeze(Xtrain[:,:,i])
+    tid = Ytrain[i]
+    
+    # first 128, high gamma
+    tmp1 = tmp[:,:128]
+    # add noise
+    var_noise = 0.35
+    std_dev = np.std(np.concatenate(tmp1))
+    add_noise = rnd.randn(tmp1.shape[0],tmp1.shape[1]) * std_dev * var_noise
+    tmp1n = tmp1 + add_noise
+    #plt.figure();plt.plot(tmp1[:,13]);plt.plot(tmp1n[:,13]);plt.show()    
+    # add variable mean offset
+    m=np.mean(tmp1,0)
+    add_mean = m*0.2
+    flip_sign = rnd.rand(add_mean.shape[0])
+    flip_sign[flip_sign>0.5]=1
+    flip_sign[flip_sign<=0.5]=-1
+    add_mean = np.multiply(flip_sign,add_mean) + m
+    tmp1m = tmp1n + add_mean
+    tmp1m  = (tmp1m-tmp1m.min())/(tmp1m.max()-tmp1m.min())    
+    #plt.figure();plt.plot(tmp1[:,13]);plt.plot(tmp1m[:,13]);plt.show()
+    
+    # next 128, LFOs
+    tmp2 = tmp[:,128:]
+    # add noise
+    var_noise = 0.4
+    std_dev = np.std(np.concatenate(tmp2))
+    add_noise = rnd.randn(tmp2.shape[0],tmp2.shape[1]) * std_dev * var_noise
+    tmp2n = tmp2 + add_noise
+    #plt.figure();plt.plot(tmp2[:,13]);plt.plot(tmp2n[:,13]);plt.show()    
+    # add variable mean offset
+    m=np.mean(tmp2,0)
+    add_mean = m*0.5
+    flip_sign = rnd.rand(add_mean.shape[0])
+    flip_sign[flip_sign>0.5]=1
+    flip_sign[flip_sign<=0.5]=-1
+    add_mean = np.multiply(flip_sign,add_mean) + m
+    tmp2m = tmp2n + add_mean
+    tmp2m  = (tmp2m-tmp2m.min())/(tmp2m.max()-tmp2m.min())    
+    #plt.figure();plt.plot(tmp2[:,13]);plt.plot(tmp2m[:,13]);plt.show()
+    
+    tmp=np.concatenate((tmp1m,tmp2m),axis=1)
+    
+    Ytrain = np.append(Ytrain,tid) 
+    Xtrain_aug[:,:,i] =tmp
+    #Xtrain[:,:,Xtrain.shape[2]+1] = tmp
+    #Xtrain=np.dstack((Xtrain,tmp))
+    #Xtrain = np.append(Xtrain,np.atleast_3d(tmp),axis=2)
+    #Xtrain = np.concatenate((Xtrain,np.atleast_3d(tmp)),axis=2)
+
+
+Xtrain = np.concatenate((Xtrain,Xtrain_aug),axis=2)
+del Xtrain_aug
+del condn_data_new
+print('Data augmentation also done')
+
+class_mem = np.empty([0])
+for i in np.arange(7):
+    class_mem = np.append(class_mem, np.sum(Ytest==(i+1)))
+
+plt.figure()
+plt.bar(np.arange(7),class_mem)
 
 # define a bidirection lstm model for classifier 
 class LSTM1(nn.Module):
-    def __init__(self,num_classes,input_size,hidden_size,num_layers,projection_size,fc_nodes,bidirectional_flag,
+    def __init__(self,num_classes,input_size,hidden_size,num_layers,projection_size,fc_nodes,
+                 bidirectional_flag,
                  dropout_val,dim_red):
         super(LSTM1,self).__init__()
         self.num_classes = num_classes #number of classes
@@ -135,7 +266,6 @@ class LSTM1(nn.Module):
         return out
 
 
-
 # the key variables of interest for the model
 num_classes=7
 input_size = 256
@@ -153,6 +283,19 @@ model = LSTM1(num_classes, input_size, hidden_size,
               dropout_val, dim_red)
 
 
+# training loop:
+    # define batch size -> get number of batches per epoch
+    # define number of total epochs -> randomize data within each epoch
+    # within for loop of each epoch, have subfor loop of num batches
+    # send the batch throught the network, compute loss, get gradient and update model
+    # at the end of epoch, evaluate the validation loss
+    # if validation loss at current epoch lower than previous epoch, save model
+    # if validation loss increases at current epoch, dont save and increase patience couter by 1
+    # if patience counter hits 6 -> consecutive epochs without any improvements, terminate training
+    # learning rate scheduler design
+
+
+
 # training parameters
 loss_function = nn.CrossEntropyLoss()
 learning_rate = 1e-4
@@ -165,7 +308,30 @@ optimizer = optim.Adam(model.parameters(),lr=learning_rate)
 # training loop
 num_epochs=100
 batch_size=128
-num_batches = math.ceil(XTrain.shape[0]/batch_size)
+num_batches = math.ceil(Xtrain.shape[2]/batch_size)
+
+patience=0
+for epoch in range(num_epochs):
+    #shuffle the data
+    idx = rnd.permutation(Xtrain.shape[2])
+    Xtrain = Xtrain[:,:,idx]
+    Ytrain = Ytrain[idx]
+    
+    for batch in range(num_batches):
+        # get the batch 
+        k = batch*batch_size
+        k1 = k+batch_size
+        Xtrain_batch = Xtrain[:,:,k:k1]
+        Ytrain_batch = Ytrain[k:k1]
+        
+        #push to gpu
+        Xtrain_batch = torch.from_numpy(Xtrain_batch)
+        Ytrain_batch = torch.from_numpy(Ytrain_batch)
+        Xtrain_batch = Xtrain_batch.to(device)
+        Ytrain_batch = Ytrain_batch.to(device)
+        
+        
+
 
 for epoch in range(num_epochs):
     # split the data into batches
@@ -194,9 +360,6 @@ for epoch in range(num_epochs):
     print(epoch+1)
     
 
-
-
-# load the data from matlab
 
 
 
@@ -240,6 +403,11 @@ hn=torch.t(hn)
 
 
 
+# testing random permutation
+data_test = np.empty(0,dtype=int)
+for i in range(1000):
+    tmp = np.random.choice(10,2)
+    data_test = np.append(data_test,(tmp))
 
 
 
