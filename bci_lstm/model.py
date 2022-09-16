@@ -19,6 +19,10 @@ import mat73
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 
+
+# setting up GPU
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 # load the data from matlab
 file_name = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker\decimated_lstm_data_below25Hz.mat'
 data_dict = mat73.loadmat(file_name)
@@ -218,69 +222,68 @@ for i in np.arange(7):
 plt.figure()
 plt.bar(np.arange(7),class_mem)
 
-# define a bidirection lstm model for classifier 
+###################### LSTM CODE ############################
+# creating stacked bidirectional lstm layer class
 class LSTM1(nn.Module):
-    def __init__(self,num_classes,input_size,hidden_size,num_layers,projection_size,fc_nodes,
-                 bidirectional_flag,
-                 dropout_val,dim_red):
+    def __init__(self,num_classes,input_size,hidden_size,proj_size,num_layers,fc_nodes,
+                 dropout_val):
         super(LSTM1,self).__init__()
-        self.num_classes = num_classes #number of classes
-        self.num_layers = num_layers #number of layers
-        self.input_size = input_size #input size
-        self.hidden_size = hidden_size #hidden state        
-        self.projection_size = projection_size #projection length
-        self.fc_nodes = fc_nodes #number of nodes in the forward MLP
-        self.bidirectional_flag=bidirectional_flag # flag if the LSTM is bidirectional 
-        if self.bidirectional :
-            self.layer_ratio = 2         
-        else:
-            self.layer_ratio = 1
-        if self.projection_size>0:
-            self.hidden_size_output = projection_size
-        else:
-            self.hidden_size_output = hidden_size        
-        self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size,
-                          num_layers=num_layers, proj_size= projection_size,bidirectional = bidirectional_flag,
-                          batch_first=True,dropout=dropout_val) #lstm
-        self.linear1 =  nn.Linear(self.hidden_size_output, fc_nodes) #fully connected 1
-        self.linear2 = nn.Linear(fc_nodes, num_classes) #fully connected last layer
-        self.gelu = nn.GELU()
-        self.dim_red1 = nn.Linear(128,dim_red)
-
-    def forward(self,x):              
+        self.num_classes = num_classes
+        self.num_layers = num_layers
+        self.input_size = input_size       
         
-        # dimensionality reduction on hg and LMp separately if needed and concatenate 
-        # data comes in as batch, sequence length, channels 
+        self.lstm=nn.LSTM(input_size=input_size,hidden_size=hidden_size,
+                          num_layers=num_layers,batch_first=True,dropout=dropout_val,
+                          bidirectional=True,proj_size=proj_size)
+        self.layer_ratio=num_layers*2-2
+        if proj_size>0:
+            self.mlp_input = proj_size*2
+        else:
+            self.mlp_input = hidden_size*2              
+        self.linear1 = nn.Linear(self.mlp_input,fc_nodes)
+        self.linear2 = nn.Linear(fc_nodes,num_classes)
+        self.gelu=nn.GELU()
+        self.bn1 = nn.BatchNorm1d(fc_nodes)
         
-        # Propagate input through LSTM
+    
+    def forward(self,x):
+        # take the last hidden state of the last layer all the way through MLP
         output, (hn, cn) = self.lstm(x) 
-        # extract last hidden state and reshape
-        hn=hn[layer_ratio:,:,:]
-        hn=hn.view(-1,hn.shape[1])
-        hn=torch.t(hn)
-        # pass it thru mlp layers        
-        out = self.gelu(hn)
-        out = self.linear1(out) #first Dense
-        out = self.gelu(out) #relu
-        out = self.linear2(out) #Final Output
+        hn = hn[self.layer_ratio:,:,:]
+        hn = torch.permute(hn,(1,0,2))
+        hn = torch.flatten(hn,start_dim=1,end_dim=2)
+        #pass thru mlp
+        out = self.linear1(hn)
+        out = self.bn1(out)
+        out = self.gelu(out)
+        out = self.linear2(out)
         return out
 
-
-# the key variables of interest for the model
+# lstm parameters
 num_classes=7
-input_size = 256
+input_size=256
 hidden_size=150
+proj_size=75
 num_layers=2
-projection_size=75
-fc_nodes=25
-bidirectional_flag=True
 dropout_val=0.3
-dim_red= False
+fc_nodes=25
+model =  LSTM1(num_classes, input_size, hidden_size,proj_size,
+               num_layers,fc_nodes, dropout_val) 
+model = model.to(device) #push to GPU
 
-# init the model
-model = LSTM1(num_classes, input_size, hidden_size, 
-              num_layers, projection_size, fc_nodes, bidirectional_flag,
-              dropout_val, dim_red)
+
+#####################  TRAINING LOOP   ##########################################
+
+# training parameters
+num_epochs=100
+loss_function = nn.CrossEntropyLoss()
+learning_rate = 1e-4
+batch_size = 128
+gradient_clipping = 10
+optimizer = optim.Adam(model.parameters(),lr=learning_rate)
+num_batches = math.ceil(Xtrain.shape[2]/batch_size)
+patience=0
+
 
 
 # training loop:
@@ -296,21 +299,8 @@ model = LSTM1(num_classes, input_size, hidden_size,
 
 
 
-# training parameters
-loss_function = nn.CrossEntropyLoss()
-learning_rate = 1e-4
-batch_size = 128
-gradient_clipping = 10
-loss_function = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(),lr=learning_rate)
 
 
-# training loop
-num_epochs=100
-batch_size=128
-num_batches = math.ceil(Xtrain.shape[2]/batch_size)
-
-patience=0
 for epoch in range(num_epochs):
     #shuffle the data
     idx = rnd.permutation(Xtrain.shape[2])
@@ -413,3 +403,90 @@ for i in range(1000):
 
 
 
+class LSTM1(nn.Module):
+    def __init__(self, num_classes, input_size, hidden_size, num_layers, seq_length):
+        super(LSTM1, self).__init__()
+        self.num_classes = num_classes #number of classes
+        self.num_layers = num_layers #number of layers
+        self.input_size = input_size #input size
+        self.hidden_size = hidden_size #hidden state
+        self.seq_length = seq_length #sequence length
+
+        self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size,
+                          num_layers=num_layers, batch_first=True) #lstm
+        self.fc_1 =  nn.Linear(hidden_size, 128) #fully connected 1
+        self.fc = nn.Linear(128, num_classes) #fully connected last layer
+
+        self.relu = nn.ReLU()
+    
+    def forward(self,x):
+        h_0 = Variable(torch.zeros(self.num_layers, x.size(0), self.hidden_size)) #hidden state
+        c_0 = Variable(torch.zeros(self.num_layers, x.size(0), self.hidden_size)) #internal state
+        # Propagate input through LSTM
+        output, (hn, cn) = self.lstm(x, (h_0, c_0)) #lstm with input, hidden, and internal state
+        hn = hn.view(-1, self.hidden_size) #reshaping the data for Dense layer next
+        out = self.relu(hn)
+        out = self.fc_1(out) #first Dense
+        out = self.relu(out) #relu
+        out = self.fc(out) #Final Output
+        return out
+    
+    
+num_epochs = 1000 #1000 epochs
+learning_rate = 0.001 #0.001 lr
+
+input_size = 5 #number of features
+hidden_size = 2 #number of features in hidden state
+num_layers = 1 #number of stacked lstm layers
+
+num_classes = 1 #number of output classes 
+
+
+lstm1 = LSTM1(num_classes, input_size, hidden_size, num_layers, 128) #our lstm class 
+
+
+ 
+class LSTM1(nn.Module):
+    def __init__(self,num_classes,input_size,hidden_size,num_layers,projection_size,fc_nodes,
+                 bidirectional_flag,dropout_val,dim_red):
+        super(LSTM1,self).__init__()
+        self.num_classes = num_classes #number of classes
+        self.num_layers = num_layers #number of layers
+        self.input_size = input_size #input size
+        self.hidden_size = hidden_size #hidden state        
+        self.projection_size = projection_size #projection length
+        self.fc_nodes = fc_nodes #number of nodes in the forward MLP
+        self.bidirectional_flag=bidirectional_flag # flag if the LSTM is bidirectional 
+        if self.bidirectional_flag:
+            self.layer_ratio = 2         
+        else:
+            self.layer_ratio = 1
+        if self.projection_size>0:
+            self.hidden_size_output = projection_size
+        else:
+            self.hidden_size_output = hidden_size        
+        self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size,
+                          num_layers=num_layers, proj_size= projection_size,bidirectional = bidirectional_flag,
+                          batch_first=True,dropout=dropout_val) #lstm
+        self.linear1 =  nn.Linear(self.hidden_size_output, fc_nodes) #fully connected 1
+        self.linear2 = nn.Linear(fc_nodes, num_classes) #fully connected last layer
+        self.gelu = nn.GELU()
+        self.dim_red1 = nn.Linear(128,dim_red)
+
+    def forward(self,x):              
+        
+        # dimensionality reduction on hg and LMp separately if needed and concatenate 
+        # data comes in as batch, sequence length, channels 
+        
+        # Propagate input through LSTM
+        output, (hn, cn) = self.lstm(x) 
+        # extract last hidden state and reshape
+        hn=hn[self.layer_ratio:,:,:]
+        hn=hn.view(-1,hn.shape[1])
+        hn=torch.t(hn)
+        # pass it thru mlp layers        
+        out = self.gelu(hn)
+        out = self.linear1(out) #first Dense
+        out = self.gelu(out) #relu
+        out = self.linear2(out) #Final Output
+        return out

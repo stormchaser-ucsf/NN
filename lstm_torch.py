@@ -6,7 +6,7 @@ Created on Mon Mar 21 22:39:09 2022
 """
 
 import numpy as np
-import torch
+import torch as torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
@@ -15,6 +15,9 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from torch.autograd import Variable 
 
+
+# setting up GPU
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 df = pd.read_csv("C:/Users/nikic/Documents/GitHub/NN/SBUX.csv", index_col = "Date", parse_dates=True)
 
@@ -159,9 +162,9 @@ plt.legend()
 plt.show() 
 
 
-
-input_size=10
-hidden_size=20
+num_classes=7
+input_size=256
+hidden_size=32
 proj_size=15
 if proj_size>0:
     hidden_state_size = proj_size
@@ -175,6 +178,7 @@ if bidir_flag:
     D=2
 else:
     D=1
+fc_nodes=25
 
 # init the LSTM        
 rnn = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers,
@@ -183,12 +187,50 @@ input = torch.randn(batch_size, sequence_length, input_size) # batch_size, seque
 h0 = torch.zeros(D*num_layers, batch_size, hidden_state_size) # 1*num_layers (not bidirectional), batch, hidden size
 c0 = torch.zeros(D*num_layers, batch_size, hidden_size) # same as above
 
-output, (hn, cn) = rnn(input, (h0, c0)) 
+#output, (hn, cn) = rnn(input, (h0, c0)) 
+output, (hn, cn) = rnn(input) 
 # out -> batch, seq. length, hidden size of last LSTM layer, concatenated if bilstm
 # hn -> D*num_layers, batch size, out_size. essentially contains the final hidden state alone, and not for each time pt in sequence
 # cn -> D*num_layers, batch_size, cell hidden state containing the final cell state
 tmp = hn[2:,:,:] # get only the activation of the last layer to use in the MLP
 tmp = tmp.view(-1,batch_size)
+
+# just get the final hidden state from output
+tmp = output[:,-1,:]
+# pass through linear layer
+linear1 = nn.Linear(hidden_state_size*D, fc_nodes)
+gelu = nn.GELU()
+linear2 = nn.Linear(fc_nodes,num_classes)
+tmp=linear2(gelu(linear1(tmp)))
+
+tmp2 = output
+tmp2=tmp2.detach().numpy()
+tmp2a = tmp2[:,-1,0:15]
+tmp2b = tmp2[:,0,15:30]
+tmp2 = np.concatenate((tmp2a,tmp2b),axis=1)
+
+tmp1=hn
+tmp1=tmp1.detach().numpy()
+tmp1=tmp1[2:,:,:]
+tmp1a = tmp1[0,:,:]
+tmp1b = tmp1[1,:,:]
+
+
+plt.plot(tmp1[0,:])
+plt.figure();
+plt.plot(tmp2[0,:])
+
+# using pytorch functions
+tmp1=hn
+tmp1=tmp1[2:,:,:]
+tmp1=torch.permute(tmp1, (1,0,2))
+tmp1 = torch.flatten(tmp1,start_dim=1,end_dim=2)
+tmp1=tmp1.detach().numpy()
+
+
+plt.plot(tmp1[11,:])
+plt.figure();
+plt.plot(tmp2[11,:])
 
 # =============================================================================
 # # general rule of thumb -> hidden state for bidirectional LSTM contains the final forward and reverse hidden states.
@@ -198,4 +240,58 @@ tmp = tmp.view(-1,batch_size)
 # 
 # =============================================================================
 
+#use a function to implement a bidirectional lstm
+class LSTM1(nn.Module):
+    def __init__(self,num_classes,input_size,hidden_size,proj_size,num_layers,fc_nodes,
+                 dropout_val):
+        super(LSTM1,self).__init__()
+        self.num_classes = num_classes
+        self.num_layers = num_layers
+        self.input_size = input_size       
+        
+        self.lstm=nn.LSTM(input_size=input_size,hidden_size=hidden_size,
+                          num_layers=num_layers,batch_first=True,dropout=dropout_val,
+                          bidirectional=True,proj_size=proj_size)
+        self.layer_ratio=num_layers*2-2
+        if proj_size>0:
+            self.mlp_input = proj_size*2
+        else:
+            self.mlp_input = hidden_size*2              
+        self.linear1 = nn.Linear(self.mlp_input,fc_nodes)
+        self.linear2 = nn.Linear(fc_nodes,num_classes)
+        self.gelu=nn.GELU()
+        self.bn1 = nn.BatchNorm1d(fc_nodes)
+        
+    
+    def forward(self,x):
+        # take the last hidden state of the last layer all the way through MLP
+        output, (hn, cn) = self.lstm(x) 
+        hn = hn[self.layer_ratio:,:,:]
+        hn = torch.permute(hn,(1,0,2))
+        hn = torch.flatten(hn,start_dim=1,end_dim=2)
+        #pass thru mlp
+        out = self.linear1(hn)
+        out = self.bn1(out)
+        out = self.gelu(out)
+        out = self.linear2(out)
+        return out
 
+num_classes=7
+input_size=256
+hidden_size=150
+proj_size=75
+num_layers=2
+dropout_val=0.3
+fc_nodes=25
+model =  LSTM1(num_classes, input_size, hidden_size,proj_size,
+               num_layers,fc_nodes, dropout_val) 
+model = model.to(device)
+
+
+# push to gpu
+
+input=input.to(device)
+opt = torch.optim.Adam(model.parameters())
+opt.zero_grad() 
+out = model(input)
+        
