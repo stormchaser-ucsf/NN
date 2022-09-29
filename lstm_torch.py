@@ -295,3 +295,63 @@ opt = torch.optim.Adam(model.parameters())
 opt.zero_grad() 
 out = model(input)
         
+
+
+
+# creating a bidir LSTM -> GRU -> MLP, with GRU having half the number of hidden nodes
+class rnn_gru(nn.Module):
+    def __init__(self,num_classes,input_size,hidden_size,num_layers,dropout_val):
+        super(rnn_gru,self).__init__()
+        self.num_classes = num_classes
+        self.num_layers = num_layers
+        self.input_size = input_size       
+        
+        self.gru1=nn.GRU(input_size=input_size,hidden_size=hidden_size,
+                          num_layers=num_layers,batch_first=True,dropout=dropout_val,
+                          bidirectional=True)
+        self.gru2=nn.GRU(input_size=round(hidden_size*2),hidden_size=round(hidden_size/2),
+                          num_layers=num_layers,batch_first=True, bidirectional=False)
+        
+        self.mlp_input = round(hidden_size/2              )
+        self.linear1 = nn.Linear(self.mlp_input,num_classes)
+    
+    def forward(self,x):        
+        output1, (hn1) = self.gru1(x) 
+        output2, (hn2) = self.gru2(output1)
+        hn2 = torch.squeeze(hn2)        
+        out = self.linear1(hn2)        
+        return out
+
+input_size=256
+hidden_size=150
+num_layers=1
+batch_size=64
+sequence_length = 100
+num_classes=7
+dropout_val=0.3
+
+
+rnn1 = nn.GRU(input_size=input_size, hidden_size=hidden_size, num_layers=num_layers,
+              batch_first=True,bidirectional = True,dropout=dropout_val) 
+rnn2 = nn.GRU(input_size=round(hidden_size*2), hidden_size=round(hidden_size/2), num_layers=num_layers,
+              batch_first=True,bidirectional = False) 
+linear1 = nn.Linear(round(hidden_size/2),num_classes)
+input = torch.randn(batch_size, sequence_length, input_size) # batch_size, sequence length, features (input_dimension)
+
+output1, (hn1) = rnn1(input) 
+output2, (hn2) = rnn2(output1)
+hn2  = torch.squeeze(hn2)
+out = linear1(hn2)
+
+# conv1d
+input1= torch.permute(input, (0,2,1))
+conv_layer = nn.Conv1d(in_channels=256, out_channels=256, kernel_size=3,stride=2)
+out1 = conv_layer(input1)
+out1 = torch.permute(out1,(0,2,1))
+
+# out -> batch, seq. length, hidden size of last LSTM layer, concatenated if bilstm
+# hn -> D*num_layers, batch size, out_size. essentially contains the final hidden state alone, and not for each time pt in sequence
+# cn -> D*num_layers, batch_size, cell hidden state containing the final cell state
+
+model = rnn_gru(num_classes,input_size,hidden_size,num_layers,dropout_val)
+out = model(input)
