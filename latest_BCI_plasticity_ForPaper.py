@@ -22,8 +22,15 @@ import matplotlib.pyplot as plt
 import math
 import mat73
 import numpy.random as rnd
+import numpy.linalg as lin
 from sklearn.model_selection  import train_test_split
+import os
 plt.rcParams['figure.dpi'] = 200
+from utils import *
+import sklearn as skl
+from sklearn.metrics import silhouette_score as sil
+from sklearn.metrics import silhouette_samples as sil_samples
+
 
 # setting up GPU
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -34,7 +41,6 @@ file_name = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker\condn_d
 data_dict = mat73.loadmat(file_name)
 condn_data_imagined = data_dict.get('condn_data')
 condn_data_imagined = np.array(condn_data_imagined)
-
 
 # get the class labels from the data, and convert to one-hot encoding
 len = np.shape(condn_data_imagined)[1]
@@ -52,8 +58,8 @@ for i in range(Y.shape[0]):
 Y= Y_mult
 
 # convert to 2D matrix from 3D
-tmp_data = np.zeros((condn_data_imagined.shape[0]*condn_data_imagined.shape[1],
-                    condn_data_imagined.shape[2]))
+# tmp_data = np.zeros((condn_data_imagined.shape[0]*condn_data_imagined.shape[1],
+#                     condn_data_imagined.shape[2]))
 tmp_data = np.empty([0,96])
 
 for i in np.arange(condn_data_imagined.shape[0]):
@@ -62,40 +68,27 @@ for i in np.arange(condn_data_imagined.shape[0]):
 
 condn_data_imagined = tmp_data
 
-
-# split into training and validation class 
-def training_test_split(condn_data,Y,prop):
-    len = np.arange(Y.shape[0])
-    len_cutoff = round(prop*len[-1])
-    idx = np.random.permutation(Y.shape[0])
-    train_idx, test_idx = idx[:len_cutoff] , idx[len_cutoff:]
-    Xtrain, Xtest = condn_data_imagined[train_idx,:] , condn_data_imagined[test_idx,:] 
-    Ytrain, Ytest = Y[train_idx,:] , Y[test_idx,:]
-    return Xtrain,Xtest,Ytrain,Ytest
-             
-Xtrain,Xtest,Ytrain,Ytest = training_test_split(condn_data_imagined,Y,0.85)
-
-    
-
-# why isnt this working????
-# I = np.ones((len,1))
-# I[np.round(idx)] =  0    
-# I = (np.where(I==1)[0])
+#condn_data_imagined = scale_zero_one(condn_data_imagined)            
+Xtrain,Xtest,Ytrain,Ytest = training_test_split(condn_data_imagined,Y,0.8)
 
 # create a autoencoder with a classifier layer for separation in latent space
 class encoder(nn.Module):
     def __init__(self,input_size,hidden_size,latent_dims,num_classes):
         super(encoder,self).__init__()
+        self.hidden_size2 = round(hidden_size/4)
         self.linear1 = nn.Linear(input_size,hidden_size)
-        self.linear2 = nn.Linear(hidden_size,latent_dims)
+        self.linear2 = nn.Linear(hidden_size,self.hidden_size2)
+        self.linear3 = nn.Linear(self.hidden_size2,latent_dims)
         self.gelu = nn.ELU()
         self.tanh = nn.Sigmoid()
+        self.dropout =  nn.Dropout(p=0.3)
         
     def forward(self,x):
         x=self.linear1(x)
         x=self.gelu(x)
-        x=self.linear2(x)
-        #x=self.gelu(x)
+        x=self.linear2(x)        
+        x=self.gelu(x)
+        x=self.linear3(x)
         #x=self.tanh(x)
         return x
 
@@ -103,10 +96,10 @@ class latent_classifier(nn.Module):
     def __init__(self,latent_dims,num_classes):
         super(latent_classifier,self).__init__()
         self.linear1 = nn.Linear(latent_dims,num_classes)
-        self.weights = torch.randn(latent_dims,num_classes).to(device)
+        self.weights = torch.randn(latent_dims,num_classes).to(device)        
     
     def forward(self,x):
-        x=self.linear1(x)
+        x=self.linear1(x)        
         #x=torch.matmul(x,self.weights)
         return x
     
@@ -115,6 +108,7 @@ class recon_classifier(nn.Module):
         super(recon_classifier,self).__init__()
         self.linear1 = nn.Linear(input_size,num_classes)
         self.weights = torch.randn(input_size,num_classes)
+        self.dropout =  nn.Dropout(p=0.3)
     
     def forward(self,x):
         x=self.linear1(x)
@@ -123,15 +117,20 @@ class recon_classifier(nn.Module):
 class decoder(nn.Module):
     def __init__(self,input_size,hidden_size,latent_dims,num_classes):
         super(decoder,self).__init__()
-        self.linear1 = nn.Linear(latent_dims,hidden_size)
-        self.linear2 = nn.Linear(hidden_size,input_size)
+        self.hidden_size2 = round(hidden_size/4)
+        self.linear1 = nn.Linear(latent_dims,self.hidden_size2)
+        self.linear2 = nn.Linear(self.hidden_size2,hidden_size)
+        self.linear3 = nn.Linear(hidden_size,input_size)
         self.gelu = nn.ELU()
+        self.relu = nn.ReLU()
+        self.dropout =  nn.Dropout(p=0.3)
         
     def forward(self,x):
-        x=self.gelu(x)
         x=self.linear1(x)
         x=self.gelu(x)
         x=self.linear2(x)
+        x=self.gelu(x)
+        x=self.linear3(x)
         return x
 
 
@@ -142,7 +141,7 @@ class iAutoencoder(nn.Module):
         self.encoder = encoder(input_size,hidden_size,latent_dims,num_classes)
         self.decoder = decoder(input_size,hidden_size,latent_dims,num_classes)
         self.latent_classifier = latent_classifier(latent_dims,num_classes)
-        self.recon_classifier = recon_classifier(input_size,num_classes)
+        #self.recon_classifier = recon_classifier(input_size,num_classes)
     
     def forward(self,x):
         z=self.encoder(x)
@@ -160,81 +159,27 @@ model = iAutoencoder(input_size,hidden_size,latent_dims,num_classes)
 model = model.to(device)
 # testing it out
 input = torch.randn(64,96).to(device)
-(recon,latent) = model(input)
+(recon,decodes) = model(input)
 
-# function to convert one-hot representation back to class numbers
-def convert_to_ClassNumbers(indata):
-    with torch.no_grad():
-        outdata = torch.max(indata,1).indices
-    
-    return outdata
-
-# validation function 
-def validation_loss(model,X_test,Y_test,batch_val,val_type):    
-    crit_classif_val = nn.CrossEntropyLoss(reduction='sum') #if mean, it is over all samples
-    crit_recon_val = nn.MSELoss(reduction='sum') # if mean, it is over all elements 
-    loss_val=0    
-    accuracy=0
-    recon_error=0
-    if batch_val > X_test.shape[0]:
-        batch_val = X_test.shape[0]
-    
-    idx=np.arange(0,X_test.shape[0],batch_val)    
-    if idx[-1]<X_test.shape[0]:
-        idx=np.append(idx,X_test.shape[0])
-    else:
-        print('something wrong here')
-    
-    iters=(idx.shape[0]-1)
-    
-    for i in np.arange(iters):
-        x=X_test[idx[i]:idx[i+1],:]
-        y=Y_test[idx[i]:idx[i+1],:]     
-        with torch.no_grad():                
-            if val_type==1: #validation
-                x=torch.from_numpy(x).to(device).float()
-                y=torch.from_numpy(y).to(device).float()
-                model.eval()
-                out,ypred = model(x) #usually just the last training batch
-                loss1 = crit_recon_val(out,x)
-                loss2 = crit_classif_val(ypred,y)
-                loss_val += loss1.item() + loss2.item()
-                model.train()
-            else:
-                out,ypred = model(x) #usually just the last training batch
-                loss1 = crit_recon_val(out,x)
-                loss2 = crit_classif_val(ypred,y)
-                loss_val += loss1.item() + loss2.item()
-            
-            ylabels = convert_to_ClassNumbers(y)        
-            ypred_labels = convert_to_ClassNumbers(ypred)     
-            accuracy += torch.sum(ylabels == ypred_labels).item()
-            recon_error += (torch.sum(torch.square(out-x))).item()   
-            
-    loss_val=loss_val/X_test.shape[0]
-    accuracy = accuracy/X_test.shape[0]
-    recon_error = (recon_error/X_test.shape[0])#.cpu().numpy()
-    torch.cuda.empty_cache()
-    return loss_val,accuracy,recon_error
-
-init_loss,init_acc,init_recon = validation_loss(model,Xtest,Ytest,32,1)
-print('Initial loss, accuracy, recon error')
+init_loss,init_acc,init_recon = validation_loss(model,Xtest,Ytest,512,1)
+print('Initial loss, init_acc, recon error')
 print(init_loss,init_acc,init_recon)
+
 
 # TRAINING LOOP
 # minimize the recon loss as well as the classification loss
 # return the model with lowest validation loss 
-
-num_epochs=300
+num_epochs=200
 batch_size=32
 num_batches = math.ceil(Xtrain.shape[0]/batch_size)
 recon_criterion = nn.MSELoss(reduction='sum')
 classif_criterion = nn.CrossEntropyLoss(reduction='sum')
 learning_rate = 1e-3
 opt = torch.optim.Adam(model.parameters(),lr=learning_rate)
-batch_val=32
-patience=8
-
+batch_val=512
+patience=6
+gradient_clipping=5
+filename='autoencoder.pth'
 print('Starting training')
 goat_loss=99999
 counter=0
@@ -242,12 +187,11 @@ for epoch in range(num_epochs):
   #shuffle the data    
   idx = rnd.permutation(Xtrain.shape[0]) 
   
-  if epoch==150:
+  if epoch==100:
       for g in opt.param_groups:
           g['lr']=1e-4
-      
     
-  for batch in range(num_batches):
+  for batch in range(num_batches-1):
       # get the batch 
       k = batch*batch_size
       k1 = k+batch_size
@@ -261,70 +205,131 @@ for epoch in range(num_epochs):
       Xtrain_batch = Xtrain_batch.to(device)
       Ytrain_batch = Ytrain_batch.to(device)
       
-      # pass thru network
+      # forward pass thru network
       opt.zero_grad() 
       recon,decodes = model(Xtrain_batch)
+      latent_activity = model.encoder(Xtrain_batch)      
+      
+      # get loss      
       recon_loss = (recon_criterion(recon,Xtrain_batch))/Xtrain_batch.shape[0]
       classif_loss = (classif_criterion(decodes,Ytrain_batch))/Xtrain_batch.shape[0]      
       loss = recon_loss + classif_loss
+      total_loss = loss.item()
       #print(classif_loss.item())
-      loss.backward()
-      #nn.utils.clip_grad_value_(model.parameters(), clip_value=gradient_clipping)
-      opt.step()
       
-  val_loss,val_acc,val_recon=validation_loss(model,Xtest,Ytest,batch_val,1)  
-  train_loss,train_acc,train_recon=validation_loss(model,Xtrain_batch,Ytrain_batch,
-                                       round(batch_size/2),0)  
-  print(epoch,val_loss,val_acc*100,train_loss,train_acc*100)
+      # compute accuracy
+      ylabels = convert_to_ClassNumbers(Ytrain_batch)        
+      ypred_labels = convert_to_ClassNumbers(decodes)     
+      accuracy = (torch.sum(ylabels == ypred_labels).item())/ylabels.shape[0]
+      
+      # backpropagate thru network 
+      loss.backward()
+      nn.utils.clip_grad_value_(model.parameters(), clip_value=gradient_clipping)
+      opt.step()
+  
+  # get validation losses
+  val_loss,val_acc,val_recon=validation_loss(model,Xtest,Ytest,batch_val,1)    
+  
+  #print(epoch,val_loss,val_acc*100,total_loss,accuracy*100)  
+  print(f'Epoch [{epoch}/{num_epochs}], Val. Loss {val_loss:.4f}, Train Loss {total_loss:.4f}, Val. Acc {val_acc*100:.4f}, Train Acc {accuracy*100:.4f}')
   
   if val_loss<goat_loss:
       goat_loss = val_loss
+      goat_acc = val_acc*100      
       counter = 0
+      print('Goat loss, saving model')      
+      torch.save(model.state_dict(), filename)
   else:
       counter += 1
 
   if counter>=patience:
       print('Early stoppping point reached')
-      print('Best val loss is')
-      print(goat_loss)
+      print('Best val loss and val acc  are')
+      print(goat_loss,goat_acc)
       break
+
+
+
 
 #print (f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
 
+# loading the model back
+model_goat = iAutoencoder(input_size,hidden_size,latent_dims,num_classes)
+model_goat.load_state_dict(torch.load('autoencoder.pth'))
+model_goat=model_goat.to(device)
+model_goat.eval()
 
-# plotting in latent space
-def plot_latent(model, data, Y, num_samples,dim):
-    # randomly sample the number of samples 
-    idx = rnd.choice(data.shape[0],num_samples)
-    data=torch.from_numpy(data).to(device).float()
-    Y=torch.from_numpy(Y).to(device).float()
-    Y=convert_to_ClassNumbers(Y)
-    y=Y[idx]    
-    z = data[idx,:]
-    z = model.encoder(z)
-    z = z.to('cpu').detach().numpy()
-    y = y.to('cpu').detach().numpy()    
-    plt.figure()
-    if dim==3:
-        ax=plt.axes(projection="3d")
-        p=ax.scatter3D(z[:, 0], z[:, 1],z[:,2], c=y, cmap='tab10')
-        p=ax.scatter3D(z[:, 0], z[:, 1],z[:,2], c=y, cmap='tab10')
-        plt.colorbar(p)
-    if dim==2:
-        ax=plt.axes
-        plt.scatter(z[:, 0], z[:, 1], c=y, cmap='tab10')
-        plt.scatter(z[:, 0], z[:, 1], c=y, cmap='tab10')
-        plt.colorbar()
+  
+       
         
-plot_latent(model, Xtrain,Ytrain,500,3)
+D = plot_latent(model_goat, Xtest,Ytest,400,3)
+
+D = plot_latent(model_goat, condn_data_imagined,Y,1500,3)
+
+
+
+# X=rnd.randn(10,12)
+# X[[0,3,4,7],:] = X[[0,3,4,7],:] + 25
+# X[[1,5,9],:] = X[[1,5,9],:] + 10
+# X[[2,6,8],:] = X[[2,6,8],:] - 40
+# labels = np.array([1,2,3,1,1,2,3,1,3,2])
+# D = sil(X,labels)
+# print(1-D)
+
+# D = sil_samples(X,labels)
+# print(np.mean(1-D))
     
-   
+# get monte carlo estimate of the mahab distance pairwise in data 
+def monte_carlo_mahab(data,labels,model,num_samples):
+    D=np.zeros((labels.shape[1],labels.shape[1]))
+    labels = np.argmax(labels,axis=1)
+    data = torch.from_numpy(data).to(device).float()
+    z = model.encoder(data)
+    for i in np.arange(np.max(labels)+1):
+        idxA = (labels==i).nonzero()[0]
+        A = z[idxA,:].detach().cpu().numpy()        
+        for j in np.arange(i+1,np.max(labels)+1):
+            idxB = (labels==j).nonzero()[0]
+            B = z[idxB,:].detach().cpu().numpy()      
+            D[i,j] = get_mahab_distance(A,B)
+            D[j,i] = D[i,j]
     
+    return(D)
+
+
+D = monte_carlo_mahab(condn_data_imagined,Y,model_goat,0)
+D = D[np.triu_indices(D.shape[0])]
+D = D[D>0]
+imagined_data_D = np.mean(D)
+
+
+# now load the testing data 
+file_name = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker\condn_data_online.mat'
+data_online=mat73.loadmat(file_name)
+data_online = data_online.get('condn_data')
+condn_data_online = np.zeros((0,96))
+Yonline = np.zeros(0)
+for i in np.arange(7):
+    tmp = np.array(data_online[i])
+    condn_data_online = np.concatenate((condn_data_online,tmp),axis=0)
+    idx = i*np.ones((tmp.shape[0],1))[:,0]
+    Yonline = np.concatenate((Yonline,idx),axis=0)
+
+Y_mult = np.zeros((Yonline.shape[0],7))
+for i in range(Y.shape[0]):
+    tmp = round(Y[i])
+    Y_mult[i,tmp]=1
+Yonline = Y_mult
+
+    
+D = plot_latent(model_goat, condn_data_online,Yonline,696,3)
+D = monte_carlo_mahab(condn_data_online,Yonline,model_goat,0)
+D = D[np.triu_indices(D.shape[0])]
+D = D[D>0]
+imagined_data_D = np.mean(D)
+
 
 # # now plot data from online thru the built autoencoder     
-# file_name = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker\condn_data_online'
-# data_online=sio.loadmat(file_name, mdict=None, appendmat=True)
-# data_online=data_online.get('condn_data_online')
 
 # # get the data shape to be batch samples, features
 # condn_data = np.empty([0,32])

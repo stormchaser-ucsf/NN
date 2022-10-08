@@ -30,7 +30,7 @@ def cca(Xa,Xb):
     Caa12 = la.cholesky(Caa)
     Cbb12 = la.cholesky(Cbb)
         
-    # solver
+    # solver    
     X = la.inv(np.transpose(Caa12) ) @ Cab @ la.inv(Cbb12)
     U,S,V = la.svd(X)
     Wa = la.inv(Caa12) @ U;

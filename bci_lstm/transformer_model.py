@@ -271,7 +271,7 @@ class GatedTransformerClassifier(torch.nn.Module):
         self.pos_encoder = nn.Embedding(input_sample, input_dim)
         self.dropout_input = nn.Dropout(output_dropout)
 
-        # define the time encoding layers
+        # define the time encoding layers        
         self.time_encoder_layer = nn.TransformerEncoderLayer(d_model=input_sample, nhead=num_heads_time,
                                                              dim_feedforward=hidden_unit_dim_time,
                                                              dropout=dropout, activation='gelu')
@@ -399,13 +399,13 @@ cfg.blackout_prob = 0.04787032280216536
 cfg.random_channel_noise_sigma = 0.028305685438945617
 
 cfg.decode_layers = 2
-cfg.decode_nodes = 256
-cfg.dropout = 0.25
-cfg.conv_dropout = 0.25
-cfg.output_dropout = 0.25
+cfg.decode_nodes = 150
+cfg.dropout = 0.3
+cfg.conv_dropout = 0.3
+cfg.output_dropout = 0.3
 cfg.ks = 3
 cfg.stride = 3
-cfg.conv_dim = 100
+cfg.conv_dim = 96
 
 cfg.lr = 1e-3
 cfg.batch_size = 256
@@ -436,7 +436,7 @@ model = model.to(device)
 
 # training parameters
 num_epochs=100
-batch_size = 128
+batch_size = 256
 gradient_clipping = 2.0
 learning_rate=3e-4
 opt = optim.Adam(model.parameters(),lr=learning_rate)

@@ -72,9 +72,11 @@ for i in np.arange(condn_data_new.shape[2]):
     tmp = np.squeeze(condn_data_new[:,:,i])
     tmp1 = tmp[:,:128]
     tmp1  = (tmp1-tmp1.min())/(tmp1.max()-tmp1.min())
+    #tmp1 = tmp1-np.mean(tmp1,0)
     
     tmp2 = tmp[:,128:]
     tmp2  = (tmp2-tmp2.min())/(tmp2.max()-tmp2.min())
+    #tmp2 = tmp2-np.mean(tmp2,0)
     
     tmp = np.concatenate((tmp1,tmp2),axis=1)
     condn_data_new[:,:,i] = tmp
@@ -338,7 +340,7 @@ model = model.to(device) #push to GPU
 num_epochs=100
 batch_size = 256
 gradient_clipping = 10.0
-learning_rate=1e-3
+learning_rate=5e-4
 opt = optim.Adam(model.parameters(),lr=learning_rate)
 criterion = nn.CrossEntropyLoss(reduction='mean')
 num_batches = math.ceil(Xtrain.shape[2]/batch_size)
@@ -405,7 +407,7 @@ val_loss,val_acc = validation_loss(model,Xtest,Ytest,batch_val,1)
 torch.cuda.empty_cache()
 print(val_loss,val_acc)
 
-filename='lstm_model.pth'
+filename='lstm_model1.pth'
 goat_loss=99999
 goat_acc=0
 counter=0
@@ -440,7 +442,7 @@ for epoch in range(num_epochs):
       accuracy = (torch.sum(Ypred_labels == Ylabels).item())/Ypred_labels.shape[0]
       train_acc = accuracy
       train_loss = loss.item()
-      print(loss.item(),accuracy*100)
+      #print(loss.item(),accuracy*100)
       loss.backward()
       nn.utils.clip_grad_value_(model.parameters(), clip_value=gradient_clipping)
       opt.step()
@@ -448,7 +450,7 @@ for epoch in range(num_epochs):
   val_loss,val_acc=validation_loss(model,Xtest,Ytest,batch_val,1)  
   #train_loss,train_acc=validation_loss(model,Xtrain_batch,Ytrain_batch,
   #                                     round(batch_size/2),0)  
-  print(val_loss,val_acc*100,train_loss,train_acc*100,)
+  print(val_loss,val_acc*100,train_loss,train_acc*100,epoch)
   
   if val_loss<goat_loss:
       goat_loss = val_loss
