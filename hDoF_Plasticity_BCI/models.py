@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Oct  5 22:29:06 2022
+Created on Sun Oct  9 16:57:09 2022
 
 @author: nikic
 """
@@ -19,81 +19,101 @@ import mat73
 import numpy.random as rnd
 import numpy.linalg as lin
 from sklearn.model_selection  import train_test_split
+import os
+plt.rcParams['figure.dpi'] = 200
+from utils import *
+import sklearn as skl
 from sklearn.metrics import silhouette_score as sil
 from sklearn.metrics import silhouette_samples as sil_samples
 
+# create a autoencoder with a classifier layer for separation in latent space
+class encoder(nn.Module):
+    def __init__(self,input_size,hidden_size,latent_dims,num_classes):
+        super(encoder,self).__init__()
+        self.hidden_size2 = round(hidden_size/4)
+        self.linear1 = nn.Linear(input_size,hidden_size)
+        self.linear2 = nn.Linear(hidden_size,self.hidden_size2)
+        self.linear3 = nn.Linear(self.hidden_size2,latent_dims)
+        self.gelu = nn.ELU()
+        self.tanh = nn.Sigmoid()
+        self.dropout =  nn.Dropout(p=0.3)
+        
+    def forward(self,x):
+        x=self.linear1(x)
+        x=self.gelu(x)
+        x=self.dropout(x)
+        x=self.linear2(x)        
+        x=self.gelu(x)
+        x=self.dropout(x)
+        x=self.linear3(x)
+        #x=self.tanh(x)
+        return x
 
-
-# setting up GPU
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
-
-# scale each data sample to be within 0 and 1
-def scale_zero_one(indata):
-    for i in range(indata.shape[0]):
-        a = indata[i,:]
-        a = (a-a.min())/(a.max()-a.min())
-        indata[i,:] = a
+class latent_classifier(nn.Module):
+    def __init__(self,latent_dims,num_classes):
+        super(latent_classifier,self).__init__()
+        self.linear1 = nn.Linear(latent_dims,num_classes)
+        self.weights = torch.randn(latent_dims,num_classes).to(device)        
     
-    return(indata)
-
-
-# function to get mahalanobis distance
-def get_mahab_distance(x,y):
-    C1 = np.cov(x,rowvar=False) +  1e-3*np.eye(x.shape[1])
-    C2 = np.cov(y,rowvar=False) +  1e-3*np.eye(y.shape[1])
-    C = (C1+C2)/2
-    m1 = np.mean(x,0)
-    m2 = np.mean(y,0)
-    D = (m2-m1) @ lin.inv(C) @ np.transpose(m2-m1)     
-    return D
-
-
-# get monte carlo estimate of the mahab distance pairwise in data in latent space
-def monte_carlo_mahab(data,labels,model,num_samples):
-    D=np.zeros((labels.shape[1],labels.shape[1]))
-    labels = np.argmax(labels,axis=1)
-    data = torch.from_numpy(data).to(device).float()
-    z = model.encoder(data)
-    for i in np.arange(np.max(labels)+1):
-        idxA = (labels==i).nonzero()[0]
-        A = z[idxA,:].detach().cpu().numpy()        
-        for j in np.arange(i+1,np.max(labels)+1):
-            idxB = (labels==j).nonzero()[0]
-            B = z[idxB,:].detach().cpu().numpy()      
-            D[i,j] = get_mahab_distance(A,B)
-            D[j,i] = D[i,j]
+    def forward(self,x):
+        x=self.linear1(x)        
+        #x=torch.matmul(x,self.weights)
+        return x
     
-    return(D)
-
-# get monte carlo estimate of the mahab distance pairwise in data in full space
-def monte_carlo_mahab_full(data,labels,num_samples):
-    D=np.zeros((labels.shape[1],labels.shape[1]))
-    labels = np.argmax(labels,axis=1)    
-    z = data
-    for i in np.arange(np.max(labels)+1):
-        idxA = (labels==i).nonzero()[0]
-        A = z[idxA,:]
-        for j in np.arange(i+1,np.max(labels)+1):
-            idxB = (labels==j).nonzero()[0]
-            B = z[idxB,:]
-            D[i,j] = get_mahab_distance(A,B)
-            D[j,i] = D[i,j]
+class recon_classifier(nn.Module):
+    def __init__(self,input_size,num_classes):
+        super(recon_classifier,self).__init__()
+        self.linear1 = nn.Linear(input_size,num_classes)
+        self.weights = torch.randn(input_size,num_classes)
+        self.dropout =  nn.Dropout(p=0.3)
     
-    return(D)
+    def forward(self,x):
+        x=self.linear1(x)
+        return x
+
+class decoder(nn.Module):
+    def __init__(self,input_size,hidden_size,latent_dims,num_classes):
+        super(decoder,self).__init__()
+        self.hidden_size2 = round(hidden_size/4)
+        self.linear1 = nn.Linear(latent_dims,self.hidden_size2)
+        self.linear2 = nn.Linear(self.hidden_size2,hidden_size)
+        self.linear3 = nn.Linear(hidden_size,input_size)
+        self.gelu = nn.ELU()
+        self.relu = nn.ReLU()
+        self.dropout =  nn.Dropout(p=0.3)
+        
+    def forward(self,x):
+        x=self.linear1(x)
+        x=self.gelu(x)
+        x=self.dropout(x)
+        x=self.linear2(x)
+        x=self.gelu(x)
+        x=self.dropout(x)
+        x=self.linear3(x)
+        return x
 
 
+# combining all into 
+class iAutoencoder(nn.Module):
+    def __init__(self,input_size,hidden_size,latent_dims,num_classes):
+        super(iAutoencoder,self).__init__()
+        self.encoder = encoder(input_size,hidden_size,latent_dims,num_classes)
+        self.decoder = decoder(input_size,hidden_size,latent_dims,num_classes)
+        self.latent_classifier = latent_classifier(latent_dims,num_classes)
+        #self.recon_classifier = recon_classifier(input_size,num_classes)
     
+    def forward(self,x):
+        z=self.encoder(x)
+        y=self.latent_classifier(z)
+        z=self.decoder(z)
+        #y=self.recon_classifier(z)
+        return z,y
 
-# split into training and validation class 
-def training_test_split(condn_data,Y,prop):
-    len = np.arange(Y.shape[0])
-    len_cutoff = round(prop*len[-1])
-    idx = np.random.permutation(Y.shape[0])
-    train_idx, test_idx = idx[:len_cutoff] , idx[len_cutoff:]
-    Xtrain, Xtest = condn_data[train_idx,:] , condn_data[test_idx,:] 
-    Ytrain, Ytest = Y[train_idx,:] , Y[test_idx,:]
-    return Xtrain,Xtest,Ytrain,Ytest
+def get_model_iAE(input_size,hidden_size,latent_dims,num_classes):
+    model = iAutoencoder(input_size,hidden_size,latent_dims,num_classes)
+    model = model.to(device)
+    return model
+
 
 
 # function to convert one-hot representation back to class numbers
@@ -271,4 +291,89 @@ def plot_latent(model, data, Y, num_samples,dim):
     
     return D
 
+
+
+def training_loop_iAE(model,num_epochs,batch_size,opt,batch_val,
+                      patience,gradient_clipping,filename,
+                      Xtrain,Ytrain,Xtest,Ytest):    
     
+    num_batches = math.ceil(Xtrain.shape[0]/batch_size)
+    recon_criterion = nn.MSELoss(reduction='sum')
+    classif_criterion = nn.CrossEntropyLoss(reduction='sum')
+    print('Starting training')
+    goat_loss=99999
+    counter=0
+    for epoch in range(num_epochs):
+      #shuffle the data    
+      idx = rnd.permutation(Xtrain.shape[0]) 
+      idx_split = np.array_split(idx,num_batches)
+      
+      if epoch==100:
+          for g in opt.param_groups:
+              g['lr']=1e-4
+        
+      for batch in range(num_batches):
+          # get the batch           
+          samples = idx_split[batch]
+          Xtrain_batch = Xtrain[samples,:]
+          Ytrain_batch = Ytrain[samples,:]        
+          
+          #push to gpu
+          Xtrain_batch = torch.from_numpy(Xtrain_batch).float()
+          Ytrain_batch = torch.from_numpy(Ytrain_batch).float()          
+          Xtrain_batch = Xtrain_batch.to(device)
+          Ytrain_batch = Ytrain_batch.to(device)
+          
+          # forward pass thru network
+          opt.zero_grad() 
+          recon,decodes = model(Xtrain_batch)
+          latent_activity = model.encoder(Xtrain_batch)      
+          
+          # get loss      
+          recon_loss = (recon_criterion(recon,Xtrain_batch))/Xtrain_batch.shape[0]
+          classif_loss = (classif_criterion(decodes,Ytrain_batch))/Xtrain_batch.shape[0]      
+          loss = recon_loss + classif_loss
+          total_loss = loss.item()
+          #print(classif_loss.item())
+          
+          # compute accuracy
+          ylabels = convert_to_ClassNumbers(Ytrain_batch)        
+          ypred_labels = convert_to_ClassNumbers(decodes)     
+          accuracy = (torch.sum(ylabels == ypred_labels).item())/ylabels.shape[0]
+          
+          # backpropagate thru network 
+          loss.backward()
+          nn.utils.clip_grad_value_(model.parameters(), clip_value=gradient_clipping)
+          opt.step()
+      
+      # get validation losses
+      val_loss,val_acc,val_recon=validation_loss(model,Xtest,Ytest,batch_val,1)    
+      #val_loss,val_recon=validation_loss_regression(model,Xtest,Ytest,batch_val,1)    
+      
+      
+      print(f'Epoch [{epoch}/{num_epochs}], Val. Loss {val_loss:.2f}, Train Loss {total_loss:.2f}, Val. Acc {val_acc*100:.2f}, Train Acc {accuracy*100:.2f}')
+      #print(f'Epoch [{epoch}/{num_epochs}], Val. Loss {val_loss:.4f}, Train Loss {total_loss:.4f}')
+      
+      if val_loss<goat_loss:
+          goat_loss = val_loss
+          goat_acc = val_acc*100      
+          counter = 0
+          print('Goat loss, saving model')      
+          torch.save(model.state_dict(), filename)
+      else:
+          counter += 1
+    
+      if counter>=patience:
+          print('Early stoppping point reached')
+          print('Best val loss and val acc  are')
+          print(goat_loss,goat_acc)
+          break
+    
+    # loading the model back
+    model_goat = iAutoencoder(input_size,hidden_size,latent_dims,num_classes)
+    model_goat.load_state_dict(torch.load('autoencoder.pth'))
+    model_goat=model_goat.to(device)
+    model_goat.eval()
+    return model_goat
+
+

@@ -53,6 +53,12 @@ for i in np.arange(l):
     Y = np.append(Y,i*np.ones([idx,1]))
 
 data = condn_data
+
+Y_mult = np.zeros((Y.shape[0],7))
+for i in range(Y.shape[0]):
+    tmp = round(Y[i])
+    Y_mult[i,tmp]=1
+Y = Y_mult
     
 
 # changing the forward pass to be reflective of the VAE framework
@@ -94,36 +100,54 @@ class decoder(nn.Module):
         #z = z.reshape((-1, 1, 28, 28))     
         return z
 
+class latent_classifier(nn.Module):
+    def __init__(self,hidden_size,num_classes):
+        super(latent_classifier,self).__init__()
+        self.linear1 = nn.Linear(hidden_size,num_classes)
+    
+    def forward(self,x):
+        x = self.linear1(x)
+        return x
+
 
 # combining both into one
 class VariationalAutoencoder(nn.Module):
-    def __init__(self,latent_dims):
+    def __init__(self,latent_dims,num_classes):
         super(VariationalAutoencoder,self).__init__()
         self.encoder = VariationalEncoder(latent_dims)
         self.decoder = decoder(latent_dims)
+        self.classifier = latent_classifier(latent_dims,num_classes)
     
     def forward(self,x):
         z=self.encoder(x)
+        y=self.classifier(z)
         z=self.decoder(z)
-        return z
+        return z,y
 
 
 # creating the model
 latent_dims = 3
-vae = VariationalAutoencoder(latent_dims).to(device) # GPU
+num_classes=7
+vae = VariationalAutoencoder(latent_dims,num_classes).to(device) # GPU
+input = torch.randn(64,32).to(device)
+out,decodes = vae(input)
 criterion = nn.MSELoss(reduction='sum')
+class_crit = nn.CrossEntropyLoss(reduction='sum')
 opt = torch.optim.Adam(vae.parameters())
-beta_params=0;
+beta_params=1e-8;
 
 # training loop
 num_epochs=100
 batch_size=64
 num_batches = math.ceil(data.shape[0]/batch_size)
+overall_loss = np.array([])
+overall_kl_loss = np.array([])
 
 for epoch in range(num_epochs):
     # split the data into batches
     idx = np.random.permutation(data.shape[0])
     data1 = data[idx,:]
+    Y1 = Y[idx,:]
     
     for i in range(num_batches):
         k = i*batch_size
@@ -133,20 +157,29 @@ for epoch in range(num_epochs):
             k1=data1.shape[0]
             
         x = data1[k:k1,:]
+        y = Y1[k:k1,:]
         x=torch.from_numpy(x)
-        x=x.to(device) # push it to GPU
-        x=x.to(torch.float32) # convert to single
+        x=x.to(device).float() # push it to GPU        
+        y =  torch.from_numpy(y).to(device).float()
         opt.zero_grad() # flush gradients
-        xhat = vae(x)
-        loss_kl = vae.encoder.kl()
+        xhat,ypred = vae(x)
+        #loss_kl = vae.encoder.kl()
         #print(loss_kl)
         #loss = ((x - xhat)**2).sum() + loss_kl
-        loss=criterion(x,xhat) + beta_params*vae.encoder.kl()                  
+        recon_loss = (criterion(x,xhat))/x.shape[0]
+        classif_loss = (class_crit(ypred,y))/x.shape[0]
+        kl_loss = vae.encoder.kl()/x.shape[0]
+        loss = recon_loss + classif_loss + beta_params*kl_loss
+        overall_loss = np.append(overall_loss,loss.item())
+        overall_kl_loss  = np.append(overall_kl_loss,beta_params*kl_loss.item())
         loss.backward()
         opt.step()
     print(epoch+1)
     
-   
+plt.figure()
+plt.plot(overall_loss)  
+plt.figure()
+plt.plot(overall_kl_loss)  
     
 def plot_latent(ae, data, Y, num_samples):
     # randomly sample the number of samples 
@@ -163,8 +196,18 @@ def plot_latent(ae, data, Y, num_samples):
     p=ax.scatter3D(z[:, 0], z[:, 1],z[:,2], c=y, cmap='tab10')
     p=ax.scatter3D(z[:, 0], z[:, 1],z[:,2], c=y, cmap='tab10')
     plt.colorbar(p)
-        
-plot_latent(vae, data,Y,1000)
+
+
+# function to convert one-hot representation back to class numbers
+def convert_to_ClassNumbers(indata):
+    with torch.no_grad():
+        outdata = torch.max(indata,1).indices
+    
+    return outdata
+
+
+YY = convert_to_ClassNumbers(torch.from_numpy(Y))
+plot_latent(vae, data,YY,1000)
 
 
 # now plot data from online thru the built autoencoder     

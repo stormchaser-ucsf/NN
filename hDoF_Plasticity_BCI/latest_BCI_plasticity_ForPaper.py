@@ -37,7 +37,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 # load the data from matlab
-file_name = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker\condn_data_imagined_day7.mat'
+file_name = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker\condn_data_imagined_day1.mat'
 data_dict = mat73.loadmat(file_name)
 data_imagined = data_dict.get('condn_data')
 #condn_data_imagined = np.array(condn_data_imagined)
