@@ -93,7 +93,7 @@ data = torch.utils.data.DataLoader(
 
 
 
-num_epochs=25
+num_epochs=15
 n_total_steps = len(data)
 criterion = nn.MSELoss(reduction='sum')
 criterion2 = nn.CrossEntropyLoss()
@@ -166,7 +166,7 @@ plot_latent(linearAE, data)
 x=torch.randn(100,28,28)
 z = linearAE.encoder(x.to(device))
 z = z.to('cpu').detach().numpy()
-plt.scatter(z[:, 0], z[:, 1],z[:, 2])
+plt.scatter(z[:, 0], z[:, 1])
 
 
 
@@ -182,7 +182,7 @@ class VariationalEncoder(nn.Module):
         # gaussian samplimg
         self.N = torch.distributions.Normal(0, 1)
         self.N.loc = self.N.loc.cuda() #sampling on GPU loc-mean
-        self.N.scale = self.N.loc.scale.cuda() #sampling on GPU scale -std
+        self.N.scale = self.N.scale.cuda() #sampling on GPU scale -std
         self.kl= 0 #KL loss
     
     def forward(self,x):
@@ -201,7 +201,7 @@ class VariationalAutoencoder(nn.Module):
     def __init__(self,latent_dims):
         super(VariationalAutoencoder,self).__init__()
         self.encoder = VariationalEncoder(latent_dims)
-        self.decoder = decoder(latent_dims)
+        self.decoder = decoder(latent_dims)        
     
     def forward(self,x):
         z=self.encoder(x)
@@ -209,33 +209,55 @@ class VariationalAutoencoder(nn.Module):
         return z
 
 # the loss function in the training algorithm 
-num_epochs=25
+num_epochs=15
 n_total_steps = len(data)
-criterion = nn.MSELoss(reduction='sum')
+criterion = nn.MSELoss(reduction='mean')
 def train(ae, data, epochs =num_epochs):
     opt  = torch.optim.Adam(ae.parameters())
+    overall_kl_loss = np.array([])
+    overall_loss=np.array([])
     for epoch in range(epochs):
         for i,(x,y) in enumerate(data):
             x=x.to(device) # push it to GPU
             opt.zero_grad() # flush gradients
-            xhat,xclass = ae(x)
+            xhat = ae(x)
             #loss = ((x - xhat)**2).sum()
-            loss=criterion(x,xhat) + ae.encoder.kl            
+            loss=criterion(x,xhat) + (ae.encoder.kl())/x.shape[0]    
+            overall_kl_loss = np.append(overall_kl_loss,
+                                        torch.detach(ae.encoder.kl()).cpu())
+            overall_loss = np.append(overall_loss,loss.item())
             loss.backward()
             opt.step()
             #print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
             if (i+1) % 100 == 0:
                 print (f'Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{n_total_steps}], Loss: {loss.item():.4f}')
 
-    return ae
+    return ae,overall_kl_loss,overall_loss
 
 
 latent_dims = 3
 vae = VariationalAutoencoder(latent_dims).to(device) # GPU
 
-vae = train(vae, data)
+vae,kl_loss,total_loss = train(vae, data)
+plt.figure()
+plt.plot(total_loss)
 
 x,y=next(iter(data))
+
+# plotting
+def plot_latent(linearAE, data, num_batches=100):
+    for i, (x, y) in enumerate(data):
+        z = linearAE.encoder(x.to(device))
+        z = z.to('cpu').detach().numpy()
+        plt.scatter(z[:, 0], z[:, 1],z[:, 2], c=y, cmap='tab10')
+        if i > num_batches:
+            plt.colorbar()
+            break
+plot_latent(ae, data)
+
+
+
+
 
 # ################## extra stuff ##################
 # # plotting images using matplotlib

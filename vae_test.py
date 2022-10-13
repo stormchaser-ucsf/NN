@@ -16,228 +16,176 @@ import torchvision
 import numpy as np
 import matplotlib.pyplot as plt
 plt.rcParams['figure.dpi'] = 200
+import numpy as np
+import numpy.random as rnd
+from utils import *
 
 # setting up GPU
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-# the first dimension in torch is always the batch size or the batch input data
-# thus why data is flattened along the first dimension
+# full implementation of VAE using distributions, on MNIST and then BCI data, 
+# and then with a classifier layer in the middle 
 
 
-# create encoder module with linear layers
-class encoder(nn.Module):
-    def __init__(self,latent_dims):
-        super(encoder,self).__init__()
-        self.linear1 = nn.Linear(784,256)
-        self.linear2 = nn.Linear(256,latent_dims)
-        
-    def forward(self,x):
-        x = torch.flatten(x,start_dim=1)
-        x = self.linear1(x)
-        x = F.relu(x)
-        x = self.linear2(x)
-        return x
+# encoder, decoder, classifier, parameters of the latent representation
 
-class decoder(nn.Module):
-    def __init__(self,latent_dims):
-        super(decoder,self).__init__()
-        self.linear1 = nn.Linear(latent_dims,256)
-        self.linear2 = nn.Linear(256,784)
-        
-    def forward(self,z):        
-        z = self.linear1(z)
-        z = F.relu(z)
-        z = self.linear2(z)
-        z = z.reshape((-1, 1, 28, 28))     
-        return z
-
-class autoencoder(nn.Module):
-    def __init__(self, latent_dims):
-        super(autoencoder,self).__init__()
-        self.encoder = encoder(latent_dims)
-        self.decoder = decoder(latent_dims)
-        
-    def forward(self,x):
-        z=self.encoder(x)
-        z=self.decoder(z)
-        return z
-    
-# training loop to train on MNIST dataset 
-data = torch.utils.data.DataLoader(
-        torchvision.datasets.MNIST('./data',
-               transform=torchvision.transforms.ToTensor(),
-               download=True),
-        batch_size=128,
-        shuffle=True)
-
-num_epochs=25
-n_total_steps = len(data)
-criterion = nn.MSELoss(reduction='sum')
-def train(linearAE, data, epochs =num_epochs):
-    opt  = torch.optim.Adam(linearAE.parameters())
-    for epoch in range(epochs):
-        for i,(x,y) in enumerate(data):
-            x=x.to(device) # push it to GPU
-            opt.zero_grad() # flush gradients
-            xhat = linearAE(x)
-            #loss = ((x - xhat)**2).sum()
-            loss=criterion(x,xhat)
-            loss.backward()
-            opt.step()
-            #print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
-            if (i+1) % 100 == 0:
-                print (f'Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{n_total_steps}], Loss: {loss.item():.4f}')
-
-    return linearAE
-
-latent_dims = 3
-linearAE = autoencoder(latent_dims).to(device) # GPU
-
-linearAE = train(linearAE, data)
-
-# # pytorch engineer method of training 
-# criterion = nn.MSELoss()
-# opt  = torch.optim.Adam(linearAE.parameters())
-# n_total_steps = len(data)
-# for epoch in range(num_epochs):
-#     for i,(x,y) in enumerate(data):
-#         x=x.to(device)
-        
-#         # foward pass
-#         xhat = linearAE(x)
-#         #loss = ((x - xhat)**2).sum()
-#         loss = criterion(x,xhat)
-        
-#         #backward pass and optimize
-#         opt.zero_grad() # flush gradients
-#         loss.backward()
-#         opt.step()
-#         if (i+1) % 100 == 0:
-#             print (f'Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{n_total_steps}], Loss: {loss.item():.4f}')
-
-#### end pytroch engineer method of training        
-
-
-
-
-
-# plotting
-def plot_latent(linearAE, data, num_batches=100):
-    for i, (x, y) in enumerate(data):
-        z = linearAE.encoder(x.to(device))
-        z = z.to('cpu').detach().numpy()
-        plt.scatter(z[:, 0], z[:, 1],z[:, 2], c=y, cmap='tab10')
-        if i > num_batches:
-            plt.colorbar()
-            break
-plot_latent(linearAE, data)
-
-
-
-x=torch.randn(100,28,28)
-z = linearAE.encoder(x.to(device))
-z = z.to('cpu').detach().numpy()
-plt.scatter(z[:, 0], z[:, 1],z[:, 2])
-
-
-
-
-# changing the forward pass to be reflective of the VAE framework
 class VariationalEncoder(nn.Module):
-    def __init__(self,latent_dims):
+    def __init__(self,input_size,hidden_dim,latent_dim,dropout):
         super(VariationalEncoder, self).__init__()
-        self.linear1 = nn.Linear(784,256)
-        self.linear2 = nn.Linear(256,latent_dims) # for the mean
-        self.linear3 = nn.Linear(256,latent_dims) # for the std
-        
+        self.hidden_dim2 = round(hidden_dim/4)
+        self.linear1 = nn.Linear(input_size,hidden_dim)
+        self.linear2 = nn.Linear(hidden_dim,  self.hidden_dim2 )
+        self.mu = nn.Linear(self.hidden_dim2 ,latent_dim) 
+        self.log_sig = nn.Linear(self.hidden_dim2 ,latent_dim) 
+        self.relu = nn.GELU()
+        self.dropout_val= dropout
+        self.dropout = nn.Dropout(dropout)        
         # gaussian samplimg
-        self.N = torch.distributions.Normal(0, 1)
-        self.N.loc = self.N.loc.cuda() #sampling on GPU loc-mean
-        self.N.scale = self.N.loc.scale.cuda() #sampling on GPU scale -std
+        self.Ndist = torch.distributions.Normal(0, 1)     
+        self.Ndist.loc = self.Ndist.loc.cuda()
+        self.Ndist.scale = self.Ndist.scale.cuda()
         self.kl= 0 #KL loss
     
-    def forward(self,x):
-        x=torch.flatten(x,start_dim=1) #first dim is batch 
+    def forward(self,x):        
         x=self.linear1(x)
-        x=F.relu(x)
-        mu = self.linear2(x)
-        sigma = self.linear3(x)
-        sigma = torch.exp(sigma) # exp of std
-        z = mu + sigma*self.N.sample(mu.shape) # sampling from the normal distribution
-        self.kl = (sigma**2+mu**2 - torch.log(sigma) -1/2).sum
+        x=self.relu(x)
+        if self.dropout_val >0:
+            x=self.dropout(x)
+        x=self.linear2(x)
+        x=self.relu(x)
+        if self.dropout_val >0:
+            x=self.dropout(x)
+        mu = self.mu(x)
+        log_sigma = self.log_sig(x)
+        sigma = torch.exp(log_sigma)
+        z = mu + sigma*self.Ndist.sample(mu.shape) # reparametrizing trick
+        qdist = torch.distributions.Normal(mu,sigma)
+        log_qz = qdist.log_prob(z)
+        log_pz = self.Ndist.log_prob(z)
+        self.kl = (log_qz - log_pz).sum(-1) # summing over all the dimensions
         return z
+    
+class VariationalDecoder(nn.Module):
+    def __init__(self,input_size,hidden_dim,latent_dim,dropout):
+        super(VariationalDecoder, self).__init__()
+        self.hidden_dim2 = round(hidden_dim/4)
+        self.linear1 = nn.Linear(latent_dim,self.hidden_dim2)
+        self.linear2 = nn.Linear(self.hidden_dim2,hidden_dim)
+        self.mu_p = nn.Linear(hidden_dim, input_size)
+        self.logsig_p = nn.Linear(hidden_dim, input_size)        
+        self.relu = nn.GELU()
+        self.dropout_val= dropout
+        self.dropout = nn.Dropout(dropout)        
+        # gaussian sampling for reparmaterization trick on GPU
+        self.Ndist = torch.distributions.Normal(0, 1)
+        self.Ndist.loc = self.Ndist.loc.to(device)
+        self.Ndist.scale = self.Ndist.scale.to(device)
+        self.logprob_x = 0 #log prob of data
+    
+    def forward(self,x):        
+        x=self.linear1(x)
+        x=self.relu(x)
+        if self.dropout_val >0:
+            x=self.dropout(x)
+        x=self.linear2(x)
+        x=self.relu(x)
+        if self.dropout_val >0:
+            x=self.dropout(x)
+        mu_p = self.mu_p(x)
+        logsig_p = self.logsig_p(x)
+        sigma_p = torch.exp(logsig_p)
+        xhat = mu_p + sigma_p*self.Ndist.sample(mu_p.shape) # reconstruction        
+        return xhat,mu_p,sigma_p
+    
+class latentClassifier(nn.Module):
+    def __init__(self,latent_dim,num_classes):
+        super(latentClassifier,self).__init__()
+        self.linear = nn.Linear(latent_dim,num_classes)
+    
+    def forward(self,x):
+        x = self.linear(x)
+        return x
 
-# combining both into one
-class VariationalAutoencoder(nn.Module):
-    def __init__(self,latent_dims):
-        super(VariationalAutoencoder,self).__init__()
-        self.encoder = VariationalEncoder(latent_dims)
-        self.decoder = decoder(latent_dims)
+# putting it all together 
+class vae(nn.Module):
+    def __init__(self,input_size,hidden_dim,latent_dim,num_classes,dropout):
+        super(vae,self).__init__()
+        self.encoder = VariationalEncoder(input_size,hidden_dim,latent_dim,dropout)
+        self.decoder = VariationalDecoder(input_size,hidden_dim,latent_dim,dropout)
+        self.classifier = latentClassifier(latent_dim,num_classes) 
+        self.logprob_x=0
+        self.kl_loss=0
     
     def forward(self,x):
         z=self.encoder(x)
-        z=self.decoder(z)
-        return z
+        self.kl_loss = self.encoder.kl
+        #y=self.classifier(z)
+        xhat,mu_p,sig_p=self.decoder(z)
+        pdist = torch.distributions.Normal(mu_p, sig_p)
+        pdist.loc = pdist.loc.to(device)
+        pdist.scale = pdist.scale.to(device)
+        self.logprob_x = pdist.log_prob(x).sum(-1) # summing over all dimensions
+        vae_loss = self.kl_loss - self.logprob_x                
+        return xhat,vae_loss
+    
+input_size=96
+hidden_dim=32
+latent_dim=3
+num_classes=7
+dropout=0
 
-# the loss function in the training algorithm 
-num_epochs=25
-n_total_steps = len(data)
-criterion = nn.MSELoss(reduction='sum')
-def train(ae, data, epochs =num_epochs):
-    opt  = torch.optim.Adam(ae.parameters())
-    for epoch in range(epochs):
-        for i,(x,y) in enumerate(data):
-            x=x.to(device) # push it to GPU
-            opt.zero_grad() # flush gradients
-            xhat = ae(x)
-            #loss = ((x - xhat)**2).sum()
-            loss=criterion(x,xhat) + ae.encoder.kl            
-            loss.backward()
-            opt.step()
-            #print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}')
-            if (i+1) % 100 == 0:
-                print (f'Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{n_total_steps}], Loss: {loss.item():.4f}')
+vae_model = vae(input_size,hidden_dim,latent_dim,num_classes,dropout).to(device)
+input_data = torch.randn(128,96).to(device)
+xhat,vae_loss = vae_model(input_data)
 
-    return ae
+condn_data_imagined = np.array(rnd.randn(30000,96))
+Y=np.zeros((int(3e4),1))
+idx = np.arange(0,1e4,dtype=int)
+condn_data_imagined[idx,:] = condn_data_imagined[idx,:] + 0
+idx = np.arange(1e4,2e4,dtype=int)
+condn_data_imagined[idx,:] = condn_data_imagined[idx,:] - 5
+Y[idx]=1
+idx = np.arange(2e4,3e4,dtype=int)
+condn_data_imagined[idx,:] = condn_data_imagined[idx,:] + 5
+Y[idx]=2
+plt.stem(np.mean(condn_data_imagined,axis=1))
+plt.figure();plt.stem(Y)
 
+# train and testing split
+Y_mult = np.zeros((Y.shape[0],3))
+for i in range(Y.shape[0]):
+    tmp = int(Y[i])
+    Y_mult[i,tmp]=1
+Y = Y_mult
 
-latent_dims = 3
-vae = VariationalAutoencoder(latent_dims).to(device) # GPU
+#condn_data_imagined = scale_zero_one(condn_data_imagined)            
+Xtrain,Xtest,Ytrain,Ytest = training_test_split(condn_data_imagined,Y,0.8)
 
-vae = train(vae, data)
-
-
-
-# ################## extra stuff ##################
-# # plotting images using matplotlib
-# fig1, (ax1, ax2) = plt.subplots(nrows=2, ncols=1) # two axes on figure
-# x=torch.randn(28,28)
-# ax1.imshow(x)
-
-# # understanding the flatten and the reshape functions
-# x = torch.flatten(x)
-# z=x
-# z=z.reshape(28,28)
-# ax2.imshow(z)
-
-# x=np.random.randn(28,28)
-# y=np.random.randn(28,28)
-# z=((x-y)**2)
-# print(z)
+# run it through the vae training loop 
 
 
-
-# nn.Linear
-
-x=torch.randn(12,28,28)
-z=torch.flatten(x,start_dim=1)
+# playing around with Kl stuff in pytorch 
+p = torch.distributions.Normal(0,1)
+q = torch.distributions.Normal(0,2)
 
 
+prob_p=np.array([])
+prob_q=np.array([])
+k_values=np.array([])
 
-
-
-
-
-
-
+for i in range(100):
+    z = q.rsample()   
+    log_pz = p.log_prob(z)
+    log_qz = q.log_prob(z)
+    prob_p =  np.append(prob_p,torch.exp(log_pz).numpy())
+    prob_q =  np.append(prob_q,torch.exp(log_qz).numpy())
+    d = log_qz - log_pz
+    k_values =  np.append(k_values,d.numpy())
+    
+plt.figure()
+plt.hist(k_values)
+plt.figure()
+plt.hist(prob_p)
+plt.figure()
+plt.hist(prob_q)
 
