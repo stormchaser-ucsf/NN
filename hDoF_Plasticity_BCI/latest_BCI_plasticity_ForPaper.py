@@ -30,6 +30,7 @@ from utils import *
 import sklearn as skl
 from sklearn.metrics import silhouette_score as sil
 from sklearn.metrics import silhouette_samples as sil_samples
+from models import plot_latent
 
 
 # setting up GPU
@@ -142,6 +143,60 @@ class iAutoencoder(nn.Module):
         z=self.decoder(z)
         #y=self.recon_classifier(z)
         return z,y
+
+def convert_to_ClassNumbers(indata):
+    with torch.no_grad():
+        outdata = torch.max(indata,1).indices
+    
+    return outdata
+
+# function to validate model 
+def validation_loss(model,X_test,Y_test,batch_val,val_type):    
+    crit_classif_val = nn.CrossEntropyLoss(reduction='sum') #if mean, it is over all samples
+    crit_recon_val = nn.MSELoss(reduction='sum') # if mean, it is over all elements 
+    loss_val=0    
+    accuracy=0
+    recon_error=0
+    if batch_val > X_test.shape[0]:
+        batch_val = X_test.shape[0]
+    
+    idx=np.arange(0,X_test.shape[0],batch_val)    
+    if idx[-1]<X_test.shape[0]:
+        idx=np.append(idx,X_test.shape[0])
+    else:
+        print('something wrong here')
+    
+    iters=(idx.shape[0]-1)
+    
+    for i in np.arange(iters):
+        x=X_test[idx[i]:idx[i+1],:]
+        y=Y_test[idx[i]:idx[i+1],:]     
+        with torch.no_grad():                
+            if val_type==1: #validation
+                x=torch.from_numpy(x).to(device).float()
+                y=torch.from_numpy(y).to(device).float()
+                model.eval()
+                out,ypred = model(x) 
+                loss1 = crit_recon_val(out,x)
+                loss2 = crit_classif_val(ypred,y)
+                loss_val += loss1.item() + loss2.item()
+                model.train()
+            else:
+                out,ypred = model(x) 
+                loss1 = crit_recon_val(out,x)
+                loss2 = crit_classif_val(ypred,y)
+                loss_val += loss1.item() + loss2.item()
+            
+            ylabels = convert_to_ClassNumbers(y)        
+            ypred_labels = convert_to_ClassNumbers(ypred)     
+            accuracy += torch.sum(ylabels == ypred_labels).item()
+            recon_error += (torch.sum(torch.square(out-x))).item()   
+            
+    loss_val=loss_val/X_test.shape[0]
+    accuracy = accuracy/X_test.shape[0]
+    recon_error = (recon_error/X_test.shape[0])#.cpu().numpy()
+    torch.cuda.empty_cache()
+    return loss_val,accuracy,recon_error
 
 # model init 
 input_size = 96

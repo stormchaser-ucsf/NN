@@ -51,7 +51,7 @@ STEP 4: Look at activity in the final decoder layer (before or after sofmax) aft
 
 # load the data from matlab
 #condn_data_trial_Day1_online
-file_name = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker\condn_data_imagined_Day1.mat'
+file_name = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker\condn_data_trial_Day1_online.mat'
 data_dict = mat73.loadmat(file_name)
 trial_data = data_dict.get('trial_data')
 Y = np.array(trial_data.get('targetID'))
