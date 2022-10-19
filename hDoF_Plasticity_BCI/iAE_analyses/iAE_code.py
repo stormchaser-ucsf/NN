@@ -195,6 +195,14 @@ np.savez('whole_dataSamples_stats_results',
 data=np.load('whole_dataSamples_stats_results.npz')
 silhoutte_imagined_days = data.get('silhoutte_imagined_days')
 silhoutte_online_days = data.get('silhoutte_online_days')
+var_online_days = data.get('var_online_days')
+mean_distances_online_days = data.get('mean_distances_online_days')
+mahab_distances_online_days = data.get('mahab_distances_online_days')
+var_imagined_days = data.get('var_imagined_days')
+mean_distances_imagined_days = data.get('mean_distances_imagined_days')
+mahab_distances_imagined_days = data.get('mahab_distances_imagined_days')
+accuracy_imagined_days = data.get('accuracy_imagined_days')
+accuracy_online_days = data.get('accuracy_online_days')
 
 plt.figure()
 plt.boxplot(accuracy_online_days)
@@ -230,55 +238,31 @@ plt.show()
 
 sigma = 1
 plt.figure()
-tmp_main = np.squeeze(np.mean(mahab_distances_imagined_days,1))
-tmp = np.mean(tmp_main,axis=0)
+tmp_main = np.squeeze(np.median(mahab_distances_imagined_days,1))
+tmp = np.median(tmp_main,axis=0)
 tmp1 = scipy.stats.median_abs_deviation(tmp_main,axis=0)/np.sqrt(21)
 tmp = gaussian_filter1d(tmp, sigma=sigma)
 tmp1 = gaussian_filter1d(tmp1, sigma=sigma)
-plt.plot(tmp,color="black")
+plt.plot(tmp,color="black",label = 'Imagined')
 plt.plot(tmp+tmp1,color="black",linestyle="dotted")
 plt.plot(tmp-tmp1,color="black",linestyle="dotted")
-tmp_main = np.squeeze(np.mean(mahab_distances_online_days,1))
-tmp = np.mean(tmp_main,axis=0)
+tmp_main = np.squeeze(np.median(mahab_distances_online_days,1))
+tmp = np.median(tmp_main,axis=0)
 tmp1 = scipy.stats.median_abs_deviation(tmp_main,axis=0)/np.sqrt(21)
 tmp = gaussian_filter1d(tmp, sigma=sigma)
 tmp1 = gaussian_filter1d(tmp1, sigma=sigma)
-plt.plot(tmp,color="blue")
+plt.plot(tmp,color="blue",label = 'Online')
 plt.plot(tmp+tmp1,color="blue",linestyle="dotted")
 plt.plot(tmp-tmp1,color="blue",linestyle="dotted")
+plt.xlabel('Days')
+plt.ylabel('Mahalnobis distance')
+plt.legend()
 plt.show()
 
 
 
-# playing around with np savez function
-nik = rnd.randn(100,100)
-mona = rnd.randn(100,100)
-np.savez('test',nik=nik,mona=mona)
-data=np.load('test.npz')
-
-a1 = data.get('nik')
-
     
-# dist_var_imagined_overall  =  dist_var_overall    
-# dist_means_imagined_overall = dist_means_overall
 
-# dist_var_online_overall  =  dist_var_overall    
-# dist_means_online_overall = dist_means_overall
-    
-# tmp = np.mean(dist_means_imagined_overall,axis=0)  
-# plt.figure();plt.boxplot(tmp)
-# tmp = np.mean(dist_var_imagined_overall,axis=0)  
-# plt.figure();plt.boxplot(tmp)        
-    
-# tmp1 = np.mean(dist_means_imagined_overall,axis=0)  
-# tmp2 = np.mean(dist_means_online_overall,axis=0)  
-# tmp = np.append(tmp1[:,None],tmp2[:,None],axis=1)
-# plt.figure();plt.boxplot(tmp)   
-
-# tmp1 = np.mean(dist_var_imagined_overall,axis=0)  
-# tmp2 = np.mean(dist_var_online_overall,axis=0)  
-# tmp = np.append(tmp1[:,None],tmp2[:,None],axis=1)
-# plt.figure();plt.boxplot(np.log(tmp)  )
 
 
          
