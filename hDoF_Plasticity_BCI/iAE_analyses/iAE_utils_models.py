@@ -23,6 +23,7 @@ plt.rcParams['figure.dpi'] = 200
 import sklearn as skl
 from sklearn.metrics import silhouette_score as sil
 from sklearn.metrics import silhouette_samples as sil_samples
+import scipy.stats as stats
 
 
 # setting up GPU
@@ -50,6 +51,19 @@ def get_data(filename):
     Y = Y_mult
     return condn_data_imagined, Y
 
+
+# median bootstrap
+def median_bootstrap(indata,iters):
+    out_boot=  np.zeros([iters,indata.shape[1]])  
+    for cols in np.arange(indata.shape[1]):
+        xx = indata[:,cols]
+        for i in np.arange(iters):
+            idx = rnd.choice(indata.shape[0],indata.shape[0])
+            xx_tmp = np.median(xx[idx])
+            out_boot[i,cols] = xx_tmp
+    out_boot = np.sort(out_boot,axis=0)
+    out_boot_std = np.std(out_boot,axis=0)
+    return out_boot, out_boot_std
 
 # scale each data sample to be within 0 and 1
 def scale_zero_one(indata):
@@ -79,6 +93,7 @@ def get_variances(z,idx):
     for i in np.arange(len(np.unique(idx))):
         idxA = (idx==i).nonzero()[0]
         A = z[idxA,:]
+       # A = stats.zscore(A,axis=0)
         C = np.cov(A,rowvar=False)
         if len(C.shape) > 0:
             C = C + 1e-4*np.identity(C.shape[0])
@@ -87,6 +102,15 @@ def get_variances(z,idx):
             A = C
         dist_var[i] = A
     return dist_var
+
+def get_variance_overall(z):
+    C = np.cov(z,rowvar=False)
+    if lin.matrix_rank(C) == C.shape[0]:
+        A = lin.det(C)
+    else:
+        C = C + 1e-4*np.identity(C.shape[0])
+        A = lin.det(C)
+    return A
 
 
 # function to get mahalanobis distance
@@ -483,7 +507,7 @@ def plot_latent(model, data, Y, num_samples,dim):
     z = z.to('cpu').detach().numpy()
     y = y.to('cpu').detach().numpy()    
     D = sil(z,y)
-    plt.figure()
+    fig=plt.figure()
     if dim==3:
         ax=plt.axes(projection="3d")
         p=ax.scatter3D(z[:, 0], z[:, 1],z[:,2], c=y, cmap='tab10')        
@@ -493,4 +517,4 @@ def plot_latent(model, data, Y, num_samples,dim):
         plt.scatter(z[:, 0], z[:, 1], c=y, cmap='tab10')
         plt.colorbar()
     
-    return D,z,y
+    return D,z,y,fig

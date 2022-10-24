@@ -190,26 +190,26 @@ class latentClassifier(nn.Module):
         return x
 
 # putting it all together 
-# class vae(nn.Module):
-#     def __init__(self,input_size,hidden_dim,latent_dim,num_classes,dropout):
-#         super(vae,self).__init__()
-#         self.encoder = VariationalEncoder(input_size,hidden_dim,latent_dim,dropout)
-#         self.decoder = VariationalDecoder(input_size,hidden_dim,latent_dim,dropout)
-#         #self.classifier = latentClassifier(latent_dim,num_classes) 
-#         self.logprob_x=0
-#         self.kl_loss=0
+class vae(nn.Module):
+    def __init__(self,input_size,hidden_dim,latent_dim,num_classes,dropout):
+        super(vae,self).__init__()
+        self.encoder = VariationalEncoder(input_size,hidden_dim,latent_dim,dropout)
+        self.decoder = VariationalDecoder(input_size,hidden_dim,latent_dim,dropout)
+        #self.classifier = latentClassifier(latent_dim,num_classes) 
+        self.logprob_x=0
+        self.kl_loss=0
     
-#     def forward(self,x):
-#         z=self.encoder(x)
-#         self.kl_loss = self.encoder.kl
-#         #y=self.classifier(z)
-#         xhat,mu_p,sig_p=self.decoder(z)
-#         pdist = torch.distributions.Normal(mu_p, sig_p)
-#         pdist.loc = pdist.loc.to(device)
-#         pdist.scale = pdist.scale.to(device)
-#         self.logprob_x = pdist.log_prob(x).sum(-1) # summing over all dimensions
-#         vae_loss = self.kl_loss - self.logprob_x                
-#         return xhat,vae_loss
+    def forward(self,x):
+        z=self.encoder(x)
+        self.kl_loss = self.encoder.kl
+        #y=self.classifier(z)
+        xhat,mu_p,sig_p=self.decoder(z)
+        pdist = torch.distributions.Normal(mu_p, sig_p)
+        pdist.loc = pdist.loc.to(device)
+        pdist.scale = pdist.scale.to(device)
+        self.logprob_x = pdist.log_prob(x).sum(-1) # summing over all dimensions
+        vae_loss = 5*self.kl_loss - self.logprob_x                
+        return xhat,vae_loss
 
 
 
@@ -477,123 +477,123 @@ def training_loop_iAE(model,num_epochs,batch_size,opt,batch_val,
 
 
 
-# def training_loop_VAE(model,num_epochs,batch_size,opt,batch_val,
-#                       patience,gradient_clipping,filename,
-#                       Xtrain,Ytrain,Xtest,Ytest,
-#                       vae,input_size,hidden_dim,latent_dim,num_classes,dropout):    
+def training_loop_VAE(model,num_epochs,batch_size,opt,batch_val,
+                      patience,gradient_clipping,filename,
+                      Xtrain,Ytrain,Xtest,Ytest,
+                      vae,input_size,hidden_dim,latent_dim,num_classes,dropout):    
     
-#     num_batches = math.ceil(Xtrain.shape[0]/batch_size)    
-#     classif_criterion = nn.CrossEntropyLoss(reduction='sum')
-#     print('Starting training')
-#     goat_loss=99999
-#     counter=0
-#     kl_loss=np.array([])
-#     recon_loss = np.array([])
-#     total_loss = np.array([])
-#     for epoch in range(num_epochs):
-#       #shuffle the data    
-#       idx = rnd.permutation(Xtrain.shape[0]) 
-#       idx_split = np.array_split(idx,num_batches)
+    num_batches = math.ceil(Xtrain.shape[0]/batch_size)    
+    classif_criterion = nn.CrossEntropyLoss(reduction='sum')
+    print('Starting training')
+    goat_loss=99999
+    counter=0
+    kl_loss=np.array([])
+    recon_loss = np.array([])
+    total_loss = np.array([])
+    for epoch in range(num_epochs):
+      #shuffle the data    
+      idx = rnd.permutation(Xtrain.shape[0]) 
+      idx_split = np.array_split(idx,num_batches)
       
-#       if epoch==100:
-#           for g in opt.param_groups:
-#               g['lr']=1e-4
+      if epoch==100:
+          for g in opt.param_groups:
+              g['lr']=1e-4
         
-#       for batch in range(num_batches):
-#           # get the batch           
-#           samples = idx_split[batch]
-#           Xtrain_batch = Xtrain[samples,:]
-#           Ytrain_batch = Ytrain[samples,:]        
+      for batch in range(num_batches):
+          # get the batch           
+          samples = idx_split[batch]
+          Xtrain_batch = Xtrain[samples,:]
+          Ytrain_batch = Ytrain[samples,:]        
           
-#           #push to gpu
-#           Xtrain_batch = torch.from_numpy(Xtrain_batch).float()
-#           Ytrain_batch = torch.from_numpy(Ytrain_batch).float()          
-#           Xtrain_batch = Xtrain_batch.to(device)
-#           Ytrain_batch = Ytrain_batch.to(device)
+          #push to gpu
+          Xtrain_batch = torch.from_numpy(Xtrain_batch).float()
+          Ytrain_batch = torch.from_numpy(Ytrain_batch).float()          
+          Xtrain_batch = Xtrain_batch.to(device)
+          Ytrain_batch = Ytrain_batch.to(device)
           
-#           # forward pass thru network
-#           opt.zero_grad() 
-#           recon,vae_loss = model(Xtrain_batch)
-#           #latent_activity = model.encoder(Xtrain_batch)      
+          # forward pass thru network
+          opt.zero_grad() 
+          recon,vae_loss = model(Xtrain_batch)
+          #latent_activity = model.encoder(Xtrain_batch)      
           
-#           # get loss                
-#           #classif_loss = (classif_criterion(decodes,Ytrain_batch))/Xtrain_batch.shape[0]      
-#           loss = vae_loss.mean() 
-#           tmp_kl_loss = model.encoder.kl.mean().item()
-#           tmp_recon_loss = model.logprob_x.mean().item()
-#           kl_loss = np.append(kl_loss,tmp_kl_loss)
-#           recon_loss = np.append(recon_loss,tmp_recon_loss)
-#           total_loss = np.append(total_loss,loss.item())
-#           #print(classif_loss.item())
+          # get loss                
+          #classif_loss = (classif_criterion(decodes,Ytrain_batch))/Xtrain_batch.shape[0]      
+          loss = vae_loss.mean() 
+          tmp_kl_loss = model.encoder.kl.mean().item()
+          tmp_recon_loss = model.logprob_x.mean().item()
+          kl_loss = np.append(kl_loss,tmp_kl_loss)
+          recon_loss = np.append(recon_loss,tmp_recon_loss)
+          total_loss = np.append(total_loss,loss.item())
+          #print(classif_loss.item())
           
-#           # compute accuracy
-#           # ylabels = convert_to_ClassNumbers(Ytrain_batch)        
-#           # ypred_labels = convert_to_ClassNumbers(decodes)     
-#           # accuracy = (torch.sum(ylabels == ypred_labels).item())/ylabels.shape[0]
+          # compute accuracy
+          # ylabels = convert_to_ClassNumbers(Ytrain_batch)        
+          # ypred_labels = convert_to_ClassNumbers(decodes)     
+          # accuracy = (torch.sum(ylabels == ypred_labels).item())/ylabels.shape[0]
           
-#           # backpropagate thru network 
-#           loss.backward()
-#           nn.utils.clip_grad_value_(model.parameters(), clip_value=gradient_clipping)
-#           opt.step()
+          # backpropagate thru network 
+          loss.backward()
+          nn.utils.clip_grad_value_(model.parameters(), clip_value=gradient_clipping)
+          opt.step()
       
-#       # get validation losses
-#       val_loss=validation_loss_vae(model,Xtest,Ytest,batch_val,1)    
+      # get validation losses
+      val_loss=validation_loss_vae(model,Xtest,Ytest,batch_val,1)    
     
       
-#       print(f'Epoch [{epoch+1}/{num_epochs}], Train Loss {loss:.2f}, Val. Loss {val_loss:.2f}, Kl loss {tmp_kl_loss:.2f}, Recon loss {tmp_recon_loss:.2f}')
+      print(f'Epoch [{epoch+1}/{num_epochs}], Train Loss {loss:.2f}, Val. Loss {val_loss:.2f}, Kl loss {tmp_kl_loss:.2f}, Recon loss {tmp_recon_loss:.2f}')
       
-#       if val_loss<goat_loss:
-#         goat_loss = val_loss            
-#         counter = 0
-#         print('Goat loss, saving model')      
-#         torch.save(model.state_dict(), filename)
-#       else:
-#         counter += 1
+      if val_loss<goat_loss:
+        goat_loss = val_loss            
+        counter = 0
+        print('Goat loss, saving model')      
+        torch.save(model.state_dict(), filename)
+      else:
+        counter += 1
  
-#       if counter>=patience:
-#         print('Early stoppping point reached')
-#         print('Best val loss')
-#         print(goat_loss)
-#         break
+      if counter>=patience:
+        print('Early stoppping point reached')
+        print('Best val loss')
+        print(goat_loss)
+        break
  
-#     # loading the model back
-#     model_goat = vae(input_size,hidden_dim,latent_dim,num_classes,dropout)
-#     model_goat.load_state_dict(torch.load(filename))
-#     model_goat=model_goat.to(device)
-#     model_goat.eval()
-#     return model_goat
+    # loading the model back
+    model_goat = vae(input_size,hidden_dim,latent_dim,num_classes,dropout)
+    model_goat.load_state_dict(torch.load(filename))
+    model_goat=model_goat.to(device)
+    model_goat.eval()
+    return model_goat
 
 
-# # function to validate model 
-# def validation_loss_vae(model,X_test,Y_test,batch_val,val_type):            
-#     loss_val=0    
-#     if batch_val > X_test.shape[0]:
-#         batch_val = X_test.shape[0]
+# function to validate model 
+def validation_loss_vae(model,X_test,Y_test,batch_val,val_type):            
+    loss_val=0    
+    if batch_val > X_test.shape[0]:
+        batch_val = X_test.shape[0]
     
-#     idx=np.arange(0,X_test.shape[0],batch_val)    
-#     if idx[-1]<X_test.shape[0]:
-#         idx=np.append(idx,X_test.shape[0])
-#     else:
-#         print('something wrong here')
+    idx=np.arange(0,X_test.shape[0],batch_val)    
+    if idx[-1]<X_test.shape[0]:
+        idx=np.append(idx,X_test.shape[0])
+    else:
+        print('something wrong here')
     
-#     iters=(idx.shape[0]-1)
+    iters=(idx.shape[0]-1)
     
-#     for i in np.arange(iters):
-#         x=X_test[idx[i]:idx[i+1],:]
-#         y=Y_test[idx[i]:idx[i+1],:]     
-#         with torch.no_grad():                
-#             if val_type==1: #validation
-#                 x=torch.from_numpy(x).to(device).float()
-#                 y=torch.from_numpy(y).to(device).float()
-#                 model.eval()
-#                 out_recon,out_loss = model(x)                 
-#                 loss_val += out_loss.sum().item()
-#                 model.train()
-#             else:
-#                 out = model(x) 
-#                 loss1 = crit_recon_val(out,x)                
-#                 loss_val += loss1.item()             
+    for i in np.arange(iters):
+        x=X_test[idx[i]:idx[i+1],:]
+        y=Y_test[idx[i]:idx[i+1],:]     
+        with torch.no_grad():                
+            if val_type==1: #validation
+                x=torch.from_numpy(x).to(device).float()
+                y=torch.from_numpy(y).to(device).float()
+                model.eval()
+                out_recon,out_loss = model(x)                 
+                loss_val += out_loss.sum().item()
+                model.train()
+            else:
+                out = model(x) 
+                loss1 = crit_recon_val(out,x)                
+                loss_val += loss1.item()             
             
-#     loss_val=loss_val/X_test.shape[0]        
-#     torch.cuda.empty_cache()
-#     return loss_val
+    loss_val=loss_val/X_test.shape[0]        
+    torch.cuda.empty_cache()
+    return loss_val
