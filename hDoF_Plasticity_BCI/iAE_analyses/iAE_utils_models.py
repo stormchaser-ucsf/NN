@@ -414,6 +414,7 @@ def training_loop_iAE(model,num_epochs,batch_size,learning_rate,batch_val,
                       Xtrain,Ytrain,Xtest,Ytest,
                       input_size,hidden_size,latent_dims,num_classes):
     
+   
     num_batches = math.ceil(Xtrain.shape[0]/batch_size)
     recon_criterion = nn.MSELoss(reduction='sum')
     classif_criterion = nn.CrossEntropyLoss(reduction='sum')    
@@ -421,6 +422,7 @@ def training_loop_iAE(model,num_epochs,batch_size,learning_rate,batch_val,
     print('Starting training')
     goat_loss=99999
     counter=0
+    model.train()
     for epoch in range(num_epochs):
       #shuffle the data    
       #shuffle the data    
@@ -502,7 +504,7 @@ def plot_latent(model, data, Y, num_samples,dim):
     Y=convert_to_ClassNumbers(Y)
     y=Y#y=Y[idx1]    
     z = data#[idx1,:]
-    model = model.eval()
+    model.eval()
     z = model.encoder(z)
     z = z.to('cpu').detach().numpy()
     y = y.to('cpu').detach().numpy()    
@@ -516,5 +518,41 @@ def plot_latent(model, data, Y, num_samples,dim):
         ax=plt.axes        
         plt.scatter(z[:, 0], z[:, 1], c=y, cmap='tab10')
         plt.colorbar()
-    
+    model.train()    
     return D,z,y,fig
+
+
+def return_recon(model,data,Y):
+    data = torch.from_numpy(data).to(device).float()
+    Y=torch.from_numpy(Y).to(device).float()
+    Y=convert_to_ClassNumbers(Y).to('cpu').detach().numpy()
+    model.eval()
+    hg_recon = []
+    beta_recon=[]
+    delta_recon=[]
+    for query in np.arange(7):
+        idx = np.where(Y==query)[0]
+        data_tmp = data[idx,:]        
+        
+        with torch.no_grad():
+            recon_data,class_outputs = model(data_tmp)        
+                
+        recon_data = recon_data.to('cpu').detach().numpy()    
+        # hg
+        idx = np.arange(2,96,3)
+        hg_recon_tmp = recon_data[:,idx]  
+        hg_recon.append(hg_recon_tmp)
+        # delta
+        idx = np.arange(0,96,3)
+        delta_recon_tmp = recon_data[:,idx]        
+        delta_recon.append(delta_recon_tmp)
+        #beta
+        idx = np.arange(1,96,3)
+        beta_recon_tmp = recon_data[:,idx]  
+        beta_recon.append(beta_recon_tmp)
+    
+    model.train()
+    return delta_recon,beta_recon,hg_recon
+    
+    
+

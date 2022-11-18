@@ -31,7 +31,8 @@ from tempfile import TemporaryFile
 from scipy.ndimage import gaussian_filter1d
 import scipy as scipy
 import scipy.stats as stats
-
+# setting up GPU
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # model params
 input_size=96
@@ -126,15 +127,20 @@ for days in (np.arange(10)+1):
         while len(np.unique(np.argmax(Ytest,axis=1)))<7:
             Xtrain,Xtest,Ytrain,Ytest = training_test_split(condn_data_imagined,Yimagined,0.8)                        
             
-        if 'model' in locals():
-            del model    
-        model = iAutoencoder(input_size,hidden_size,latent_dims,num_classes).to(device)        
+        # if 'model' in locals():
+        #     del model    
+        # model = iAutoencoder(input_size,hidden_size,latent_dims,num_classes).to(device)        
         model,acc = training_loop_iAE(model,num_epochs,batch_size,learning_rate,batch_val,
                               patience,gradient_clipping,nn_filename,
                               Xtrain,Ytrain,Xtest,Ytest,
                               input_size,hidden_size,latent_dims,num_classes)
         # store acc from latent space
-        accuracy_imagined_iter = np.append(accuracy_imagined_iter,acc)
+        accuracy_imagined_iter = np.append(accuracy_imagined_iter,acc)        
+       
+        # get reconstructed activity as images in the three bands
+        delta_recon_imag,beta_recon_imag,hg_recon_imag = return_recon(model,
+                                                    condn_data_imagined,Yimagined)
+        
         # get latent activity and plot
         D,z,idx,fig_imagined = plot_latent(model, condn_data_imagined,Yimagined,condn_data_imagined.shape[0],
                               latent_dims)        
@@ -170,7 +176,12 @@ for days in (np.arange(10)+1):
                               Xtrain,Ytrain,Xtest,Ytest,
                               input_size,hidden_size,latent_dims,num_classes)   
          # store acc from latent space
-        accuracy_online_iter = np.append(accuracy_online_iter,acc)          
+        accuracy_online_iter = np.append(accuracy_online_iter,acc)      
+        
+        # get reconstructed activity as images in the three bands
+        delta_recon_online,beta_recon_online,hg_recon_online = return_recon(model,
+                                                    condn_data_online,Yonline)
+       
         # get latent activity and plot
         del D,z,idx
         D,z,idx,fig_online = plot_latent(model, condn_data_online,Yonline,condn_data_online.shape[0],
@@ -206,12 +217,16 @@ for days in (np.arange(10)+1):
                               Xtrain,Ytrain,Xtest,Ytest,
                               input_size,hidden_size,latent_dims,num_classes)   
          # store acc from latent space
-        accuracy_batch_iter = np.append(accuracy_batch_iter,acc)          
+        accuracy_batch_iter = np.append(accuracy_batch_iter,acc)    
+        
+        # get reconstructed activity as images in the three bands
+        delta_recon_batch,beta_recon_batch,hg_recon_batch = return_recon(model,
+                                                    condn_data_batch,Ybatch)
         # get latent activity and plot
         del D,z,idx
         D,z,idx,fig_batch = plot_latent(model, condn_data_batch,Ybatch,condn_data_batch.shape[0],
                               latent_dims)
-        #splt.close()
+        #plt.close()
         silhoutte_batch_iter = np.append(silhoutte_batch_iter,D)
         # mahab distance
         mahab_distances = get_mahab_distance_latent(z,idx)

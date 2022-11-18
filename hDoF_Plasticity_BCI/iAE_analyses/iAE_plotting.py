@@ -54,7 +54,7 @@ accuracy_batch_days = data.get('accuracy_batch_days')
 
 # plotting latent spaces
 az=-54
-el=24
+el=30
 x1 = np.array(fig_imagined.axes[0].get_xlim())[:,None]
 x2 = np.array(fig_online.axes[0].get_xlim())[:,None]
 x3 = np.array(fig_batch.axes[0].get_xlim())[:,None]
@@ -94,7 +94,7 @@ image_name = 'Latent_Day10_Batch.svg'
 fig_batch.savefig(image_name, format=image_format, dpi=300)
 
 
-# plotting overall variances over days (MAIN)
+# plotting overall variances over days (MAIN MAIN)
 N=2
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
@@ -195,6 +195,155 @@ plt.legend()
 plt.show()
 
 
+
+# plotting distance between means (no mahab) over days (MAIN) with median
+N=2
+fig = plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+X=np.arange(10)+1
+X=np.arange(10)+1
+# imagined 
+tmp_main = np.median(mean_distances_imagined_days,axis=1)
+tmp1 = np.median(tmp_main,axis=0)
+tmp_boot, tmp_boot_std = median_bootstrap(tmp_main,1000)
+tmp1b = tmp_boot_std/1#sqrt(tmp_main.shape[0])
+tmp1 = np.insert(tmp1,0,tmp1[0],axis=0)
+tmp1b = np.insert(tmp1b,0,tmp1b[0],axis=0)
+tmp1 = np.convolve(tmp1, np.ones(N)/N, mode='same')
+tmp1 = tmp1[1:]
+tmp1b = tmp1b[1:]
+plt.plot(X,tmp1,color="black",label = 'Imagined')
+plt.fill_between(X, tmp1-tmp1b, tmp1+tmp1b,color="black",alpha=0.2)
+# online
+tmp_main = np.median(mean_distances_online_days,axis=1)
+tmp2 = np.median(tmp_main,axis=0)
+tmp_boot, tmp_boot_std = median_bootstrap(tmp_main,1000)
+tmp2b = tmp_boot_std/1#sqrt(tmp_main.shape[0])
+tmp2 = np.insert(tmp2,0,tmp2[0],axis=0)
+tmp2b = np.insert(tmp2b,0,tmp2b[0],axis=0)
+tmp2 = np.convolve(tmp2, np.ones(N)/N, mode='same')
+tmp2b = np.convolve(tmp2b, np.ones(N)/N, mode='same')
+tmp2 = tmp2[1:]
+tmp2b = tmp2b[1:]
+plt.plot(X,tmp2,color="blue",label = 'Online')
+plt.fill_between(X, tmp2-tmp2b, tmp2+tmp2b,color="blue",alpha=0.2)
+# batch
+tmp_main = np.median(mean_distances_batch_days,axis=1)
+tmp3 = np.median(tmp_main,axis=0)
+tmp_boot, tmp_boot_std = median_bootstrap(tmp_main,1000)
+tmp3b = tmp_boot_std/1#sqrt(tmp_main.shape[0])
+tmp3 = np.insert(tmp3,0,tmp3[0],axis=0)
+tmp3b = np.insert(tmp3b,0,tmp3b[0],axis=0)
+tmp3 = np.convolve(tmp3, np.ones(N)/N, mode='same')
+tmp3b = np.convolve(tmp3b, np.ones(N)/N, mode='same')
+tmp3 = tmp3[1:]
+tmp3b = tmp3b[1:]
+plt.plot(X,tmp3,color="red",label = 'Batch')
+plt.fill_between(X, tmp3-tmp3b, tmp3+tmp3b,color="red",alpha=0.2)
+plt.legend()
+plt.xlabel('Days',**hfont)
+plt.ylabel('Distance between means',**hfont)
+plt.show()
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Distance_Between_Means_Days.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
+
+tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
+# tmp = np.concatenate((np.ndarray.flatten(var_overall_imagined_days)[:,None],
+#                       np.ndarray.flatten(var_overall_online_days)[:,None],
+#                       np.ndarray.flatten(var_overall_batch_days)[:,None]),axis=1)
+fig=plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+plt.boxplot(tmp)
+plt.xticks(ticks=[1,2,3],labels=('Imagined','Online','Batch'),**hfont)
+plt.ylabel('Distance between means',**hfont)
+plt.show()
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Distance_Between_Means_Boxplot.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
+print(np.mean(tmp,axis=0))
+
+
+# plotting distance between means (no mahab) over days (MAIN) with mean
+N=1
+fig = plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+X=np.arange(10)+1
+X=np.arange(10)+1
+# imagined 
+tmp_main = np.mean(mean_distances_imagined_days,axis=0)
+tmp1 = np.mean(tmp_main,axis=0)
+tmp_boot_std = np.std(tmp_main,axis=0)
+tmp1b = tmp_boot_std/sqrt(tmp_main.shape[0])
+tmp1 = np.insert(tmp1,0,tmp1[0],axis=0)
+tmp1b = np.insert(tmp1b,0,tmp1b[0],axis=0)
+tmp1 = np.convolve(tmp1, np.ones(N)/N, mode='same')
+tmp1 = tmp1[1:]
+tmp1b = tmp1b[1:]
+plt.plot(X,tmp1,color="black",label = 'Imagined')
+plt.fill_between(X, tmp1-tmp1b, tmp1+tmp1b,color="black",alpha=0.2)
+# online
+tmp_main = np.mean(mean_distances_online_days,axis=0)
+tmp2 = np.mean(tmp_main,axis=0)
+tmp_boot_std = np.std(tmp_main,axis=0)
+tmp2b = tmp_boot_std/sqrt(tmp_main.shape[0])
+tmp2 = np.insert(tmp2,0,tmp2[0],axis=0)
+tmp2b = np.insert(tmp2b,0,tmp2b[0],axis=0)
+tmp2 = np.convolve(tmp2, np.ones(N)/N, mode='same')
+tmp2b = np.convolve(tmp2b, np.ones(N)/N, mode='same')
+tmp2 = tmp2[1:]
+tmp2b = tmp2b[1:]
+plt.plot(X,tmp2,color="blue",label = 'Online')
+plt.fill_between(X, tmp2-tmp2b, tmp2+tmp2b,color="blue",alpha=0.2)
+# batch
+tmp_main = np.mean(mean_distances_batch_days,axis=0)
+tmp3 = np.mean(tmp_main,axis=0)
+tmp_boot_std = np.std(tmp_main,axis=0)
+tmp3b = tmp_boot_std/sqrt(tmp_main.shape[0])
+tmp3 = np.insert(tmp3,0,tmp3[0],axis=0)
+tmp3b = np.insert(tmp3b,0,tmp3b[0],axis=0)
+tmp3 = np.convolve(tmp3, np.ones(N)/N, mode='same')
+tmp3b = np.convolve(tmp3b, np.ones(N)/N, mode='same')
+tmp3 = tmp3[1:]
+tmp3b = tmp3b[1:]
+plt.plot(X,tmp3,color="red",label = 'Batch')
+plt.fill_between(X, tmp3-tmp3b, tmp3+tmp3b,color="red",alpha=0.2)
+plt.legend()
+plt.xlabel('Days',**hfont)
+plt.ylabel('Distance between means',**hfont)
+plt.show()
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Distance_Between_Means_Days.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
+
+tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
+# tmp = np.concatenate((np.ndarray.flatten(var_overall_imagined_days)[:,None],
+#                       np.ndarray.flatten(var_overall_online_days)[:,None],
+#                       np.ndarray.flatten(var_overall_batch_days)[:,None]),axis=1)
+fig=plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+plt.boxplot(tmp)
+plt.xticks(ticks=[1,2,3],labels=('Imagined','Online','Batch'),**hfont)
+plt.ylabel('Distance between means',**hfont)
+plt.show()
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Distance_Between_Means_Boxplot.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
+print(np.mean(tmp,axis=0))
+
+
 # plotting mean centroid variances over days  (MAIN)
 N=2
 fig = plt.figure()
@@ -248,7 +397,9 @@ image_name = 'Overall_Variance_Latent_Days.svg'
 fig.savefig(image_name, format=image_format, dpi=300)
 
 
-# plotting mean Mahalanobis distance over days  (MAIN)
+# plotting mean Mahalanobis distance over days  (MAIN MAIN)
+# over days there is a learning effect where Mahab distance grows between the 
+# actions and Batch is always greater than all others. 
 N=2
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
@@ -258,8 +409,8 @@ plt.rcParams.update({'font.size': 6})
 X=np.arange(10)+1
 X=np.arange(10)+1
 # imagined 
-tmp_main = np.squeeze(np.mean(mahab_distances_imagined_days,1))
-tmp1 = np.mean(tmp_main,axis=0)
+tmp_main = np.squeeze(np.median(mahab_distances_imagined_days,1))
+tmp1 = np.median(tmp_main,axis=0)
 tmp1b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp1 = np.insert(tmp1,0,tmp1[0],axis=0)
 tmp1b = np.insert(tmp1b,0,tmp1b[0],axis=0)
@@ -269,8 +420,8 @@ tmp1b = tmp1b[1:]
 plt.plot(X,tmp1,color="black",label = 'Imagined')
 plt.fill_between(X, tmp1-tmp1b, tmp1+tmp1b,color="black",alpha=0.2)
 # online
-tmp_main = np.squeeze(np.mean(mahab_distances_online_days,1))
-tmp2 = np.mean(tmp_main,axis=0)
+tmp_main = np.squeeze(np.median(mahab_distances_online_days,1))
+tmp2 = np.median(tmp_main,axis=0)
 tmp2b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp2 = np.insert(tmp2,0,tmp2[0],axis=0)
 tmp2b = np.insert(tmp2b,0,tmp2b[0],axis=0)
@@ -281,8 +432,8 @@ tmp2b = tmp2b[1:]
 plt.plot(X,tmp2,color="blue",label = 'Online')
 plt.fill_between(X, tmp2-tmp2b, tmp2+tmp2b,color="blue",alpha=0.2)
 # batch
-tmp_main = np.squeeze(np.mean(mahab_distances_batch_days,1))
-tmp3 = np.mean(tmp_main,axis=0)
+tmp_main = np.squeeze(np.median(mahab_distances_batch_days,1))
+tmp3 = np.median(tmp_main,axis=0)
 tmp3b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp3 = np.insert(tmp3,0,tmp3[0],axis=0)
 tmp3b = np.insert(tmp3b,0,tmp3b[0],axis=0)
@@ -309,12 +460,12 @@ hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams.update({'font.size': 6})
-plt.boxplot(tmp)
+plt.boxplot(tmp,whis=2,showfliers=False)
 plt.xticks(ticks=[1,2,3],labels=('Imagined','Online','Batch'),**hfont)
 plt.ylabel('Mahalanobis Distances',**hfont)
 plt.show()
 image_format = 'svg' # e.g .png, .svg, etc.
-image_name = 'Overall_Variance_Latent_Boxplot.svg'
+image_name = 'Mahab_Dist_Boxplot.svg'
 fig.savefig(image_name, format=image_format, dpi=300)
 print(np.mean(tmp,axis=0))
 
@@ -524,7 +675,7 @@ plt.show()
 
 
 #### plot median Mahalanobis with bootstrap confidence intervals  (MAIN)
-sigma = 1
+sigma = 0.75
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
@@ -533,7 +684,7 @@ plt.rcParams.update({'font.size': 6})
 X=np.arange(10)+1
 # imagined days
 tmp_main = np.squeeze(np.mean(mahab_distances_imagined_days,1))
-tmp = np.mean(tmp_main,axis=0)
+tmp = np.median(tmp_main,axis=0)
 tmp_boot, tmp_boot_std = median_bootstrap(tmp_main,1000)
 tmp1 = tmp_boot_std/1#sqrt(tmp_main.shape[0])
 tmp = gaussian_filter1d(tmp, sigma=sigma)
@@ -544,24 +695,24 @@ plt.fill_between(X, tmp-tmp1, tmp+tmp1,color="black",alpha=0.2)
 #plt.plot(X,tmp-tmp1,color="black",linestyle="dotted")
 # online days 
 tmp_main = np.squeeze(np.mean(mahab_distances_online_days,1))
-tmp = np.mean(tmp_main,axis=0)
+tmp = np.median(tmp_main,axis=0)
 tmp_boot, tmp_boot_std = median_bootstrap(tmp_main,1000)
-tmp1 = tmp_boot_std/1#sqrt(tmp_main.shape[0])
+tmp2 = tmp_boot_std/1#sqrt(tmp_main.shape[0])
 tmp = gaussian_filter1d(tmp, sigma=sigma)
-tmp1 = gaussian_filter1d(tmp1, sigma=sigma)
+tmp2 = gaussian_filter1d(tmp2, sigma=sigma)
 plt.plot(X,tmp,color="blue",label = 'Online')
-plt.fill_between(X, tmp-tmp1, tmp+tmp1,color="blue",alpha=0.2)
+plt.fill_between(X, tmp-tmp2, tmp+tmp2,color="blue",alpha=0.2)
 #plt.plot(X,tmp+tmp1,color="blue",linestyle="dotted")
 #plt.plot(X,tmp-tmp1,color="blue",linestyle="dotted")
 # batch update days 
 tmp_main = np.squeeze(np.mean(mahab_distances_batch_days,1))
-tmp = np.mean(tmp_main,axis=0)
+tmp = np.median(tmp_main,axis=0)
 tmp_boot, tmp_boot_std = median_bootstrap(tmp_main,1000)
-tmp1 = tmp_boot_std/1#sqrt(tmp_main.shape[0])
+tmp3 = tmp_boot_std/1#sqrt(tmp_main.shape[0])
 tmp = gaussian_filter1d(tmp, sigma=sigma)
-tmp1 = gaussian_filter1d(tmp1, sigma=sigma)
+tmp3 = gaussian_filter1d(tmp3, sigma=sigma)
 plt.plot(X,tmp,color="red",label = 'Batch')
-plt.fill_between(X, tmp-tmp1, tmp+tmp1,color="red",alpha=0.2)
+plt.fill_between(X, tmp-tmp3, tmp+tmp3,color="red",alpha=0.2)
 #plt.plot(X,tmp+tmp1,color="red",linestyle="dotted")
 #plt.plot(X,tmp-tmp1,color="red",linestyle="dotted")
 plt.xlabel('Days',**hfont)
@@ -573,11 +724,29 @@ image_format = 'svg' # e.g .png, .svg, etc.
 image_name = 'Mahab_Days_Latent_withBatch.svg'
 fig.savefig(image_name, format=image_format, dpi=300)
 
+tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
+# tmp = np.concatenate((np.ndarray.flatten(var_overall_imagined_days)[:,None],
+#                       np.ndarray.flatten(var_overall_online_days)[:,None],
+#                       np.ndarray.flatten(var_overall_batch_days)[:,None]),axis=1)
+fig=plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+plt.boxplot(tmp)
+plt.xticks(ticks=[1,2,3],labels=('Imagined','Online','Batch'),**hfont)
+plt.ylabel('Mahab Dist',**hfont)
+plt.show()
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Overall_Mahab_Dist_boxplot.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
+print(np.mean(tmp,axis=0))
+
 
 
 # Median Mahalanobis distance -> with bootstrapped standard errors of the median
 sigma = 0.01
-N=2 # N day running average
+N=1 # N day running average
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
@@ -597,20 +766,20 @@ plt.fill_between(X, tmp-tmp1, tmp+tmp1,color="black",alpha=0.2)
 tmp_main = np.squeeze(np.mean(mahab_distances_online_days,1))
 tmp = np.median(tmp_main,axis=0)
 tmp_boot, tmp_boot_std = median_bootstrap(tmp_main,1000)
-tmp1 = tmp_boot_std/1#sqrt(tmp_main.shape[0])
+tmp2 = tmp_boot_std/1#sqrt(tmp_main.shape[0])
 tmp = np.convolve(tmp, np.ones(N)/N, mode='same')
-tmp1 = np.convolve(tmp1, np.ones(N)/N, mode='same')
+tmp2 = np.convolve(tmp2, np.ones(N)/N, mode='same')
 plt.plot(X,tmp,color="blue",label = 'Online')
-plt.fill_between(X, tmp-tmp1, tmp+tmp1,color="blue",alpha=0.2)
+plt.fill_between(X, tmp-tmp2, tmp+tmp2,color="blue",alpha=0.2)
 # batch update days 
 tmp_main = np.squeeze(np.mean(mahab_distances_batch_days,1))
 tmp = np.median(tmp_main,axis=0)
 tmp_boot, tmp_boot_std = median_bootstrap(tmp_main,1000)
-tmp1 = tmp_boot_std/1#sqrt(tmp_main.shape[0])
+tmp3 = tmp_boot_std/1#sqrt(tmp_main.shape[0])
 tmp = np.convolve(tmp, np.ones(N)/N, mode='same')
-tmp1 = np.convolve(tmp1, np.ones(N)/N, mode='same')
+tmp3 = np.convolve(tmp3, np.ones(N)/N, mode='same')
 plt.plot(X,tmp,color="red",label = 'Batch')
-plt.fill_between(X, tmp-tmp1, tmp+tmp1,color="red",alpha=0.2)
+plt.fill_between(X, tmp-tmp3, tmp+tmp3,color="red",alpha=0.2)
 plt.xlabel('Days',**hfont)
 plt.ylabel('Mahalanobis Distance',**hfont)
 plt.legend()
@@ -620,6 +789,23 @@ image_format = 'svg' # e.g .png, .svg, etc.
 image_name = 'Variances_Days_Latent.svg'
 fig.savefig(image_name, format=image_format, dpi=300)
 
+tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
+# tmp = np.concatenate((np.ndarray.flatten(var_overall_imagined_days)[:,None],
+#                       np.ndarray.flatten(var_overall_online_days)[:,None],
+#                       np.ndarray.flatten(var_overall_batch_days)[:,None]),axis=1)
+fig=plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+plt.boxplot(tmp)
+plt.xticks(ticks=[1,2,3],labels=('Imagined','Online','Batch'),**hfont)
+plt.ylabel('Mahab Dist',**hfont)
+plt.show()
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Overall_Mahab_Dist_boxplot.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
+print(np.mean(tmp,axis=0))
 
 
 
@@ -632,7 +818,7 @@ plt.rcParams['figure.dpi'] = 300
 plt.rcParams.update({'font.size': 6})
 X=np.arange(10)+1
 # imagined days
-tmp_main = np.squeeze(np.mean(mean_distances_imagined_days,1))
+tmp_main = np.squeeze(np.median(mean_distances_imagined_days,1))
 tmp = np.mean(tmp_main,axis=0)
 tmp1 = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp = gaussian_filter1d(tmp, sigma=sigma)
@@ -640,7 +826,7 @@ tmp1 = gaussian_filter1d(tmp1, sigma=sigma)
 plt.plot(X,tmp,color="black",label = 'Imagined')
 plt.fill_between(X, tmp-tmp1, tmp+tmp1,color="black",alpha=0.2)
 # online days 
-tmp_main = np.squeeze(np.mean(mean_distances_online_days,1))
+tmp_main = np.squeeze(np.median(mean_distances_online_days,1))
 tmp = np.mean(tmp_main,axis=0)
 tmp1 = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp = gaussian_filter1d(tmp, sigma=sigma)
@@ -648,7 +834,7 @@ tmp1 = gaussian_filter1d(tmp1, sigma=sigma)
 plt.plot(X,tmp,color="blue",label = 'Online')
 plt.fill_between(X, tmp-tmp1, tmp+tmp1,color="blue",alpha=0.2)
 # batch update days 
-tmp_main = np.squeeze(np.mean(mean_distances_batch_days,1))
+tmp_main = np.squeeze(np.median(mean_distances_batch_days,1))
 tmp = np.mean(tmp_main,axis=0)
 tmp1 = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp = gaussian_filter1d(tmp, sigma=sigma)
@@ -893,3 +1079,464 @@ model,acc = training_loop_iAE(model,num_epochs,batch_size,learning_rate,batch_va
                       patience,gradient_clipping,nn_filename,
                       Xtrain,Ytrain,Xtest,Ytest,
                       input_size,hidden_size,latent_dims,num_classes)
+
+
+# PLOTTING (MAIN) THE HEAT MAPS OF RECONSTRUCTED ACTIVITY PASSING THRU AE
+query=6
+tmp = np.mean(hg_recon_imag[query],axis=0)
+tmp = np.reshape(tmp,(4,8))
+xmax1,xmin1 = tmp.max(),tmp.min()
+plt.figure()
+fig1=plt.imshow(tmp)
+plt.colorbar
+plt.show
+
+
+tmp = np.mean(hg_recon_online[query],axis=0)
+tmp = np.reshape(tmp,(4,8))
+xmax2,xmin2 = tmp.max(),tmp.min()
+plt.figure()
+plt.colorbar
+fig2=plt.imshow(tmp)
+
+
+tmp = np.mean(hg_recon_batch[query],axis=0)
+tmp = np.reshape(tmp,(4,8))
+xmax3,xmin3 = tmp.max(),tmp.min()
+plt.figure()
+plt.colorbar
+fig3=plt.imshow(tmp)
+
+
+xmax = np.array([xmax1,xmax2,xmax3])
+xmin = np.array([xmin1,xmin2,xmin3])
+fig1.set_clim(xmin.min(),xmax.max())
+fig2.set_clim(xmin.min(),xmax.max())
+fig3.set_clim(xmin.min(),xmax.max())
+
+
+# high gamma
+actions =['Rt Thumb','Left Leg','Lt Thumb','Head','Lips','Tongue','Both Middle Finger']
+corr_coef_hg = np.array([])
+hand_knob_act_imag=np.array([])
+hand_knob_act_online=np.array([])
+hand_knob_act_batch=np.array([])
+var_imag=np.array([])
+var_online=np.array([])
+var_batch=np.array([])
+hand_channels = np.array([23,31])
+for query in np.arange(7):        
+    
+    # getting hand knob activation
+    tmp = hg_recon_imag[query]
+    a = np.std(tmp,axis=0)
+    var_imag = np.append(var_imag,a)
+    tmp = tmp[:,hand_channels] # get the hand knob channels 30,31,22,23,15
+    hand_knob_act_imag = tmp    
+    # plotting
+    fig=plt.figure()
+    plt.suptitle(actions[query])
+    tmp = np.mean(hg_recon_imag[query],axis=0)
+    #tmp = stats.zscore(tmp)
+    tmp1 = np.reshape(tmp,(4,8))
+    xmax1,xmin1 = tmp.max(),tmp.min()
+    plt.subplot(311)
+    fig1=plt.imshow(tmp1)
+    plt.axis('off')    
+    plt.colorbar()
+        
+    # getting hand knob activation
+    tmp = hg_recon_online[query]
+    a = np.std(tmp,axis=0)
+    var_online = np.append(var_online,a)
+    tmp = tmp[:,hand_channels] # get the hand knob channels 30,31,22,23,15
+    hand_knob_act_online = tmp        
+    # plotting
+    tmp = np.mean(hg_recon_online[query],axis=0)
+    #tmp = stats.zscore(tmp)
+    tmp2 = np.reshape(tmp,(4,8))
+    xmax2,xmin2 = tmp.max(),tmp.min()
+    plt.subplot(312)    
+    fig2=plt.imshow(tmp2)   
+    plt.axis('off')      
+    plt.colorbar()
+        
+    # getting hand knob activation
+    tmp = hg_recon_batch[query]
+    a = np.std(tmp,axis=0)
+    var_batch = np.append(var_batch,a)
+    tmp = tmp[:,hand_channels] # get the hand knob channels 30,31,22,23,15
+    hand_knob_act_batch = tmp        
+    # plotting
+    tmp = np.mean(hg_recon_batch[query],axis=0) #first 8 nos form first row, etc
+    #tmp = stats.zscore(tmp)
+    tmp3 = np.reshape(tmp,(4,8)) # first 8 values form the first row of the grid and so on
+    xmax3,xmin3 = tmp.max(),tmp.min()
+    plt.subplot(313)    
+    fig3=plt.imshow(tmp3)
+    plt.axis('off')    
+    plt.colorbar()
+    
+    # a = np.corrcoef(np.ndarray.flatten(tmp1),np.ndarray.flatten(tmp2))[0,1]
+    # b = np.corrcoef(np.ndarray.flatten(tmp1),np.ndarray.flatten(tmp3))[0,1]
+    # c = np.corrcoef(np.ndarray.flatten(tmp2),np.ndarray.flatten(tmp3))[0,1]
+    a = np.dot(tmp1.flatten(),tmp2.flatten())
+    b = np.dot(tmp1.flatten(),tmp3.flatten())
+    c = np.dot(tmp2.flatten(),tmp3.flatten())
+    corr_coef_hg = np.append(corr_coef_hg,[a,b,c])
+    
+    xmax = np.array([xmax1,xmax2,xmax3])
+    xmin = np.array([xmin1,xmin2,xmin3])
+    fig1.set_clim(xmin.min(),xmax.max())
+    fig2.set_clim(xmin.min(),xmax.max())
+    fig3.set_clim(xmin.min(),xmax.max())
+    
+    image_format = 'svg' # e.g .png, .svg, etc.
+    image_name = actions[query] + '_hg_Day5.svg'
+    fig.savefig(image_name, format=image_format, dpi=300)
+
+# plotting hand knob activation
+x= [hand_knob_act_imag.flatten()  ,hand_knob_act_online.flatten(), hand_knob_act_batch.flatten() ]
+fig=plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+plt.boxplot(x,showfliers=False)
+plt.xticks(ticks=[1,2,3],labels=('Imagined','Online','Batch'),**hfont)
+plt.ylabel('hG Hand knob activity',**hfont)
+plt.show()
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Hand_Knob_Activation.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
+
+# plotting variance boxplots 
+x= [var_imag  ,var_online, var_batch]
+fig=plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+plt.boxplot(x,showfliers=False)
+plt.xticks(ticks=[1,2,3],labels=('Imagined','Online','Batch'),**hfont)
+plt.ylabel('hG Variance',**hfont)
+plt.show()
+# plotting variance histograms
+fig=plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+plt.hist(x[0],fc=(.2 ,.2,.2,.5),label='Open Loop')
+plt.hist(x[1],fc=(.2 ,.2,.8,.5),label='Init Seed')
+plt.hist(x[2],fc=(.8 ,.2,.2,.5),label='Batch')
+#plt.xlim((0,0.14))
+#plt.xlabel('hG Std. Deviation',**hfont)
+#plt.ylabel('Count',**hfont)
+plt.tick_params(labelleft=False,labelbottom=False)
+plt.legend()
+plt.show()
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Hg_Variance.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
+
+# delta
+actions =['Rt Thumb','Left Leg','Lt Thumb','Head','Lips','Tongue','Both Middle Finger']
+corr_coef_delta = np.array([])
+hand_knob_act_imag=np.array([])
+hand_knob_act_online=np.array([])
+hand_knob_act_batch=np.array([])
+var_imag=np.array([])
+var_online=np.array([])
+var_batch=np.array([])
+hand_channels = np.array([23,31])
+for query in np.arange(7):        
+    
+    # getting hand knob activation
+    tmp = delta_recon_imag[query]
+    a = np.std(tmp,axis=0)
+    var_imag = np.append(var_imag,a)
+    tmp = tmp[:,hand_channels] # get the hand knob channels 30,31,22,23,15
+    hand_knob_act_imag = np.append(hand_knob_act_imag,tmp)
+    # plotting
+    fig=plt.figure()
+    plt.suptitle(actions[query])
+    tmp = np.mean(delta_recon_imag[query],axis=0)
+    #tmp = stats.zscore(tmp)
+    tmp1 = np.reshape(tmp,(4,8))
+    xmax1,xmin1 = tmp.max(),tmp.min()
+    plt.subplot(311)
+    fig1=plt.imshow(tmp1)
+    plt.axis('off')    
+    plt.colorbar()
+        
+    # getting hand knob activation
+    tmp = delta_recon_online[query]
+    a = np.std(tmp,axis=0)
+    var_online = np.append(var_online,a)
+    tmp = tmp[:,hand_channels] # get the hand knob channels 30,31,22,23,15
+    hand_knob_act_online = np.append(hand_knob_act_online,tmp)
+    # plotting
+    tmp = np.mean(delta_recon_online[query],axis=0)
+    #tmp = stats.zscore(tmp)
+    tmp2 = np.reshape(tmp,(4,8))
+    xmax2,xmin2 = tmp.max(),tmp.min()
+    plt.subplot(312)    
+    fig2=plt.imshow(tmp2)   
+    plt.axis('off')      
+    plt.colorbar()
+        
+    # getting hand knob activation
+    tmp = delta_recon_batch[query]
+    a = np.std(tmp,axis=0)
+    var_batch = np.append(var_batch,a)
+    tmp = tmp[:,hand_channels] # get the hand knob channels 30,31,22,23,15
+    hand_knob_act_batch = np.append(hand_knob_act_batch,tmp)        
+    # plotting
+    tmp = np.mean(delta_recon_batch[query],axis=0) #first 8 nos form first row, etc
+    #tmp = stats.zscore(tmp)
+    tmp3 = np.reshape(tmp,(4,8)) # first 8 values form the first row of the grid and so on
+    xmax3,xmin3 = tmp.max(),tmp.min()
+    plt.subplot(313)    
+    fig3=plt.imshow(tmp3)
+    plt.axis('off')    
+    plt.colorbar()
+    
+   # a = np.corrcoef(np.ndarray.flatten(tmp1),np.ndarray.flatten(tmp2))[0,1]
+   # b = np.corrcoef(np.ndarray.flatten(tmp1),np.ndarray.flatten(tmp3))[0,1]
+   # c = np.corrcoef(np.ndarray.flatten(tmp2),np.ndarray.flatten(tmp3))[0,1]
+    a = np.dot(tmp1.flatten(),tmp2.flatten())
+    b = np.dot(tmp1.flatten(),tmp3.flatten())
+    c = np.dot(tmp2.flatten(),tmp3.flatten())
+    corr_coef_delta = np.append(corr_coef_delta,[a,b,c])
+    
+    xmax = np.array([xmax1,xmax2,xmax3])
+    xmin = np.array([xmin1,xmin2,xmin3])
+    fig1.set_clim(xmin.min(),xmax.max())
+    fig2.set_clim(xmin.min(),xmax.max())
+    fig3.set_clim(xmin.min(),xmax.max())
+    
+    image_format = 'svg' # e.g .png, .svg, etc.
+    image_name = actions[query] + '_delta_Day1.svg'
+    fig.savefig(image_name, format=image_format, dpi=300)
+
+# plotting hand knob activation
+x= [hand_knob_act_imag.flatten()  ,hand_knob_act_online.flatten(), hand_knob_act_batch.flatten() ]
+fig=plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+plt.boxplot(x,showfliers=False)
+plt.xticks(ticks=[1,2,3],labels=('Open Loop','Init. Seed','Batch'),**hfont)
+plt.ylabel('delta Hand knob activity',**hfont)
+plt.show()
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Delta_Hand_Knob_Activation.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
+
+# plotting variance boxplots 
+x= [var_imag  ,var_online, var_batch]
+fig=plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+plt.boxplot(x,showfliers=False)
+plt.xticks(ticks=[1,2,3],labels=('Imagined','Online','Batch'),**hfont)
+plt.ylabel('hG Variance',**hfont)
+plt.show()
+# plotting variance histograms
+fig=plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+plt.hist(x[0],fc=(.2 ,.2,.2,.5),label='Open Loop')
+plt.hist(x[1],fc=(.2 ,.2,.8,.5),label='Init Seed')
+plt.hist(x[2],fc=(.8 ,.2,.2,.5),label='Batch')
+#plt.xlim((0,0.14))
+#plt.xlabel('Delta Std. Deviation',**hfont)
+#plt.ylabel('Count',**hfont)
+plt.tick_params(labelleft=False,labelbottom=False)
+#plt.legend()
+plt.show()
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Delta_Variance.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
+
+# beta
+actions =['Rt Thumb','Left Leg','Lt Thumb','Head','Lips','Tongue','Both Middle Finger']
+corr_coef_beta = np.array([])
+hand_knob_act_imag=np.array([])
+hand_knob_act_online=np.array([])
+hand_knob_act_batch=np.array([])
+var_imag=np.array([])
+var_online=np.array([])
+var_batch=np.array([])
+hand_channels = np.array([23,31])
+for query in np.arange(7):        
+    
+    # getting hand knob activation
+    tmp = beta_recon_imag[query]
+    a = np.std(tmp,axis=0)
+    var_imag = np.append(var_imag,a)
+    tmp = tmp[:,hand_channels] # get the hand knob channels 30,31,22,23,15
+    hand_knob_act_imag = tmp    
+    # plotting
+    fig=plt.figure()
+    plt.suptitle(actions[query])
+    tmp = np.mean(beta_recon_imag[query],axis=0)
+    #tmp = stats.zscore(tmp)
+    tmp1 = np.reshape(tmp,(4,8))
+    xmax1,xmin1 = tmp.max(),tmp.min()
+    plt.subplot(311)
+    fig1=plt.imshow(tmp1)
+    plt.axis('off')    
+    plt.colorbar()
+        
+    # getting hand knob activation
+    tmp = beta_recon_online[query]
+    a = np.std(tmp,axis=0)
+    var_online = np.append(var_online,a)
+    tmp = tmp[:,hand_channels] # get the hand knob channels 30,31,22,23,15
+    hand_knob_act_online = tmp        
+    # plotting
+    tmp = np.mean(beta_recon_online[query],axis=0)
+    #tmp = stats.zscore(tmp)
+    tmp2 = np.reshape(tmp,(4,8))
+    xmax2,xmin2 = tmp.max(),tmp.min()
+    plt.subplot(312)    
+    fig2=plt.imshow(tmp2)   
+    plt.axis('off')      
+    plt.colorbar()
+        
+    # getting hand knob activation
+    tmp = beta_recon_batch[query]
+    a = np.std(tmp,axis=0)
+    var_batch = np.append(var_batch,a)
+    tmp = tmp[:,hand_channels] # get the hand knob channels 30,31,22,23,15
+    hand_knob_act_batch = tmp        
+    # plotting
+    tmp = np.mean(beta_recon_batch[query],axis=0) #first 8 nos form first row, etc
+    #tmp = stats.zscore(tmp)
+    tmp3 = np.reshape(tmp,(4,8)) # first 8 values form the first row of the grid and so on
+    xmax3,xmin3 = tmp.max(),tmp.min()
+    plt.subplot(313)    
+    fig3=plt.imshow(tmp3)
+    plt.axis('off')    
+    plt.colorbar()
+    
+    # a = np.corrcoef(np.ndarray.flatten(tmp1),np.ndarray.flatten(tmp2))[0,1]
+    # b = np.corrcoef(np.ndarray.flatten(tmp1),np.ndarray.flatten(tmp3))[0,1]
+    # c = np.corrcoef(np.ndarray.flatten(tmp2),np.ndarray.flatten(tmp3))[0,1]
+    a = np.dot(tmp1.flatten(),tmp2.flatten())
+    b = np.dot(tmp1.flatten(),tmp3.flatten())
+    c = np.dot(tmp2.flatten(),tmp3.flatten())
+    corr_coef_beta = np.append(corr_coef_beta,[a,b,c])
+    
+    xmax = np.array([xmax1,xmax2,xmax3])
+    xmin = np.array([xmin1,xmin2,xmin3])
+    fig1.set_clim(xmin.min(),xmax.max())
+    fig2.set_clim(xmin.min(),xmax.max())
+    fig3.set_clim(xmin.min(),xmax.max())
+    
+    image_format = 'svg' # e.g .png, .svg, etc.
+    image_name = actions[query] + '_delta_Day1.svg'
+    fig.savefig(image_name, format=image_format, dpi=300)
+
+# plotting hand knob activation
+x= [hand_knob_act_imag.flatten()  ,hand_knob_act_online.flatten(), hand_knob_act_batch.flatten() ]
+fig=plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+plt.boxplot(x,showfliers=False)
+plt.xticks(ticks=[1,2,3],labels=('Open Loop','Init. Seed','Batch'),**hfont)
+plt.ylabel('beta Hand knob activity',**hfont)
+plt.show()
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Beta_Hand_Knob_Activation.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
+
+# plotting variance boxplots 
+x= [var_imag  ,var_online, var_batch]
+fig=plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+plt.boxplot(x,showfliers=False)
+plt.xticks(ticks=[1,2,3],labels=('Imagined','Online','Batch'),**hfont)
+plt.ylabel('hG Variance',**hfont)
+plt.show()
+# plotting variance histograms
+fig=plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+plt.hist(x[0],fc=(.2 ,.2,.2,.5),label='Open Loop')
+plt.hist(x[1],fc=(.2 ,.2,.8,.5),label='Init Seed')
+plt.hist(x[2],fc=(.8 ,.2,.2,.5),label='Batch')
+#plt.xlim((0,0.14))
+#plt.xlabel('Beta Std. Deviation',**hfont)
+#plt.ylabel('Count',**hfont)
+#plt.legend()
+plt.tick_params(labelleft=False,labelbottom=False)
+plt.show()
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Beta_Variance.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
+
+# plotting all spatial correlations together as boxplot
+x= [corr_coef_delta  ,corr_coef_beta, corr_coef_hg]
+fig=plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+plt.boxplot(x,showfliers=False)
+plt.xticks(ticks=[1,2,3],labels=('Delta','Beta','hG'),**hfont)
+plt.ylabel('Norm. Spatial Correlation',**hfont)
+plt.ylim((0.4,1))
+plt.show()
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Norm. Spatial_Correlation.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
+
+
+# labels = np.argmax(Yimagined,axis=1)
+# idx = np.where(labels==5)[0]
+# tmp = condn_data_imagined[idx,:]
+# hgidx = np.arange(2,96,3)
+# tmp = tmp[:,hgidx]
+# tmp = np.mean(tmp,axis=0)
+# #tmp = tmp/lin.norm(tmp)
+# tmp = np.reshape(tmp,(4,8))
+# xmax1,xmin1 = tmp.max(),tmp.min()
+# plt.figure()
+# fig1=plt.imshow(tmp)
+# plt.colorbar()
+
+# labels = np.argmax(Yonline,axis=1)
+# idx = np.where(labels==5)[0]
+# tmp = condn_data_online[idx,:]
+# hgidx = np.arange(2,96,3)
+# tmp = tmp[:,hgidx]
+# tmp = np.mean(tmp,axis=0)
+# tmp = np.reshape(tmp,(4,8))
+# #tmp = tmp/lin.norm(tmp)
+# xmax2,xmin2 = tmp.max(),tmp.min()
+# plt.figure()
+# fig2=plt.imshow(tmp)
+# plt.colorbar()
+# xmax = np.array([xmax1,xmax2])
+# xmin = np.array([xmin1,xmin2])
+# fig1.set_clim(xmin.min(),xmax.max())
+# fig2.set_clim(xmin.min(),xmax.max())
+
+
+
+
