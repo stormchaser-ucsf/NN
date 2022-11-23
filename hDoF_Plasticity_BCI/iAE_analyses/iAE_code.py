@@ -65,8 +65,11 @@ dist_means_overall_batch = np.empty([10,0])
 dist_var_overall_batch = np.empty([10,0])
 mahab_dist_overall_batch = np.empty([10,0])
 
+# num of days
+num_days=10
+
 # iterations to bootstrap
-iterations = 1
+iterations = 50
 
 # init overall variables 
 mahab_distances_imagined_days = np.zeros([21,iterations,10])
@@ -87,6 +90,17 @@ accuracy_batch_days = np.zeros((iterations,10))
 var_overall_imagined_days = np.zeros((iterations,10))
 var_overall_batch_days = np.zeros((iterations,10))
 var_overall_online_days = np.zeros((iterations,10))
+# init vars for channel variance stuff
+delta_recon_imag_var_days = np.zeros([iterations,224,num_days])
+beta_recon_imag_var_days = np.zeros([iterations,224,num_days])
+hg_recon_imag_var_days = np.zeros([iterations,224,num_days])
+delta_recon_online_var_days = np.zeros([iterations,224,num_days])
+beta_recon_online_var_days = np.zeros([iterations,224,num_days])
+hg_recon_online_var_days = np.zeros([iterations,224,num_days])
+delta_recon_batch_var_days = np.zeros([iterations,224,num_days])
+beta_recon_batch_var_days = np.zeros([iterations,224,num_days])
+hg_recon_batch_var_days = np.zeros([iterations,224,num_days])
+
 
 # main loop 
 for days in (np.arange(10)+1):
@@ -116,7 +130,17 @@ for days in (np.arange(10)+1):
     accuracy_batch_iter = np.array([])
     var_overall_imagined_iter = np.array([])
     var_overall_online_iter = np.array([])
-    var_overall_batch_iter = np.array([])
+    var_overall_batch_iter = np.array([])    
+    # variances in reconstruction
+    delta_recon_imag_var_iter = []
+    beta_recon_imag_var_iter = []
+    hg_recon_imag_var_iter = []
+    delta_recon_online_var_iter = []
+    beta_recon_online_var_iter = []
+    hg_recon_online_var_iter = []
+    delta_recon_batch_var_iter = []
+    beta_recon_batch_var_iter = []
+    hg_recon_batch_var_iter = []
     
     # inner loop
     for loop in np.arange(iterations):
@@ -127,9 +151,9 @@ for days in (np.arange(10)+1):
         while len(np.unique(np.argmax(Ytest,axis=1)))<7:
             Xtrain,Xtest,Ytrain,Ytest = training_test_split(condn_data_imagined,Yimagined,0.8)                        
             
-        # if 'model' in locals():
-        #     del model    
-        # model = iAutoencoder(input_size,hidden_size,latent_dims,num_classes).to(device)        
+        if 'model' in locals():
+            del model    
+        model = iAutoencoder(input_size,hidden_size,latent_dims,num_classes).to(device)        
         model,acc = training_loop_iAE(model,num_epochs,batch_size,learning_rate,batch_val,
                               patience,gradient_clipping,nn_filename,
                               Xtrain,Ytrain,Xtest,Ytest,
@@ -140,12 +164,19 @@ for days in (np.arange(10)+1):
         # get reconstructed activity as images in the three bands
         delta_recon_imag,beta_recon_imag,hg_recon_imag = return_recon(model,
                                                     condn_data_imagined,Yimagined)
+        # get the variance of each channel and storing 
+        delta_imag_variances = get_recon_channel_variances(delta_recon_imag)
+        beta_imag_variances = get_recon_channel_variances(beta_recon_imag)
+        hg_imag_variances = get_recon_channel_variances(hg_recon_imag)
+        delta_recon_imag_var_iter.append(delta_imag_variances)
+        beta_recon_imag_var_iter.append(beta_imag_variances)
+        hg_recon_imag_var_iter.append(hg_imag_variances)
         
         # get latent activity and plot
         D,z,idx,fig_imagined = plot_latent(model, condn_data_imagined,Yimagined,condn_data_imagined.shape[0],
                               latent_dims)        
         silhoutte_imagined_iter = np.append(silhoutte_imagined_iter,D)
-        #plt.close()
+        plt.close()
         # mahab distance
         mahab_distances = get_mahab_distance_latent(z,idx)
         mahab_distances = mahab_distances[np.triu_indices(mahab_distances.shape[0])]
@@ -181,12 +212,19 @@ for days in (np.arange(10)+1):
         # get reconstructed activity as images in the three bands
         delta_recon_online,beta_recon_online,hg_recon_online = return_recon(model,
                                                     condn_data_online,Yonline)
+        # get the variance of each channel and storing 
+        delta_online_variances = get_recon_channel_variances(delta_recon_online)
+        beta_online_variances = get_recon_channel_variances(beta_recon_online)
+        hg_online_variances = get_recon_channel_variances(hg_recon_online)
+        delta_recon_online_var_iter.append(delta_online_variances)
+        beta_recon_online_var_iter.append(beta_online_variances)
+        hg_recon_online_var_iter.append(hg_online_variances)
        
         # get latent activity and plot
         del D,z,idx
         D,z,idx,fig_online = plot_latent(model, condn_data_online,Yonline,condn_data_online.shape[0],
                               latent_dims)
-        #plt.close()
+        plt.close()
         silhoutte_online_iter = np.append(silhoutte_online_iter,D)
         # mahab distance
         mahab_distances = get_mahab_distance_latent(z,idx)
@@ -222,11 +260,19 @@ for days in (np.arange(10)+1):
         # get reconstructed activity as images in the three bands
         delta_recon_batch,beta_recon_batch,hg_recon_batch = return_recon(model,
                                                     condn_data_batch,Ybatch)
+        # get the variance of each channel and storing 
+        delta_batch_variances = get_recon_channel_variances(delta_recon_batch)
+        beta_batch_variances = get_recon_channel_variances(beta_recon_batch)
+        hg_batch_variances = get_recon_channel_variances(hg_recon_batch)
+        delta_recon_batch_var_iter.append(delta_batch_variances)
+        beta_recon_batch_var_iter.append(beta_batch_variances)
+        hg_recon_batch_var_iter.append(hg_batch_variances)
+        
         # get latent activity and plot
         del D,z,idx
         D,z,idx,fig_batch = plot_latent(model, condn_data_batch,Ybatch,condn_data_batch.shape[0],
                               latent_dims)
-        #plt.close()
+        plt.close()
         silhoutte_batch_iter = np.append(silhoutte_batch_iter,D)
         # mahab distance
         mahab_distances = get_mahab_distance_latent(z,idx)
@@ -267,11 +313,22 @@ for days in (np.arange(10)+1):
     var_overall_batch_days[:,days-1] = var_overall_batch_iter.T
     var_overall_online_days[:,days-1] = var_overall_online_iter.T
     var_overall_imagined_days[:,days-1] = var_overall_imagined_iter.T
+    # store the channel variances from reconstruction
+    delta_recon_imag_var_days[:,:,days-1] = np.array(delta_recon_imag_var_iter)
+    beta_recon_imag_var_days[:,:,days-1] = np.array(beta_recon_imag_var_iter)
+    hg_recon_imag_var_days[:,:,days-1] = np.array(hg_recon_imag_var_iter)
+    delta_recon_online_var_days[:,:,days-1] = np.array(delta_recon_online_var_iter)
+    beta_recon_online_var_days[:,:,days-1] = np.array(beta_recon_online_var_iter)
+    hg_recon_online_var_days[:,:,days-1] = np.array(hg_recon_online_var_iter)
+    delta_recon_batch_var_days[:,:,days-1] = np.array(delta_recon_batch_var_iter)
+    beta_recon_batch_var_days[:,:,days-1] = np.array(beta_recon_batch_var_iter)
+    hg_recon_batch_var_days[:,:,days-1] = np.array(hg_recon_batch_var_iter)
       
 
 
 # saving it all 
-np.savez('whole_dataSamples_stats_results_withBatch_Main_withVariance', 
+# orig filename: whole_dataSamples_stats_results_withBatch_Main_withVariance
+np.savez('whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars', 
          silhoutte_imagined_days = silhoutte_imagined_days,
          silhoutte_online_days = silhoutte_online_days,
          silhoutte_batch_days = silhoutte_batch_days,
@@ -289,7 +346,16 @@ np.savez('whole_dataSamples_stats_results_withBatch_Main_withVariance',
          accuracy_batch_days = accuracy_batch_days,
          var_overall_batch_days = var_overall_batch_days,
          var_overall_online_days = var_overall_online_days,
-         var_overall_imagined_days = var_overall_imagined_days)
+         var_overall_imagined_days = var_overall_imagined_days,
+         delta_recon_imag_var_days=delta_recon_imag_var_days,
+         beta_recon_imag_var_days=beta_recon_imag_var_days,
+         hg_recon_imag_var_days=hg_recon_imag_var_days,
+         delta_recon_online_var_days=delta_recon_online_var_days,
+         beta_recon_online_var_days=beta_recon_online_var_days,
+         hg_recon_online_var_days=hg_recon_online_var_days,
+         delta_recon_batch_var_days=delta_recon_batch_var_days,
+         beta_recon_batch_var_days=beta_recon_batch_var_days,
+         hg_recon_batch_var_days=hg_recon_batch_var_days)
 
     
 

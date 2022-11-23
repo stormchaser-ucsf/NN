@@ -51,6 +51,25 @@ def get_data(filename):
     Y = Y_mult
     return condn_data_imagined, Y
 
+# get the data 
+def get_data_B2(filename):
+    data_dict = mat73.loadmat(filename)
+    data_imagined = data_dict.get('condn_data')
+    condn_data_imagined = np.zeros((0,96))
+    Y = np.zeros(0)
+    for i in np.arange(4):
+        tmp = np.array(data_imagined[i])
+        condn_data_imagined = np.concatenate((condn_data_imagined,tmp),axis=0)
+        idx = i*np.ones((tmp.shape[0],1))[:,0]
+        Y = np.concatenate((Y,idx),axis=0)
+
+    Y_mult = np.zeros((Y.shape[0],4))
+    for i in range(Y.shape[0]):
+        tmp = round(Y[i])
+        Y_mult[i,tmp]=1
+    Y = Y_mult
+    return condn_data_imagined, Y
+
 
 # median bootstrap
 def median_bootstrap(indata,iters):
@@ -88,8 +107,36 @@ def get_distance_means(z,idx):
             dist_means = np.append(dist_means,d)
     return dist_means
 
+def get_distance_means_B2(z,idx):        
+    dist_means=np.array([])
+    for i in np.arange(4):
+        idxA = (idx==i).nonzero()[0]
+        A = z[idxA,:]        
+        for j in np.arange(i+1,4):
+            idxB = (idx==j).nonzero()[0]
+            B = z[idxB,:]
+            d = np.mean(A,axis=0)-np.mean(B,axis=0)
+            d = (d @ d.T) ** (0.5)
+            dist_means = np.append(dist_means,d)
+    return dist_means
+
 def get_variances(z,idx):
     dist_var = np.empty((7,))
+    for i in np.arange(len(np.unique(idx))):
+        idxA = (idx==i).nonzero()[0]
+        A = z[idxA,:]
+       # A = stats.zscore(A,axis=0)
+        C = np.cov(A,rowvar=False)
+        if len(C.shape) > 0:
+            C = C + 1e-4*np.identity(C.shape[0])
+            A = lin.det(C)
+        elif len(C.shape) == 0:
+            A = C
+        dist_var[i] = A
+    return dist_var
+
+def get_variances_B2(z,idx):
+    dist_var = np.empty((4,))
     for i in np.arange(len(np.unique(idx))):
         idxA = (idx==i).nonzero()[0]
         A = z[idxA,:]
@@ -126,6 +173,19 @@ def get_mahab_distance(x,y):
 # function to get mahalanobis distance
 def get_mahab_distance_latent(z,idx):
     mdist =  np.zeros([7,7])
+    for i in np.arange(len(np.unique(idx))):
+        idxA = (idx==i).nonzero()[0]
+        A = z[idxA,:]
+        for j in np.arange(i+1,len(np.unique(idx))):
+            idxB = (idx==j).nonzero()[0]
+            B = z[idxB,:]
+            mdist[i,j] = get_mahab_distance(A, B)    
+            mdist[j,i] = mdist[i,j]
+    return mdist
+
+# function to get mahalanobis distance
+def get_mahab_distance_latent_B2(z,idx):
+    mdist =  np.zeros([4,4])
     for i in np.arange(len(np.unique(idx))):
         idxA = (idx==i).nonzero()[0]
         A = z[idxA,:]
@@ -553,6 +613,67 @@ def return_recon(model,data,Y):
     
     model.train()
     return delta_recon,beta_recon,hg_recon
+
+def return_recon_B2(model,data,Y):
+    data = torch.from_numpy(data).to(device).float()
+    Y=torch.from_numpy(Y).to(device).float()
+    Y=convert_to_ClassNumbers(Y).to('cpu').detach().numpy()
+    model.eval()
+    hg_recon = []
+    beta_recon=[]
+    delta_recon=[]
+    for query in np.arange(4):
+        idx = np.where(Y==query)[0]
+        data_tmp = data[idx,:]        
+        
+        with torch.no_grad():
+            recon_data,class_outputs = model(data_tmp)        
+                
+        recon_data = recon_data.to('cpu').detach().numpy()    
+        # hg
+        idx = np.arange(2,96,3)
+        hg_recon_tmp = recon_data[:,idx]  
+        hg_recon.append(hg_recon_tmp)
+        # delta
+        idx = np.arange(0,96,3)
+        delta_recon_tmp = recon_data[:,idx]        
+        delta_recon.append(delta_recon_tmp)
+        #beta
+        idx = np.arange(1,96,3)
+        beta_recon_tmp = recon_data[:,idx]  
+        beta_recon.append(beta_recon_tmp)
+    
+    model.train()
+    return delta_recon,beta_recon,hg_recon
+    
+def get_recon_channel_variances(recon_data):
+    l = len(recon_data)
+    variances = np.array([])
+    for query in np.arange(l):
+        tmp = recon_data[query]
+        a = np.std(tmp,axis=0)
+        variances = np.append(variances,a)
+    
+    return variances
+
+def get_spatial_correlation(data1,data2,data3):
+    corr_coef = []
+    for query in np.arange(len(data1)):
+        tmp1 = np.mean(data1[query],axis=0)
+        tmp2 = np.mean(data2[query],axis=0)
+        tmp3 = np.mean(data3[query],axis=0)
+        a = np.corrcoef(tmp1,tmp2)[0,1]
+        b = np.corrcoef(tmp1,tmp3)[0,1]
+        c = np.corrcoef(tmp2,tmp3)[0,1]
+        corr_coef.append([a,b,c])
+    corr_coef = np.array(corr_coef).flatten()
+    return corr_coef
+    
+        
+        
+        
+    
+    
     
     
 
