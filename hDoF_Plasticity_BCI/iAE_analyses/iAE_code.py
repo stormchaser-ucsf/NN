@@ -100,6 +100,10 @@ hg_recon_online_var_days = np.zeros([iterations,224,num_days])
 delta_recon_batch_var_days = np.zeros([iterations,224,num_days])
 beta_recon_batch_var_days = np.zeros([iterations,224,num_days])
 hg_recon_batch_var_days = np.zeros([iterations,224,num_days])
+# init vars for storing day to day spatial corr coeff
+delta_spatial_corr_days = np.zeros([iterations,num_classes*3,num_days])
+beta_spatial_corr_days = np.zeros([iterations,num_classes*3,num_days])
+hg_spatial_corr_days = np.zeros([iterations,num_classes*3,num_days])
 
 
 # main loop 
@@ -141,6 +145,10 @@ for days in (np.arange(10)+1):
     delta_recon_batch_var_iter = []
     beta_recon_batch_var_iter = []
     hg_recon_batch_var_iter = []
+    # spatial correlation arrays
+    delta_spatial_corr_iter = np.empty([num_classes*3,0])
+    beta_spatial_corr_iter = np.empty([num_classes*3,0])
+    hg_spatial_corr_iter = np.empty([num_classes*3,0])
     
     # inner loop
     for loop in np.arange(iterations):
@@ -293,6 +301,20 @@ for days in (np.arange(10)+1):
         var_overall_batch_iter = np.append(var_overall_batch_iter,
                                            var_overall_batch)
         
+        #### GET SPATIAL CORRELATIONS BETWEEN IMAGINED, ONLINE AND BATCH 
+        if os.path.exists(batch_file_name):
+            delta_corr_coef = get_spatial_correlation(delta_recon_imag,delta_recon_online,delta_recon_batch)
+            beta_corr_coef = get_spatial_correlation(beta_recon_imag,beta_recon_online,beta_recon_batch)
+            hg_corr_coef = get_spatial_correlation(hg_recon_imag,hg_recon_online,hg_recon_batch)            
+        else:
+            delta_corr_coef = np.zeros(12)
+            beta_corr_coef = np.zeros(12)
+            hg_corr_coef = np.zeros(12)
+        
+        delta_spatial_corr_iter = np.append(delta_spatial_corr_iter,delta_corr_coef[:,None],axis=1)
+        beta_spatial_corr_iter = np.append(beta_spatial_corr_iter,beta_corr_coef[:,None],axis=1)
+        hg_spatial_corr_iter = np.append(hg_spatial_corr_iter,hg_corr_coef[:,None],axis=1)
+        
     
     # store it all 
     mahab_distances_imagined_days[:,:,days-1] = mahab_distances_imagined_iter
@@ -323,12 +345,16 @@ for days in (np.arange(10)+1):
     delta_recon_batch_var_days[:,:,days-1] = np.array(delta_recon_batch_var_iter)
     beta_recon_batch_var_days[:,:,days-1] = np.array(beta_recon_batch_var_iter)
     hg_recon_batch_var_days[:,:,days-1] = np.array(hg_recon_batch_var_iter)
+    # store spatial correlations (each day)
+    delta_spatial_corr_days[:,:,days-1] = delta_spatial_corr_iter
+    beta_spatial_corr_days[:,:,days-1] = beta_spatial_corr_iter
+    hg_spatial_corr_days[:,:,days-1] = hg_spatial_corr_iter
       
 
 
 # saving it all 
 # orig filename: whole_dataSamples_stats_results_withBatch_Main_withVariance
-np.savez('whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars', 
+np.savez('whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr', 
          silhoutte_imagined_days = silhoutte_imagined_days,
          silhoutte_online_days = silhoutte_online_days,
          silhoutte_batch_days = silhoutte_batch_days,
@@ -355,11 +381,58 @@ np.savez('whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars'
          hg_recon_online_var_days=hg_recon_online_var_days,
          delta_recon_batch_var_days=delta_recon_batch_var_days,
          beta_recon_batch_var_days=beta_recon_batch_var_days,
-         hg_recon_batch_var_days=hg_recon_batch_var_days)
+         hg_recon_batch_var_days=hg_recon_batch_var_days,
+         delta_spatial_corr_days=delta_spatial_corr_days,
+         beta_spatial_corr_days=beta_spatial_corr_days,
+         hg_spatial_corr_days=hg_spatial_corr_days)
+
 
     
 
 
+# condn_data_online,Yonline =   data_aug_mlp(condn_data_online,Yonline,2100)
+# condn_data_batch,Ybatch =   data_aug_mlp(condn_data_batch,Ybatch,2100)
+    
+# condn_data_total = np.concatenate((condn_data_imagined,condn_data_online,condn_data_batch),axis=0)    
+# Ytotal = np.concatenate((Yimagined,Yonline,Ybatch),axis=0)    
+
+# Ytest = np.zeros((2,2))
+# while len(np.unique(np.argmax(Ytest,axis=1)))<7:
+#     Xtrain,Xtest,Ytrain,Ytest = training_test_split(condn_data_total,Ytotal,0.8)                        
+    
+# if 'model' in locals():
+#     del model    
+# model = iAutoencoder(input_size,hidden_size,latent_dims,num_classes).to(device)        
+# model,acc = training_loop_iAE(model,num_epochs,batch_size,learning_rate,batch_val,
+#                       patience,gradient_clipping,nn_filename,
+#                       Xtrain,Ytrain,Xtest,Ytest,
+#                       input_size,hidden_size,latent_dims,num_classes)
+# # store acc from latent space
+# accuracy_imagined_iter = np.append(accuracy_imagined_iter,acc)        
+
+# # get reconstructed activity as images in the three bands
+# delta_recon_imag,beta_recon_imag,hg_recon_imag = return_recon(model,
+#                                             condn_data_imagined,Yimagined)
+# # get the variance of each channel and storing 
+# delta_imag_variances = get_recon_channel_variances(delta_recon_imag)
+# beta_imag_variances = get_recon_channel_variances(beta_recon_imag)
+# hg_imag_variances = get_recon_channel_variances(hg_recon_imag)
+# delta_recon_imag_var_iter.append(delta_imag_variances)
+# beta_recon_imag_var_iter.append(beta_imag_variances)
+# hg_recon_imag_var_iter.append(hg_imag_variances)
+
+# # get latent activity and plot imagined
+# D,z,idx,fig_imagined = plot_latent(model, condn_data_imagined,Yimagined,condn_data_imagined.shape[0],
+#                       latent_dims)        
+# silhoutte_imagined_iter = np.append(silhoutte_imagined_iter,D)
+# # online
+# D,z,idx,fig_online = plot_latent(model, condn_data_online,Yonline,condn_data_online.shape[0],
+#                       latent_dims)        
+# silhoutte_online_iter = np.append(silhoutte_online_iter,D)
+# # batch
+# D,z,idx,fig_batch = plot_latent(model, condn_data_batch,Ybatch,condn_data_batch.shape[0],
+#                       latent_dims)        
+# silhoutte_batch_iter = np.append(silhoutte_batch_iter,D)
 
 
 

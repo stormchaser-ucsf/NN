@@ -669,11 +669,29 @@ def get_spatial_correlation(data1,data2,data3):
     corr_coef = np.array(corr_coef).flatten()
     return corr_coef
     
+
+def data_aug_mlp(indata,labels,data_size):
+    N = round(data_size/indata.shape[0]) #data aug factor
+    labels_idx = np.argmax(labels,axis=1)
+    num_labels = len(np.unique(labels_idx))
+    condn_data_aug = []   
+    labels_aug=[]
+    for query in np.arange(num_labels):
+        idx = np.where(labels_idx==query)[0]
+        idx_len_aug = round(N*len(idx)) - len(idx)
         
+        for i in np.arange(idx_len_aug):
+            # randomly get 4 samples and average 
+            a = rnd.choice(idx,4,replace=True)
+            tmp_data = np.mean(indata[a,:],axis=0)
+            condn_data_aug.append(tmp_data)
+            labels_aug.append(labels[a,:][0,:])
+    
+    condn_data_aug = np.array(condn_data_aug)
+    labels_aug = np.array(labels_aug)
+    outdata = np.concatenate((indata,condn_data_aug),axis=0)
+    outdata_labels = np.concatenate((labels,labels_aug),axis=0)
+    return outdata, outdata_labels
         
-        
-    
-    
-    
-    
+
 

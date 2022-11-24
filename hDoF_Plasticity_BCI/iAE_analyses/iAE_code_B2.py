@@ -368,16 +368,13 @@ for days in (np.arange(num_days)+1):
     beta_recon_batch_var_days[:,:,days-1] = np.array(beta_recon_batch_var_iter)
     hg_recon_batch_var_days[:,:,days-1] = np.array(hg_recon_batch_var_iter)
     # store spatial correlations (each day)
-    delta_spatial_corr_days[:,:,days-1]
-    beta_spatial_corr_days[:,:,days-1]
-    hg_spatial_corr_days[:,:,days-1]
+    delta_spatial_corr_days[:,:,days-1] = delta_spatial_corr_iter.T
+    beta_spatial_corr_days[:,:,days-1] = beta_spatial_corr_iter.T
+    hg_spatial_corr_days[:,:,days-1] = hg_spatial_corr_iter.T
+     
     
-    
-      
-
-
 # saving it all 
-np.savez('B2_whole_dataSamples_stats_results_withBatch_Main_withVariance_withChVars', 
+np.savez('B2_whole_dataSamples_stats_results_withBatch_Main_withVariance_withChVars_andSpatCorr', 
          silhoutte_imagined_days = silhoutte_imagined_days,
          silhoutte_online_days = silhoutte_online_days,
          silhoutte_batch_days = silhoutte_batch_days,
@@ -404,7 +401,10 @@ np.savez('B2_whole_dataSamples_stats_results_withBatch_Main_withVariance_withChV
          hg_recon_online_var_days=hg_recon_online_var_days,
          delta_recon_batch_var_days=delta_recon_batch_var_days,
          beta_recon_batch_var_days=beta_recon_batch_var_days,
-         hg_recon_batch_var_days=hg_recon_batch_var_days)
+         hg_recon_batch_var_days=hg_recon_batch_var_days,
+         delta_spatial_corr_days=delta_spatial_corr_days,
+         beta_spatial_corr_days=beta_spatial_corr_days,
+         hg_spatial_corr_days=hg_spatial_corr_days)
 
     
 

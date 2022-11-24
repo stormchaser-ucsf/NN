@@ -2237,7 +2237,10 @@ image_name = 'Beta_Hand_Knob_Activation_B2.svg'
 fig.savefig(image_name, format=image_format, dpi=300)
 
 
-# plotting all spatial correlations together as boxplot
+# plotting all spatial correlations together as boxplot after iterating thru simulations
+corr_coef_delta = np.mean(delta_spatial_corr_days[:,:,1:5],axis=0).flatten()
+corr_coef_beta = np.mean(beta_spatial_corr_days[:,:,1:5],axis=0).flatten()
+corr_coef_hg = np.mean(hg_spatial_corr_days[:,:,1:5],axis=0).flatten()
 x= [corr_coef_delta  ,corr_coef_beta, corr_coef_hg]
 fig=plt.figure()
 hfont = {'fontname':'Arial'}
