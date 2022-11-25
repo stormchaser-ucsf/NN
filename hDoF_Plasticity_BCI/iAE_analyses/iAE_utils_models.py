@@ -233,8 +233,8 @@ def monte_carlo_mahab_full(data,labels,num_samples):
 
 # split into training and validation class trial level
 def training_test_split_trial(condn_data,Y,prop):
-    len = np.arange(Y.shape[0])
-    len_cutoff = round(prop*len[-1])
+    len1 = np.arange(Y.shape[0])
+    len_cutoff = round(prop*len1[-1])
     idx = np.random.permutation(Y.shape[0])
     train_idx, test_idx = idx[:len_cutoff] , idx[len_cutoff:]
     Xtrain, Xtest = condn_data[train_idx,:,:] , condn_data[test_idx,:,:] 
@@ -318,15 +318,28 @@ def training_test_split_trial_online(condn_data,Y,prop):
 
 # split into training and validation class 
 def training_test_split(condn_data,Y,prop):
-    len = np.arange(Y.shape[0])
-    len_cutoff = round(prop*len[-1])
+    len1 = np.arange(Y.shape[0])
+    len_cutoff = round(prop*len1[-1])
     idx = np.random.permutation(Y.shape[0])
     train_idx, test_idx = idx[:len_cutoff] , idx[len_cutoff:]
     Xtrain, Xtest = condn_data[train_idx,:] , condn_data[test_idx,:] 
     Ytrain, Ytest = Y[train_idx,:] , Y[test_idx,:]
     return Xtrain,Xtest,Ytrain,Ytest
 
-
+# split into training, testing and validation class 
+def training_test_split_val(condn_data,Y,prop):
+    # prop training, (1-prop)/2 each for val and testing
+    len1 = np.arange(Y.shape[0])
+    len_cutoff = round(prop*len1[-1])
+    idx = np.random.permutation(Y.shape[0])
+    train_idx, leftover_idx = idx[:len_cutoff] , idx[len_cutoff:]
+    Xtrain, Xleftover = condn_data[train_idx,:] , condn_data[leftover_idx,:] 
+    Ytrain, Yleftover = Y[train_idx,:] , Y[leftover_idx,:]
+    # now split left over data in half
+    len2_cutoff = round(Yleftover.shape[0]/2)
+    Xval,Xtest = Xleftover[:len2_cutoff,:], Xleftover[len2_cutoff:,:]
+    Yval,Ytest = Yleftover[:len2_cutoff,:], Yleftover[len2_cutoff:,:]    
+    return Xtrain,Xtest,Xval,Ytrain,Ytest,Yval
 
 ####### MODELS SECTION
 # function to convert one-hot representation back to class numbers
@@ -671,7 +684,7 @@ def get_spatial_correlation(data1,data2,data3):
     
 
 def data_aug_mlp(indata,labels,data_size):
-    N = round(data_size/indata.shape[0]) #data aug factor
+    N = (data_size/indata.shape[0]) #data aug factor
     labels_idx = np.argmax(labels,axis=1)
     num_labels = len(np.unique(labels_idx))
     condn_data_aug = []   
@@ -682,7 +695,7 @@ def data_aug_mlp(indata,labels,data_size):
         
         for i in np.arange(idx_len_aug):
             # randomly get 4 samples and average 
-            a = rnd.choice(idx,4,replace=True)
+            a = rnd.choice(idx,3,replace=True)
             tmp_data = np.mean(indata[a,:],axis=0)
             condn_data_aug.append(tmp_data)
             labels_aug.append(labels[a,:][0,:])

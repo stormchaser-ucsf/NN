@@ -34,7 +34,8 @@ from statsmodels.stats.anova import AnovaRM
 #whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars
 #whole_dataSamples_stats_results_withBatch_Main_withVariance
 #B2_whole_dataSamples_stats_results_withBatch_Main_withVariance
-data=np.load('whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars.npz')
+#whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars
+data=np.load('NewB2_ComManifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_withChVars_andSpatCorr.npz')
 silhoutte_imagined_days = data.get('silhoutte_imagined_days')
 silhoutte_online_days = data.get('silhoutte_online_days')
 silhoutte_batch_days = data.get('silhoutte_batch_days')
@@ -63,12 +64,15 @@ hg_recon_online_var_days=data.get('hg_recon_online_var_days')
 delta_recon_batch_var_days=data.get('delta_recon_batch_var_days')
 beta_recon_batch_var_days=data.get('beta_recon_batch_var_days')
 hg_recon_batch_var_days=data.get('hg_recon_batch_var_days')
-
+# spatial correlation stuff
+delta_spatial_corr_days=data.get('delta_spatial_corr_days')
+beta_spatial_corr_days=data.get('beta_spatial_corr_days')
+hg_spatial_corr_days=data.get('hg_spatial_corr_days')
 
 
 
 # plotting latent spaces
-az=-41
+az=-140
 el=19
 x1 = np.array(fig_imagined.axes[0].get_xlim())[:,None]
 x2 = np.array(fig_online.axes[0].get_xlim())[:,None]
@@ -369,7 +373,7 @@ plt.rcParams.update({'font.size': 6})
 X=np.arange(10)+1
 X=np.arange(10)+1
 # imagined 
-tmp_main = np.squeeze(np.median(var_imagined_days,1))
+tmp_main = np.squeeze(np.median(var_imagined_days,axis=1))
 tmp1 = np.median(tmp_main,axis=0)
 tmp1b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp1 = np.insert(tmp1,0,tmp1[0],axis=0)
@@ -380,7 +384,7 @@ tmp1b = tmp1b[1:]
 plt.plot(X,tmp1,color="black",label = 'Imagined')
 plt.fill_between(X, tmp1-tmp1b, tmp1+tmp1b,color="black",alpha=0.2)
 # online
-tmp_main = np.squeeze(np.median(var_online_days,1))
+tmp_main = np.squeeze(np.median(var_online_days,axis=1))
 tmp2 = np.median(tmp_main,axis=0)
 tmp2b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp2 = np.insert(tmp2,0,tmp2[0],axis=0)
@@ -392,7 +396,7 @@ tmp2b = tmp2b[1:]
 plt.plot(X,tmp2,color="blue",label = 'Online')
 plt.fill_between(X, tmp2-tmp2b, tmp2+tmp2b,color="blue",alpha=0.2)
 # batch
-tmp_main = np.squeeze(np.median(var_batch_days,1))
+tmp_main = np.squeeze(np.median(var_batch_days,axis=1))
 tmp3 = np.median(tmp_main,axis=0)
 tmp3b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp3 = np.insert(tmp3,0,tmp3[0],axis=0)
@@ -412,6 +416,25 @@ image_name = 'Overall_Variance_Latent_Days.svg'
 fig.savefig(image_name, format=image_format, dpi=300)
 
 
+tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
+# tmp = np.concatenate((np.ndarray.flatten(var_overall_imagined_days)[:,None],
+#                       np.ndarray.flatten(var_overall_online_days)[:,None],
+#                       np.ndarray.flatten(var_overall_batch_days)[:,None]),axis=1)
+fig=plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+plt.boxplot((tmp),whis=2,showfliers=False)
+plt.xticks(ticks=[1,2,3],labels=('Imagined','Online','Batch'),**hfont)
+plt.ylabel('Centroid variances',**hfont)
+plt.show()
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Mahab_Dist_Boxplot.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
+print(np.mean(tmp,axis=0))
+
+
 # plotting mean Mahalanobis distance over days  (MAIN MAIN)
 # over days there is a learning effect where Mahab distance grows between the 
 # actions and Batch is always greater than all others. 
@@ -424,7 +447,7 @@ plt.rcParams.update({'font.size': 6})
 X=np.arange(10)+1
 X=np.arange(10)+1
 # imagined 
-tmp_main = np.squeeze(np.median(mahab_distances_imagined_days,1))
+tmp_main = np.squeeze(np.median(mahab_distances_imagined_days,axis=1))
 tmp1 = np.median(tmp_main,axis=0)
 tmp1b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp1 = np.insert(tmp1,0,tmp1[0],axis=0)
@@ -1770,7 +1793,7 @@ print(AnovaRM(data=df, depvar='variance', subject='subject', within=['decoder'])
 
 
 # MAHAB DISTANCES 
-N=2
+N=1
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
