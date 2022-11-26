@@ -143,7 +143,7 @@ def get_variances_B2(z,idx):
        # A = stats.zscore(A,axis=0)
         C = np.cov(A,rowvar=False)
         if len(C.shape) > 0:
-            C = C + 1e-4*np.identity(C.shape[0])
+            C = C + 1e-5*np.identity(C.shape[0])
             A = lin.det(C)
         elif len(C.shape) == 0:
             A = C
@@ -162,8 +162,8 @@ def get_variance_overall(z):
 
 # function to get mahalanobis distance
 def get_mahab_distance(x,y):
-    C1 = np.cov(x,rowvar=False) +  1e-3*np.eye(x.shape[1])
-    C2 = np.cov(y,rowvar=False) +  1e-3*np.eye(y.shape[1])
+    C1 = np.cov(x,rowvar=False) +  1e-5*np.eye(x.shape[1])
+    C2 = np.cov(y,rowvar=False) +  1e-5*np.eye(y.shape[1])
     C = (C1+C2)/2
     m1 = np.mean(x,0)
     m2 = np.mean(y,0)
@@ -354,7 +354,7 @@ def convert_to_ClassNumbers(indata):
 class encoder(nn.Module):
     def __init__(self,input_size,hidden_size,latent_dims,num_classes):
         super(encoder,self).__init__()
-        self.hidden_size2 = round(hidden_size/4)
+        self.hidden_size2 = round(hidden_size/3)
         self.linear1 = nn.Linear(input_size,hidden_size)
         self.linear2 = nn.Linear(hidden_size,self.hidden_size2)
         self.linear3 = nn.Linear(self.hidden_size2,latent_dims)
@@ -398,7 +398,7 @@ class recon_classifier(nn.Module):
 class decoder(nn.Module):
     def __init__(self,input_size,hidden_size,latent_dims,num_classes):
         super(decoder,self).__init__()
-        self.hidden_size2 = round(hidden_size/4)
+        self.hidden_size2 = round(hidden_size/3)
         self.linear1 = nn.Linear(latent_dims,self.hidden_size2)
         self.linear2 = nn.Linear(self.hidden_size2,hidden_size)
         self.linear3 = nn.Linear(hidden_size,input_size)
@@ -697,6 +697,7 @@ def data_aug_mlp(indata,labels,data_size):
             # randomly get 4 samples and average 
             a = rnd.choice(idx,3,replace=True)
             tmp_data = np.mean(indata[a,:],axis=0)
+            tmp_data = tmp_data/lin.norm(tmp_data)
             condn_data_aug.append(tmp_data)
             labels_aug.append(labels[a,:][0,:])
     

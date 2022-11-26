@@ -43,12 +43,12 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # model params
 input_size=96
-hidden_size=32
+hidden_size=48
 latent_dims=3
 num_classes = 7
 
 # training params 
-num_epochs=200
+num_epochs=20
 batch_size=32
 learning_rate = 1e-3
 batch_val=512
@@ -76,7 +76,7 @@ mahab_dist_overall_batch = np.empty([10,0])
 num_days=10
 
 # iterations to bootstrap
-iterations = 20
+iterations = 50
 
 # init overall variables 
 mahab_distances_imagined_days = np.zeros([21,iterations,10])
@@ -163,7 +163,7 @@ for days in (np.arange(10)+1):
     condn_data_batch,Ybatch =   data_aug_mlp(condn_data_batch,Ybatch,condn_data_imagined.shape[0])
     
     ## plotting options
-    plt_close=False
+    plt_close=True
     
     # inner loop
     for loop in np.arange(iterations):

@@ -36,13 +36,13 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # model params
 input_size=96
-hidden_size=32
+hidden_size=48
 latent_dims=3
 num_classes = 4
 
 # training params 
-num_epochs=200
-batch_size=32
+num_epochs=250
+batch_size=64
 learning_rate = 1e-3
 batch_val=512
 patience=6
@@ -67,7 +67,7 @@ dist_var_overall_batch = np.empty([num_days,0])
 mahab_dist_overall_batch = np.empty([num_days,0])
 
 # iterations to bootstrap
-iterations = 20
+iterations = 75
 
 # init overall variables 
 mahab_distances_imagined_days = np.zeros([6,iterations,num_days])
@@ -155,7 +155,7 @@ for days in (np.arange(num_days)+1):
         condn_data_batch,Ybatch =   data_aug_mlp(condn_data_batch,Ybatch,condn_data_imagined.shape[0])
         
     # plotting option
-    plt_close=False
+    plt_close=True
     
     # inner loop
     for loop in np.arange(iterations):
@@ -245,7 +245,7 @@ for days in (np.arange(num_days)+1):
         
         # get reconstructed activity as images in the three bands
         delta_recon_online,beta_recon_online,hg_recon_online = return_recon_B2(model,
-                                                    condn_data_online,Yonline)
+                                                    condn_data_online_test,Yonline_test)
         # get the variance of each channel and storing 
         delta_online_variances = get_recon_channel_variances(delta_recon_online)
         beta_online_variances = get_recon_channel_variances(beta_recon_online)
@@ -256,7 +256,7 @@ for days in (np.arange(num_days)+1):
        
         # get latent activity and plot
         del D,z,idx
-        D,z,idx,fig_online = plot_latent(model, condn_data_online,Yonline,condn_data_online.shape[0],
+        D,z,idx,fig_online = plot_latent(model, condn_data_online_test,Yonline_test,condn_data_online_test.shape[0],
                               latent_dims)
         if plt_close==True:
             plt.close()
@@ -288,7 +288,7 @@ for days in (np.arange(num_days)+1):
             
             # get reconstructed activity as images in the three bands
             delta_recon_batch,beta_recon_batch,hg_recon_batch = return_recon_B2(model,
-                                                        condn_data_batch,Ybatch)
+                                                        condn_data_batch_test,Ybatch_test)
             # get the variance of each channel and storing 
             delta_batch_variances = get_recon_channel_variances(delta_recon_batch)
             beta_batch_variances = get_recon_channel_variances(beta_recon_batch)
@@ -299,7 +299,7 @@ for days in (np.arange(num_days)+1):
             
             # get latent activity and plot
             del D,z,idx
-            D,z,idx,fig_batch = plot_latent(model, condn_data_batch,Ybatch,condn_data_batch.shape[0],
+            D,z,idx,fig_batch = plot_latent(model, condn_data_batch_test,Ybatch_test,condn_data_batch_test.shape[0],
                                   latent_dims)
             if plt_close==True:
                 plt.close()
