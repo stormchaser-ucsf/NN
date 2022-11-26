@@ -72,8 +72,8 @@ hg_spatial_corr_days=data.get('hg_spatial_corr_days')
 
 
 # plotting latent spaces
-az=131
-el=26
+az=-147
+el=-162
 x1 = np.array(fig_imagined.axes[0].get_xlim())[:,None]
 x2 = np.array(fig_online.axes[0].get_xlim())[:,None]
 x3 = np.array(fig_batch.axes[0].get_xlim())[:,None]
@@ -217,7 +217,7 @@ plt.show()
 
 
 # plotting distance between means (no mahab) over days (MAIN) with median
-N=2
+N=1
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
@@ -365,7 +365,7 @@ print(np.mean(tmp,axis=0))
 
 
 # plotting mean centroid variances over days  (MAIN)
-N=2
+N=1
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
@@ -439,7 +439,7 @@ print(np.mean(tmp,axis=0))
 # plotting mean Mahalanobis distance over days  (MAIN MAIN)
 # over days there is a learning effect where Mahab distance grows between the 
 # actions and Batch is always greater than all others. 
-N=2
+N=1
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
@@ -448,7 +448,7 @@ plt.rcParams.update({'font.size': 6})
 X=np.arange(10)+1
 X=np.arange(10)+1
 # imagined 
-tmp_main = np.squeeze(np.median(mahab_distances_imagined_days,axis=1))
+tmp_main = np.squeeze(np.mean(mahab_distances_imagined_days,axis=1))
 tmp1 = np.median(tmp_main,axis=0)
 tmp1b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp1 = np.insert(tmp1,0,tmp1[0],axis=0)
@@ -459,7 +459,7 @@ tmp1b = tmp1b[1:]
 plt.plot(X,tmp1,color="black",label = 'Imagined')
 plt.fill_between(X, tmp1-tmp1b, tmp1+tmp1b,color="black",alpha=0.2)
 # online
-tmp_main = np.squeeze(np.median(mahab_distances_online_days,1))
+tmp_main = np.squeeze(np.mean(mahab_distances_online_days,1))
 tmp2 = np.median(tmp_main,axis=0)
 tmp2b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp2 = np.insert(tmp2,0,tmp2[0],axis=0)
@@ -471,7 +471,7 @@ tmp2b = tmp2b[1:]
 plt.plot(X,tmp2,color="blue",label = 'Online')
 plt.fill_between(X, tmp2-tmp2b, tmp2+tmp2b,color="blue",alpha=0.2)
 # batch
-tmp_main = np.squeeze(np.median(mahab_distances_batch_days,1))
+tmp_main = np.squeeze(np.mean(mahab_distances_batch_days,1))
 tmp3 = np.median(tmp_main,axis=0)
 tmp3b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp3 = np.insert(tmp3,0,tmp3[0],axis=0)

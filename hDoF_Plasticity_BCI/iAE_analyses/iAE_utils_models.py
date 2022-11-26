@@ -581,6 +581,7 @@ def plot_latent(model, data, Y, num_samples,dim):
     z = model.encoder(z)
     z = z.to('cpu').detach().numpy()
     y = y.to('cpu').detach().numpy()    
+    z = z/np.norm(z)
     D = sil(z,y)
     fig=plt.figure()
     if dim==3:
@@ -695,7 +696,7 @@ def data_aug_mlp(indata,labels,data_size):
         
         for i in np.arange(idx_len_aug):
             # randomly get 4 samples and average 
-            a = rnd.choice(idx,3,replace=True)
+            a = rnd.choice(idx,5,replace=True)
             tmp_data = np.mean(indata[a,:],axis=0)
             tmp_data = tmp_data/lin.norm(tmp_data)
             condn_data_aug.append(tmp_data)

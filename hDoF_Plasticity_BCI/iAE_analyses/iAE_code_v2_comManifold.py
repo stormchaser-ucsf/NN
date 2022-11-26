@@ -48,11 +48,11 @@ latent_dims=3
 num_classes = 7
 
 # training params 
-num_epochs=20
+num_epochs=125
 batch_size=32
 learning_rate = 1e-3
 batch_val=512
-patience=6
+patience=5
 gradient_clipping=10
 
 # file location
@@ -76,7 +76,7 @@ mahab_dist_overall_batch = np.empty([10,0])
 num_days=10
 
 # iterations to bootstrap
-iterations = 50
+iterations = 10
 
 # init overall variables 
 mahab_distances_imagined_days = np.zeros([21,iterations,10])
@@ -163,7 +163,7 @@ for days in (np.arange(10)+1):
     condn_data_batch,Ybatch =   data_aug_mlp(condn_data_batch,Ybatch,condn_data_imagined.shape[0])
     
     ## plotting options
-    plt_close=True
+    plt_close=False
     
     # inner loop
     for loop in np.arange(iterations):
@@ -378,7 +378,7 @@ for days in (np.arange(10)+1):
 
 # saving it all 
 # orig filename: whole_dataSamples_stats_results_withBatch_Main_withVariance
-np.savez('NewB1_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr', 
+np.savez('NewB1_norm1Latent_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr', 
          silhoutte_imagined_days = silhoutte_imagined_days,
          silhoutte_online_days = silhoutte_online_days,
          silhoutte_batch_days = silhoutte_batch_days,
