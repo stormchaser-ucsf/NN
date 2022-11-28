@@ -36,7 +36,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # model params
 input_size=96
-hidden_size=32
+hidden_size=48
 latent_dims=3
 num_classes = 7
 
@@ -69,7 +69,7 @@ mahab_dist_overall_batch = np.empty([10,0])
 num_days=10
 
 # iterations to bootstrap
-iterations = 50
+iterations = 5
 
 # init overall variables 
 mahab_distances_imagined_days = np.zeros([21,iterations,10])
@@ -150,6 +150,8 @@ for days in (np.arange(10)+1):
     beta_spatial_corr_iter = np.empty([num_classes*3,0])
     hg_spatial_corr_iter = np.empty([num_classes*3,0])
     
+    plt_close=False
+    
     # inner loop
     for loop in np.arange(iterations):
         
@@ -184,7 +186,8 @@ for days in (np.arange(10)+1):
         D,z,idx,fig_imagined = plot_latent(model, condn_data_imagined,Yimagined,condn_data_imagined.shape[0],
                               latent_dims)        
         silhoutte_imagined_iter = np.append(silhoutte_imagined_iter,D)
-        plt.close()
+        if plt_close==True:
+            plt.close()
         # mahab distance
         mahab_distances = get_mahab_distance_latent(z,idx)
         mahab_distances = mahab_distances[np.triu_indices(mahab_distances.shape[0])]
@@ -232,7 +235,8 @@ for days in (np.arange(10)+1):
         del D,z,idx
         D,z,idx,fig_online = plot_latent(model, condn_data_online,Yonline,condn_data_online.shape[0],
                               latent_dims)
-        plt.close()
+        if plt_close==True:
+            plt.close()
         silhoutte_online_iter = np.append(silhoutte_online_iter,D)
         # mahab distance
         mahab_distances = get_mahab_distance_latent(z,idx)
@@ -280,7 +284,8 @@ for days in (np.arange(10)+1):
         del D,z,idx
         D,z,idx,fig_batch = plot_latent(model, condn_data_batch,Ybatch,condn_data_batch.shape[0],
                               latent_dims)
-        plt.close()
+        if plt_close==True:
+            plt.close()
         silhoutte_batch_iter = np.append(silhoutte_batch_iter,D)
         # mahab distance
         mahab_distances = get_mahab_distance_latent(z,idx)
@@ -346,15 +351,15 @@ for days in (np.arange(10)+1):
     beta_recon_batch_var_days[:,:,days-1] = np.array(beta_recon_batch_var_iter)
     hg_recon_batch_var_days[:,:,days-1] = np.array(hg_recon_batch_var_iter)
     # store spatial correlations (each day)
-    delta_spatial_corr_days[:,:,days-1] = delta_spatial_corr_iter
-    beta_spatial_corr_days[:,:,days-1] = beta_spatial_corr_iter
-    hg_spatial_corr_days[:,:,days-1] = hg_spatial_corr_iter
+    delta_spatial_corr_days[:,:,days-1] = delta_spatial_corr_iter.T
+    beta_spatial_corr_days[:,:,days-1] = beta_spatial_corr_iter.T
+    hg_spatial_corr_days[:,:,days-1] = hg_spatial_corr_iter.T
       
 
 
 # saving it all 
 # orig filename: whole_dataSamples_stats_results_withBatch_Main_withVariance
-np.savez('whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr', 
+np.savez('New_B1_MinMaxScaleLatent_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr', 
          silhoutte_imagined_days = silhoutte_imagined_days,
          silhoutte_online_days = silhoutte_online_days,
          silhoutte_batch_days = silhoutte_batch_days,

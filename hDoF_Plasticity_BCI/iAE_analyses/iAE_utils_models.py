@@ -128,7 +128,7 @@ def get_variances(z,idx):
        # A = stats.zscore(A,axis=0)
         C = np.cov(A,rowvar=False)
         if len(C.shape) > 0:
-            C = C + 1e-4*np.identity(C.shape[0])
+            C = C + 1e-12*np.identity(C.shape[0])
             A = lin.det(C)
         elif len(C.shape) == 0:
             A = C
@@ -155,15 +155,15 @@ def get_variance_overall(z):
     if lin.matrix_rank(C) == C.shape[0]:
         A = lin.det(C)
     else:
-        C = C + 1e-4*np.identity(C.shape[0])
+        C = C + 1e-12*np.identity(C.shape[0])
         A = lin.det(C)
     return A
 
 
 # function to get mahalanobis distance
 def get_mahab_distance(x,y):
-    C1 = np.cov(x,rowvar=False) +  1e-5*np.eye(x.shape[1])
-    C2 = np.cov(y,rowvar=False) +  1e-5*np.eye(y.shape[1])
+    C1 = np.cov(x,rowvar=False) +  1e-12*np.eye(x.shape[1])
+    C2 = np.cov(y,rowvar=False) +  1e-12*np.eye(y.shape[1])
     C = (C1+C2)/2
     m1 = np.mean(x,0)
     m2 = np.mean(y,0)
@@ -359,8 +359,9 @@ class encoder(nn.Module):
         self.linear2 = nn.Linear(hidden_size,self.hidden_size2)
         self.linear3 = nn.Linear(self.hidden_size2,latent_dims)
         self.gelu = nn.ELU()
-        self.tanh = nn.Sigmoid()
+        self.tanh = nn.Tanh()
         self.dropout =  nn.Dropout(p=0.3)
+        #self.lnorm1 = nn.LayerNorm(latent_dims,elementwise_affine=False)
         
     def forward(self,x):
         x=self.linear1(x)
@@ -370,6 +371,7 @@ class encoder(nn.Module):
         x=self.gelu(x)
         x=self.dropout(x)
         x=self.linear3(x)
+        #x=self.lnorm1(x)
         #x=self.tanh(x)
         return x
 
@@ -406,6 +408,7 @@ class decoder(nn.Module):
         self.relu = nn.ReLU()
         self.dropout =  nn.Dropout(p=0.3)
         
+        
     def forward(self,x):
         x=self.linear1(x)
         x=self.gelu(x)
@@ -413,7 +416,7 @@ class decoder(nn.Module):
         x=self.linear2(x)
         x=self.gelu(x)
         x=self.dropout(x)
-        x=self.linear3(x)
+        x=self.linear3(x)        
         return x
 
 
@@ -580,9 +583,10 @@ def plot_latent(model, data, Y, num_samples,dim):
     model.eval()
     z = model.encoder(z)
     z = z.to('cpu').detach().numpy()
-    y = y.to('cpu').detach().numpy()    
-    z = z/np.norm(z)
+    y = y.to('cpu').detach().numpy()        
     D = sil(z,y)
+    # scale between 0 and 1
+    z=  (z-np.min(z))/(np.max(z)-np.min(z))    
     fig=plt.figure()
     if dim==3:
         ax=plt.axes(projection="3d")
@@ -698,6 +702,8 @@ def data_aug_mlp(indata,labels,data_size):
             # randomly get 4 samples and average 
             a = rnd.choice(idx,5,replace=True)
             tmp_data = np.mean(indata[a,:],axis=0)
+            b = 0.01 * rnd.randn(96)
+            tmp_data = tmp_data + b
             tmp_data = tmp_data/lin.norm(tmp_data)
             condn_data_aug.append(tmp_data)
             labels_aug.append(labels[a,:][0,:])
@@ -709,4 +715,46 @@ def data_aug_mlp(indata,labels,data_size):
     return outdata, outdata_labels
         
 
-
+def get_raw_channnel_variances(indata,labels):       
+    idx = np.argmax(labels,axis=1)
+    num_labels = len(np.unique(idx))
+    hg_variances=[]
+    delta_variances =[]
+    beta_variances = []
+    for query in np.arange(num_labels):
+        
+        idx1 = np.where(idx==query)[0]
+        indata_tmp = indata[idx1,:]
+            
+        # hg
+        idx2 = np.arange(2,96,3)
+        hg = indata_tmp[:,idx2]      
+        hg_variances_tmp = np.std(hg,axis=0)
+        hg_variances.append(hg_variances_tmp)
+        # delta
+        idx2 = np.arange(0,96,3)
+        delta = indata_tmp[:,idx2]            
+        delta_variances_tmp = np.std(delta,axis=0)
+        delta_variances.append(delta_variances_tmp)
+        #beta
+        idx2 = np.arange(1,96,3)
+        beta = indata_tmp[:,idx2]  
+        beta_variances_tmp = np.std(beta,axis=0)
+        beta_variances.append(beta_variances_tmp)
+    
+    delta_variances = np.array(delta_variances).flatten()
+    beta_variances = np.array(beta_variances).flatten()
+    hg_variances = np.array(hg_variances).flatten()
+    return delta_variances,beta_variances,hg_variances
+    
+    
+    
+    
+    
+   
+    
+    
+    
+    
+    
+    

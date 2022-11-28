@@ -37,12 +37,12 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 # model params
 input_size=96
 hidden_size=48
-latent_dims=3
+latent_dims=2
 num_classes = 4
 
 # training params 
-num_epochs=250
-batch_size=64
+num_epochs=125
+batch_size=32
 learning_rate = 1e-3
 batch_val=512
 patience=6
@@ -67,7 +67,7 @@ dist_var_overall_batch = np.empty([num_days,0])
 mahab_dist_overall_batch = np.empty([num_days,0])
 
 # iterations to bootstrap
-iterations = 75
+iterations = 5
 
 # init overall variables 
 mahab_distances_imagined_days = np.zeros([6,iterations,num_days])
@@ -397,7 +397,7 @@ for days in (np.arange(num_days)+1):
      
     
 # saving it all 
-np.savez('NewB2_ComManifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_withChVars_andSpatCorr', 
+np.savez('NewB2_NoiseDataAugment_0.1_Stats_OnTrainingData_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr', 
          silhoutte_imagined_days = silhoutte_imagined_days,
          silhoutte_online_days = silhoutte_online_days,
          silhoutte_batch_days = silhoutte_batch_days,
