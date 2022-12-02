@@ -42,10 +42,10 @@ num_classes = 4
 
 # training params 
 num_epochs=125
-batch_size=32
+batch_size=64
 learning_rate = 1e-3
 batch_val=512
-patience=6
+patience=5
 gradient_clipping=10
 
 # file location
@@ -67,7 +67,7 @@ dist_var_overall_batch = np.empty([num_days,0])
 mahab_dist_overall_batch = np.empty([num_days,0])
 
 # iterations to bootstrap
-iterations = 5
+iterations = 2
 
 # init overall variables 
 mahab_distances_imagined_days = np.zeros([6,iterations,num_days])
@@ -150,15 +150,17 @@ for days in (np.arange(num_days)+1):
     
     #### DATA AUGMENTATION ###
     #condn_data_imagined,Yimagined = data_aug_mlp(condn_data_imagined,Yimagined,3000)
-    condn_data_online,Yonline =   data_aug_mlp(condn_data_online,Yonline,condn_data_imagined.shape[0])
+    condn_data_online,Yonline =   data_aug_mlp_chol_feature_equalSize(condn_data_online,Yonline,condn_data_imagined.shape[0])
     if os.path.exists(batch_file_name):
-        condn_data_batch,Ybatch =   data_aug_mlp(condn_data_batch,Ybatch,condn_data_imagined.shape[0])
+        condn_data_batch,Ybatch =   data_aug_mlp_chol_feature_equalSize(condn_data_batch,Ybatch,condn_data_imagined.shape[0])
         
     # plotting option
     plt_close=True
     
     # inner loop
     for loop in np.arange(iterations):
+        
+        print(f'Iteration {loop+1}, Day {days}')
         
         #### DATA SPLIT OF ALL CONDITIONS FOR CROSS-VALIDATION ####
         condn_data_imagined_train,condn_data_imagined_test,Yimagined_train,Yimagined_test=training_test_split(condn_data_imagined, Yimagined, 0.8)
@@ -174,8 +176,15 @@ for days in (np.arange(num_days)+1):
         # Yimagined_train,Yimagined_test = Yimagined,Yimagined
         # condn_data_online_train,condn_data_online_test = condn_data_online,condn_data_online
         # Yonline_train,Yonline_test = Yonline,Yonline
-        # condn_data_batch_train,condn_data_batch_test = condn_data_batch,condn_data_batch
-        # Ybatch_train,Ybatch_test = Ybatch,Ybatch
+        # if os.path.exists(batch_file_name):
+        #     condn_data_batch_train,condn_data_batch_test = condn_data_batch,condn_data_batch
+        #     Ybatch_train,Ybatch_test = Ybatch,Ybatch
+        # else:
+        #     condn_data_batch_train=np.empty([0,96])
+        #     condn_data_batch_test=np.empty([0,96])
+        #     Ybatch_train = np.empty([0,4])
+        #     Ybatch_test = np.empty([0,4])
+        
         
         
         #### STACK EVERYTHING TOGETHER ###
@@ -397,7 +406,7 @@ for days in (np.arange(num_days)+1):
      
     
 # saving it all 
-np.savez('NewB2_NoiseDataAugment_0.1_Stats_OnTrainingData_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr', 
+np.savez('NewB2_NoiseDataAugmentCholEqualFeat_pt01_Stats_OnAllData_2D_common_Manifold_withBatch_Main_withVariance_AndChVars_AndSpatCorr', 
          silhoutte_imagined_days = silhoutte_imagined_days,
          silhoutte_online_days = silhoutte_online_days,
          silhoutte_batch_days = silhoutte_batch_days,

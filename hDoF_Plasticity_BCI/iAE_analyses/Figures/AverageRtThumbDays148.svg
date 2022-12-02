@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 26.4.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 138 79.4" style="enable-background:new 0 0 138 79.4;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:#FFFFFF;}
+	.st1{clip-path:url(#SVGID_00000018211130941038868710000006276032765634099351_);}
+	.st2{fill:none;stroke:#000000;stroke-width:0.8;stroke-linecap:square;}
+</style>
+<g id="figure_1">
+	<g id="axes_1">
+		<g id="patch_2">
+			<path class="st0" d="M17.2,66.9h106.9V13.4H17.2V66.9z"/>
+		</g>
+		<g>
+			<defs>
+				<rect id="SVGID_1_" x="17.2" y="13.4" width="106.9" height="53.5"/>
+			</defs>
+			<clipPath id="SVGID_00000095320041988807642360000010082127626134697095_">
+				<use xlink:href="#SVGID_1_"  style="overflow:visible;"/>
+			</clipPath>
+			<g style="clip-path:url(#SVGID_00000095320041988807642360000010082127626134697095_);">
+				
+					<image style="overflow:visible;enable-background:new    ;" width="446" height="223" id="imagec823140ca0" xlink:href="E6BEE82F.png"  transform="matrix(0.24 0 0 -0.24 17.25 66.8547)">
+				</image>
+			</g>
+		</g>
+		<g id="matplotlib.axis_1">
+		</g>
+		<g id="matplotlib.axis_2">
+		</g>
+		<g id="patch_3">
+			<path class="st2" d="M17.2,66.9V13.4"/>
+		</g>
+		<g id="patch_4">
+			<path class="st2" d="M124.2,66.9V13.4"/>
+		</g>
+		<g id="patch_5">
+			<path class="st2" d="M17.2,66.9h106.9"/>
+		</g>
+		<g id="patch_6">
+			<path class="st2" d="M17.2,13.4h106.9"/>
+		</g>
+	</g>
+</g>
+</svg>

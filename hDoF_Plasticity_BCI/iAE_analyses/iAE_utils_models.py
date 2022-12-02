@@ -162,8 +162,8 @@ def get_variance_overall(z):
 
 # function to get mahalanobis distance
 def get_mahab_distance(x,y):
-    C1 = np.cov(x,rowvar=False) +  1e-12*np.eye(x.shape[1])
-    C2 = np.cov(y,rowvar=False) +  1e-12*np.eye(y.shape[1])
+    C1 = np.cov(x,rowvar=False) +  1e-9*np.eye(x.shape[1])
+    C2 = np.cov(y,rowvar=False) +  1e-9*np.eye(y.shape[1])
     C = (C1+C2)/2
     m1 = np.mean(x,0)
     m2 = np.mean(y,0)
@@ -385,6 +385,25 @@ class latent_classifier(nn.Module):
         x=self.linear1(x)        
         #x=torch.matmul(x,self.weights)
         return x
+
+
+# class latent_classifier(nn.Module):
+#     def __init__(self,latent_dims,num_classes):
+#         super(latent_classifier,self).__init__()
+#         self.linear1 = nn.Linear(latent_dims,latent_dims*3)
+#         self.linear2 = nn.Linear(latent_dims*3,latent_dims*4)
+#         self.linear3 = nn.Linear(latent_dims*4,num_classes)
+#         #self.weights = torch.randn(latent_dims,num_classes).to(device)        
+#         self.gelu =  nn.GELU()
+    
+#     def forward(self,x):
+#         x=self.linear1(x)        
+#         x=self.gelu(x)
+#         x=self.linear2(x)        
+#         x=self.gelu(x)
+#         x=self.linear3(x)                
+#         #x=torch.matmul(x,self.weights)
+#         return x
     
 class recon_classifier(nn.Module):
     def __init__(self,input_size,num_classes):
@@ -435,6 +454,21 @@ class iAutoencoder(nn.Module):
         z=self.decoder(z)
         #y=self.recon_classifier(z)
         return z,y
+    
+# combining all into 
+class Autoencoder(nn.Module):
+    def __init__(self,input_size,hidden_size,latent_dims,num_classes):
+        super(iAutoencoder,self).__init__()
+        self.encoder = encoder(input_size,hidden_size,latent_dims,num_classes)
+        self.decoder = decoder(input_size,hidden_size,latent_dims,num_classes)
+        #self.recon_classifier = recon_classifier(input_size,num_classes)
+    
+    def forward(self,x):
+        z=self.encoder(x)        
+        z=self.decoder(z)
+        #y=self.recon_classifier(z)
+        return z   
+
 
 # function to validate model 
 def validation_loss(model,X_test,Y_test,batch_val,val_type):    
@@ -586,7 +620,7 @@ def plot_latent(model, data, Y, num_samples,dim):
     y = y.to('cpu').detach().numpy()        
     D = sil(z,y)
     # scale between 0 and 1
-    z=  (z-np.min(z))/(np.max(z)-np.min(z))    
+    #z=  (z-np.min(z))/(np.max(z)-np.min(z))    
     fig=plt.figure()
     if dim==3:
         ax=plt.axes(projection="3d")
@@ -598,6 +632,73 @@ def plot_latent(model, data, Y, num_samples,dim):
         plt.colorbar()
     model.train()    
     return D,z,y,fig
+
+# plotting and returning latent activations and give acuracy
+def plot_latent_acc(model, data, Y,dim):
+    num_samples = data.shape[0]
+    data=torch.from_numpy(data).to(device).float()
+    Y=torch.from_numpy(Y).to(device).float()
+    
+    model.eval()
+    
+    z = model.encoder(data)
+    recon,decodes = model(data)    
+    ylabels = convert_to_ClassNumbers(Y)        
+    ypred_labels = convert_to_ClassNumbers(decodes)     
+    accuracy = (torch.sum(ylabels == ypred_labels).item())/ylabels.shape[0]
+    
+    y=ylabels    
+    z = z.to('cpu').detach().numpy()
+    y = y.to('cpu').detach().numpy()        
+    D = sil(z,y)
+        
+    fig=plt.figure()
+    if dim>2:
+        ax=plt.axes(projection="3d")
+        p=ax.scatter3D(z[:, 0], z[:, 1],z[:,2], c=y, cmap='tab10')        
+        plt.colorbar(p)
+    if dim==2:
+        ax=plt.axes        
+        plt.scatter(z[:, 0], z[:, 1], c=y, cmap='tab10')
+        plt.colorbar()
+    model.train()    
+    return D,z,y,fig,accuracy
+
+
+# plotting and returning latent activations and give acuracy
+def plot_latent_select(model, data, Y,dim,ch):
+    num_samples = data.shape[0]
+    data=torch.from_numpy(data).to(device).float()
+    Y=torch.from_numpy(Y).to(device).float()
+    
+    model.eval()
+    
+    z = model.encoder(data)
+    recon,decodes = model(data)    
+    ylabels = convert_to_ClassNumbers(Y)        
+    ypred_labels = convert_to_ClassNumbers(decodes)    
+        
+    y=ylabels    
+    z = z.to('cpu').detach().numpy()
+    y = y.to('cpu').detach().numpy()   
+    idx=np.array([],dtype=int)
+    for i in np.arange(len(ch)):
+        idx = np.append(idx,np.where(y==ch[i])[0])
+               
+    z = z[idx,:]
+    y = y[idx]    
+        
+    fig=plt.figure()
+    if dim>2:
+        ax=plt.axes(projection="3d")
+        p=ax.scatter3D(z[:, 0], z[:, 1],z[:,2], c=y, cmap='tab10')        
+        plt.colorbar(p)
+    if dim==2:
+        ax=plt.axes        
+        plt.scatter(z[:, 0], z[:, 1], c=y, cmap='tab10')
+        plt.colorbar()
+    model.train()    
+    return fig
 
 
 def return_recon(model,data,Y):
@@ -713,7 +814,150 @@ def data_aug_mlp(indata,labels,data_size):
     outdata = np.concatenate((indata,condn_data_aug),axis=0)
     outdata_labels = np.concatenate((labels,labels_aug),axis=0)
     return outdata, outdata_labels
+
+def data_aug_mlp_chol(indata,labels,data_size):
+    N = (data_size/indata.shape[0]) #data aug factor
+    labels_idx = np.argmax(labels,axis=1)
+    num_labels = len(np.unique(labels_idx))
+    condn_data_aug = np.empty([0,96]) 
+    labels_aug=np.empty([0,num_labels])
+    # sample from random gaussian with known mean and cov matrix
+    for query in np.arange(num_labels):
+        idx = np.where(labels_idx==query)[0]
+        idx_len_aug = round(N*len(idx)) - len(idx)
+        tmp_data = indata[idx,:]
+        C = np.cov(tmp_data,rowvar=False) + 1e-12*np.eye(tmp_data.shape[1])
+        C12 = lin.cholesky(C)
+        m = np.mean(tmp_data,axis=0)
+        X = rnd.randn(idx_len_aug,96)
+        new_data = X @ C12 + m
+        condn_data_aug = np.concatenate((condn_data_aug,new_data),axis=0)    
+        tmp_labels = np.zeros([idx_len_aug,num_labels])
+        tmp_labels[:,query]=1        
+        labels_aug = np.concatenate((labels_aug,tmp_labels))
+       
+    outdata = np.concatenate((indata,condn_data_aug),axis=0)
+    outdata_labels = np.concatenate((labels,labels_aug),axis=0)
+    return outdata, outdata_labels
+
+def data_aug_mlp_chol_feature(indata,labels,data_size):
+    N = (data_size/indata.shape[0]) #data aug factor
+    labels_idx = np.argmax(labels,axis=1)
+    num_labels = len(np.unique(labels_idx))
+    condn_data_aug = np.empty([0,96]) 
+    labels_aug=np.empty([0,7])
+    # sample from random gaussian with known mean and cov matrix
+    for query in np.arange(num_labels):
+        idx = np.where(labels_idx==query)[0]
+        idx_len_aug = round(N*len(idx)) - len(idx)
+        tmp_data = indata[idx,:]
         
+        # doing hg
+        hg = tmp_data[:,np.arange(2,96,3)]
+        C = np.cov(hg,rowvar=False)
+        if lin.matrix_rank(C)<32:
+            C = np.cov(hg,rowvar=False) +  1e-12*np.eye(hg.shape[1])
+        C12 = lin.cholesky(C)
+        m = np.mean(hg,axis=0)
+        X = rnd.randn(idx_len_aug,hg.shape[1])
+        new_hg = X @ C12 + m
+        
+        # doing delta
+        delta = tmp_data[:,np.arange(0,96,3)]
+        C = np.cov(delta,rowvar=False)
+        if lin.matrix_rank(C)<32:
+            C = np.cov(delta,rowvar=False) +  1e-12*np.eye(delta.shape[1])
+        C12 = lin.cholesky(C)
+        m = np.mean(delta,axis=0)
+        X = rnd.randn(idx_len_aug,delta.shape[1])
+        new_delta = X @ C12 + m
+        
+        # doing beta
+        beta = tmp_data[:,np.arange(1,96,3)]
+        C = np.cov(beta,rowvar=False)
+        if lin.matrix_rank(C)<32:
+            C = np.cov(beta,rowvar=False) +  1e-12*np.eye(beta.shape[1])
+        C12 = lin.cholesky(C)
+        m = np.mean(beta,axis=0)
+        X = rnd.randn(idx_len_aug,beta.shape[1])
+        new_beta = X @ C12 + m
+        
+        new_data = np.zeros([idx_len_aug,96])
+        new_data[:,np.arange(0,96,3)] = new_delta
+        new_data[:,np.arange(1,96,3)] = new_beta
+        new_data[:,np.arange(2,96,3)] = new_hg
+        
+        condn_data_aug = np.concatenate((condn_data_aug,new_data),axis=0)    
+        tmp_labels = np.zeros([idx_len_aug,7])
+        tmp_labels[:,query]=1        
+        labels_aug = np.concatenate((labels_aug,tmp_labels))
+       
+    outdata = np.concatenate((indata,condn_data_aug),axis=0)
+    outdata_labels = np.concatenate((labels,labels_aug),axis=0)
+    return outdata, outdata_labels
+
+
+def data_aug_mlp_chol_feature_equalSize(indata,labels,data_size):    
+    labels_idx = np.argmax(labels,axis=1)
+    num_labels = len(np.unique(labels_idx))
+    N = (data_size/num_labels) #data aug factor
+    condn_data_aug = np.empty([0,96]) 
+    labels_aug=np.empty([0,num_labels])
+    # sample from random gaussian with known mean and cov matrix
+    for query in np.arange(num_labels):
+        idx = np.where(labels_idx==query)[0]
+        idx_len_aug = round(N-len(idx))
+        tmp_data = indata[idx,:]
+        
+        # doing hg
+        hg = tmp_data[:,np.arange(2,96,3)]
+        C = np.cov(hg,rowvar=False)
+        if lin.matrix_rank(C)<32:
+            C = np.cov(hg,rowvar=False) +  1e-12*np.eye(hg.shape[1])
+        C12 = lin.cholesky(C)
+        m = np.mean(hg,axis=0)
+        X = rnd.randn(idx_len_aug,hg.shape[1])
+        new_hg = X @ C12 + m
+        
+        # doing delta
+        delta = tmp_data[:,np.arange(0,96,3)]
+        C = np.cov(delta,rowvar=False)
+        if lin.matrix_rank(C)<32:
+            C = np.cov(delta,rowvar=False) +  1e-12*np.eye(delta.shape[1])
+        C12 = lin.cholesky(C)
+        m = np.mean(delta,axis=0)
+        X = rnd.randn(idx_len_aug,delta.shape[1])
+        new_delta = X @ C12 + m
+        
+        # doing beta
+        beta = tmp_data[:,np.arange(1,96,3)]
+        C = np.cov(beta,rowvar=False)
+        if lin.matrix_rank(C)<32:
+            C = np.cov(beta,rowvar=False) +  1e-12*np.eye(beta.shape[1])
+        C12 = lin.cholesky(C)
+        m = np.mean(beta,axis=0)
+        X = rnd.randn(idx_len_aug,beta.shape[1])
+        new_beta = X @ C12 + m
+        
+        new_data = np.zeros([idx_len_aug,96]) 
+        new_data[:,np.arange(0,96,3)] = new_delta
+        new_data[:,np.arange(1,96,3)] = new_beta
+        new_data[:,np.arange(2,96,3)] = new_hg
+        #add some noise
+        new_data = new_data + 0.01*rnd.randn(new_data.shape[0],new_data.shape[1])
+        
+        # make it unit norm
+        for i in np.arange(new_data.shape[0]):
+            new_data[i,:] = new_data[i,:]/lin.norm(new_data[i,:])
+        
+        condn_data_aug = np.concatenate((condn_data_aug,new_data),axis=0)    
+        tmp_labels = np.zeros([idx_len_aug,num_labels])
+        tmp_labels[:,query]=1        
+        labels_aug = np.concatenate((labels_aug,tmp_labels))
+       
+    outdata = np.concatenate((indata,condn_data_aug),axis=0)
+    outdata_labels = np.concatenate((labels,labels_aug),axis=0)
+    return outdata, outdata_labels
 
 def get_raw_channnel_variances(indata,labels):       
     idx = np.argmax(labels,axis=1)

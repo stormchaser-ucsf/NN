@@ -35,7 +35,7 @@ from statsmodels.stats.anova import AnovaRM
 #whole_dataSamples_stats_results_withBatch_Main_withVariance
 #B2_whole_dataSamples_stats_results_withBatch_Main_withVariance
 #whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars
-data=np.load('whole_dataSamples_stats_results_withBatch_Main_withVariance.npz')
+data=np.load('NewB2_NoiseDataAugment_0.1_Stats_OnTrainingData_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
 silhoutte_imagined_days = data.get('silhoutte_imagined_days')
 silhoutte_online_days = data.get('silhoutte_online_days')
 silhoutte_batch_days = data.get('silhoutte_batch_days')
@@ -426,7 +426,7 @@ hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams.update({'font.size': 6})
-plt.boxplot((tmp),whis=2,showfliers=False)
+plt.boxplot(np.log(tmp),whis=2,showfliers=False)
 plt.xticks(ticks=[1,2,3],labels=('Imagined','Online','Batch'),**hfont)
 plt.ylabel('Centroid variances',**hfont)
 plt.show()
@@ -439,7 +439,7 @@ print(np.mean(tmp,axis=0))
 # plotting mean Mahalanobis distance over days  (MAIN MAIN)
 # over days there is a learning effect where Mahab distance grows between the 
 # actions and Batch is always greater than all others. 
-N=2
+N=1
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
@@ -1794,7 +1794,7 @@ print(AnovaRM(data=df, depvar='variance', subject='subject', within=['decoder'])
 
 
 # MAHAB DISTANCES  (MAIN)
-N=1
+N=2
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
@@ -1804,35 +1804,40 @@ X=np.arange(num_days)+1
 X=np.arange(num_days)+1
 # imagined 
 tmp_main = np.squeeze(np.mean(mahab_distances_imagined_days,1))
-tmp1 = np.mean(tmp_main,axis=0)
+tmp1 = np.median(tmp_main,axis=0)
 tmp1b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
-tmp1 = np.insert(tmp1,0,tmp1[0],axis=0)
-tmp1b = np.insert(tmp1b,0,tmp1b[0],axis=0)
+tmp1 = tmp1[1:5] # only taking days with batch
+tmp1b = tmp1b[1:5] # only taking days with batch
+tmp1 = np.insert(tmp1,-1,tmp1[-1],axis=0)
+tmp1b = np.insert(tmp1b,-1,tmp1b[-1],axis=0)
 tmp1 = np.convolve(tmp1, np.ones(N)/N, mode='same')
+tmp1b = np.convolve(tmp1b, np.ones(N)/N, mode='same')
 tmp1 = tmp1[1:]
 tmp1b = tmp1b[1:]
-plt.plot(X,tmp1,color="black",label = 'Imagined')
-plt.fill_between(X, tmp1-tmp1b, tmp1+tmp1b,color="black",alpha=0.2)
+plt.plot(X[1:5],tmp1,color="black",label = 'Imagined')
+plt.fill_between(X[1:5], tmp1-tmp1b, tmp1+tmp1b,color="black",alpha=0.2)
 # online
 tmp_main = np.squeeze(np.mean(mahab_distances_online_days,1))
-tmp2 = np.mean(tmp_main,axis=0)
+tmp2 = np.median(tmp_main,axis=0)
 tmp2b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
-tmp2 = np.insert(tmp2,0,tmp2[0],axis=0)
-tmp2b = np.insert(tmp2b,0,tmp2b[0],axis=0)
+tmp2 = tmp2[1:5] # only taking days with batch
+tmp2b = tmp2b[1:5] # only taking days with batch
+tmp2 = np.insert(tmp2,-1,tmp2[-1],axis=0)
+tmp2b = np.insert(tmp2b,-1,tmp2b[-1],axis=0)
 tmp2 = np.convolve(tmp2, np.ones(N)/N, mode='same')
 tmp2b = np.convolve(tmp2b, np.ones(N)/N, mode='same')
 tmp2 = tmp2[1:]
 tmp2b = tmp2b[1:]
-plt.plot(X,tmp2,color="blue",label = 'Online')
-plt.fill_between(X, tmp2-tmp2b, tmp2+tmp2b,color="blue",alpha=0.2)
+plt.plot(X[1:5],tmp2,color="blue",label = 'Online')
+plt.fill_between(X[1:5], tmp2-tmp2b, tmp2+tmp2b,color="blue",alpha=0.2)
 # batch
 tmp_main = np.squeeze(np.mean(mahab_distances_batch_days,1))
-tmp3 = np.mean(tmp_main,axis=0)
+tmp3 = np.median(tmp_main,axis=0)
 tmp3b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp3 = tmp3[1:5] #get only  days when data available
 tmp3b = tmp3b[1:5] #get only days when data available
-tmp3 = np.insert(tmp3,0,tmp3[0],axis=0)
-tmp3b = np.insert(tmp3b,0,tmp3b[0],axis=0)
+tmp3 = np.insert(tmp3,-1,tmp3[-1],axis=0)
+tmp3b = np.insert(tmp3b,-1,tmp3b[-1],axis=0)
 tmp3 = np.convolve(tmp3, np.ones(N)/N, mode='same')
 tmp3b = np.convolve(tmp3b, np.ones(N)/N, mode='same')
 tmp3 = tmp3[1:]
@@ -1848,7 +1853,7 @@ image_format = 'svg' # e.g .png, .svg, etc.
 image_name = 'Mean_Mahalanobis_dist_Days_withBatch.svg'
 fig.savefig(image_name, format=image_format, dpi=300)
 
-tmp3 = np.append(tmp3,(np.median(tmp3),np.median(tmp3)))
+#tmp3 = np.append(tmp3,(np.median(tmp3),np.median(tmp3)))
 tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
 # tmp = np.concatenate((np.ndarray.flatten(var_overall_imagined_days)[:,None],
 #                       np.ndarray.flatten(var_overall_online_days)[:,None],
