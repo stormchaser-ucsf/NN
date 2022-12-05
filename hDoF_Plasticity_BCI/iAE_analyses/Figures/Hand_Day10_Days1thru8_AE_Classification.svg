@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 26.4.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 407 330" style="enable-background:new 0 0 407 330;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:none;stroke:#262626;stroke-width:1.3333;stroke-linecap:square;stroke-linejoin:round;stroke-miterlimit:10;}
+	.st1{fill:#262626;}
+	.st2{font-family:'ArialMT';}
+	.st3{font-size:13.3333px;}
+	.st4{font-size:14.6667px;}
+	.st5{font-family:'Arial-BoldMT';}
+	.st6{fill:none;stroke:#000000;stroke-width:1.3333;stroke-linejoin:round;stroke-miterlimit:10;}
+</style>
+<g>
+	<g>
+		<line class="st0" x1="53" y1="287" x2="368" y2="287"/>
+		<line class="st0" x1="72.7" y1="287" x2="72.7" y2="283.9"/>
+		<line class="st0" x1="112.1" y1="287" x2="112.1" y2="283.9"/>
+		<line class="st0" x1="151.4" y1="287" x2="151.4" y2="283.9"/>
+		<line class="st0" x1="190.8" y1="287" x2="190.8" y2="283.9"/>
+		<line class="st0" x1="230.2" y1="287" x2="230.2" y2="283.9"/>
+		<line class="st0" x1="269.6" y1="287" x2="269.6" y2="283.9"/>
+		<line class="st0" x1="308.9" y1="287" x2="308.9" y2="283.9"/>
+		<line class="st0" x1="348.3" y1="287" x2="348.3" y2="283.9"/>
+	</g>
+	<g transform="translate(72.6875,292.3333)">
+		<text transform="matrix(1 0 0 1 -4 14)" class="st1 st2 st3">1</text>
+	</g>
+	<g transform="translate(112.0625,292.3333)">
+		<text transform="matrix(1 0 0 1 -10 14)" class="st1 st2 st3">1-2</text>
+	</g>
+	<g transform="translate(151.4375,292.3333)">
+		<text transform="matrix(1 0 0 1 -10 14)" class="st1 st2 st3">1-3</text>
+	</g>
+	<g transform="translate(190.8125,292.3333)">
+		<text transform="matrix(1 0 0 1 -10 14)" class="st1 st2 st3">1-4</text>
+	</g>
+	<g transform="translate(230.1875,292.3333)">
+		<text transform="matrix(1 0 0 1 -10 14)" class="st1 st2 st3">1-5</text>
+	</g>
+	<g transform="translate(269.5625,292.3333)">
+		<text transform="matrix(1 0 0 1 -10 14)" class="st1 st2 st3">1-6</text>
+	</g>
+	<g transform="translate(308.9375,292.3333)">
+		<text transform="matrix(1 0 0 1 -10 14)" class="st1 st2 st3">1-7</text>
+	</g>
+	<g transform="translate(348.3125,292.3333)">
+		<text transform="matrix(1 0 0 1 -10 14)" class="st1 st2 st3">1-8</text>
+	</g>
+	<g transform="translate(210.5002,310.6667)">
+		<text transform="matrix(1 0 0 1 -102 15)" class="st1 st2 st4">Days used to build latent space</text>
+	</g>
+	<g>
+		<line class="st0" x1="53" y1="287" x2="53" y2="25"/>
+		<line class="st0" x1="53" y1="287" x2="56.2" y2="287"/>
+		<line class="st0" x1="53" y1="234.6" x2="56.2" y2="234.6"/>
+		<line class="st0" x1="53" y1="182.2" x2="56.2" y2="182.2"/>
+		<line class="st0" x1="53" y1="129.8" x2="56.2" y2="129.8"/>
+		<line class="st0" x1="53" y1="77.4" x2="56.2" y2="77.4"/>
+		<line class="st0" x1="53" y1="25" x2="56.2" y2="25"/>
+	</g>
+	<g transform="translate(47.6667,287)">
+		<text transform="matrix(1 0 0 1 -15 5.5)" class="st1 st2 st3">35</text>
+	</g>
+	<g transform="translate(47.6667,234.6)">
+		<text transform="matrix(1 0 0 1 -15 5.5)" class="st1 st2 st3">40</text>
+	</g>
+	<g transform="translate(47.6667,182.2)">
+		<text transform="matrix(1 0 0 1 -15 5.5)" class="st1 st2 st3">45</text>
+	</g>
+	<g transform="translate(47.6667,129.8)">
+		<text transform="matrix(1 0 0 1 -15 5.5)" class="st1 st2 st3">50</text>
+	</g>
+	<g transform="translate(47.6667,77.4)">
+		<text transform="matrix(1 0 0 1 -15 5.5)" class="st1 st2 st3">55</text>
+	</g>
+	<g transform="translate(47.6667,25)">
+		<text transform="matrix(1 0 0 1 -15 5.5)" class="st1 st2 st3">60</text>
+	</g>
+	<g transform="translate(28.6667,155.9999) rotate(-90)">
+		<text transform="matrix(1 0 0 1 -79.0001 -4)" class="st1 st2 st4">Accuracy of day 10 data</text>
+	</g>
+	<g transform="translate(210.5002,22.25)">
+		<text transform="matrix(1 0 0 1 -86 -4)" class="st5 st4">Accuracy in latent space</text>
+	</g>
+	<g transform="translate(72.6875,210.5662)">
+		<circle cx="0" cy="0" r="3.9"/>
+	</g>
+	<g transform="translate(72.6875,210.5662)">
+		<path d="M0-3.2c1.8,0,3.2,1.5,3.2,3.2l0,0c0,1.8-1.5,3.2-3.2,3.2S-3.2,1.8-3.2,0S-1.8-3.2,0-3.2z M0-4.6c-2.5,0-4.6,2-4.6,4.6
+			s2,4.6,4.6,4.6s4.6-2,4.6-4.6l0,0C4.6-2.5,2.5-4.6,0-4.6z"/>
+	</g>
+	<g transform="translate(112.0625,242.7021)">
+		<circle cx="0" cy="0" r="3.9"/>
+	</g>
+	<g transform="translate(112.0625,242.7021)">
+		<path d="M0-3.2c1.8,0,3.2,1.5,3.2,3.2l0,0c0,1.8-1.5,3.2-3.2,3.2S-3.2,1.8-3.2,0S-1.8-3.2,0-3.2z M0-4.6c-2.5,0-4.6,2-4.6,4.6
+			s2,4.6,4.6,4.6s4.6-2,4.6-4.6l0,0C4.6-2.5,2.5-4.6,0-4.6z"/>
+	</g>
+	<g transform="translate(151.4375,87.1967)">
+		<circle cx="0" cy="0" r="3.9"/>
+	</g>
+	<g transform="translate(151.4375,87.1967)">
+		<path d="M0-3.2c1.8,0,3.2,1.5,3.2,3.2l0,0c0,1.8-1.5,3.2-3.2,3.2S-3.2,1.8-3.2,0S-1.8-3.2,0-3.2z M0-4.6c-2.5,0-4.6,2-4.6,4.6
+			s2,4.6,4.6,4.6s4.6-2,4.6-4.6l0,0C4.6-2.5,2.5-4.6,0-4.6z"/>
+	</g>
+	<g transform="translate(190.8125,91.5291)">
+		<circle cx="0" cy="0" r="3.9"/>
+	</g>
+	<g transform="translate(190.8125,91.5291)">
+		<path d="M0-3.2c1.8,0,3.2,1.5,3.2,3.2l0,0c0,1.8-1.5,3.2-3.2,3.2S-3.2,1.8-3.2,0S-1.8-3.2,0-3.2z M0-4.6c-2.5,0-4.6,2-4.6,4.6
+			s2,4.6,4.6,4.6s4.6-2,4.6-4.6l0,0C4.6-2.5,2.5-4.6,0-4.6z"/>
+	</g>
+	<g transform="translate(230.1875,116.7634)">
+		<circle cx="0" cy="0" r="3.9"/>
+	</g>
+	<g transform="translate(230.1875,116.7634)">
+		<path d="M0-3.2c1.8,0,3.2,1.5,3.2,3.2l0,0c0,1.8-1.5,3.2-3.2,3.2S-3.2,1.8-3.2,0S-1.8-3.2,0-3.2z M0-4.6c-2.5,0-4.6,2-4.6,4.6
+			s2,4.6,4.6,4.6s4.6-2,4.6-4.6l0,0C4.6-2.5,2.5-4.6,0-4.6z"/>
+	</g>
+	<g transform="translate(269.5625,60.2283)">
+		<circle cx="0" cy="0" r="3.9"/>
+	</g>
+	<g transform="translate(269.5625,60.2283)">
+		<path d="M0-3.2c1.8,0,3.2,1.5,3.2,3.2l0,0c0,1.8-1.5,3.2-3.2,3.2S-3.2,1.8-3.2,0S-1.8-3.2,0-3.2z M0-4.6c-2.5,0-4.6,2-4.6,4.6
+			s2,4.6,4.6,4.6s4.6-2,4.6-4.6l0,0C4.6-2.5,2.5-4.6,0-4.6z"/>
+	</g>
+	<g transform="translate(308.9375,83.2834)">
+		<circle cx="0" cy="0" r="3.9"/>
+	</g>
+	<g transform="translate(308.9375,83.2834)">
+		<path d="M0-3.2c1.8,0,3.2,1.5,3.2,3.2l0,0c0,1.8-1.5,3.2-3.2,3.2S-3.2,1.8-3.2,0S-1.8-3.2,0-3.2z M0-4.6c-2.5,0-4.6,2-4.6,4.6
+			s2,4.6,4.6,4.6s4.6-2,4.6-4.6l0,0C4.6-2.5,2.5-4.6,0-4.6z"/>
+	</g>
+	<g transform="translate(348.3125,69.8153)">
+		<circle cx="0" cy="0" r="3.9"/>
+	</g>
+	<g transform="translate(348.3125,69.8153)">
+		<path d="M0-3.2c1.8,0,3.2,1.5,3.2,3.2l0,0c0,1.8-1.5,3.2-3.2,3.2S-3.2,1.8-3.2,0S-1.8-3.2,0-3.2z M0-4.6c-2.5,0-4.6,2-4.6,4.6
+			s2,4.6,4.6,4.6s4.6-2,4.6-4.6l0,0C4.6-2.5,2.5-4.6,0-4.6z"/>
+		<path class="st6" d="M-275.6,127l39.4-21.9l39.4-21.9l39.4-21.9l39.4-21.9l39.4-21.9l39.4-21.9L0-26.1"/>
+	</g>
+</g>
+</svg>

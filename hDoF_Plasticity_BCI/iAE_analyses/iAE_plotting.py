@@ -71,9 +71,9 @@ hg_spatial_corr_days=data.get('hg_spatial_corr_days')
 
 
 
-# plotting latent spaces
-az=140
-el=24
+# plotting latent spaces 3D
+az=-45
+el=33
 x1 = np.array(fig_imagined.axes[0].get_xlim())[:,None]
 x2 = np.array(fig_online.axes[0].get_xlim())[:,None]
 x3 = np.array(fig_batch.axes[0].get_xlim())[:,None]
@@ -105,11 +105,45 @@ fig_batch.axes[0].view_init(elev=el, azim=az)
 fig_imagined.axes[0].view_init(elev=el, azim=az)
 fig_online.axes[0].view_init(elev=el, azim=az)
 image_format = 'svg' # e.g .png, .svg, etc.
-image_name = 'Latent_Day3_Imag_B2.svg'
+image_name = 'Latent_Day10_Imag_B1_ComMan3d.svg'
 fig_imagined.savefig(image_name, format=image_format, dpi=300)
-image_name = 'Latent_Day3_Online_B2.svg'
+image_name = 'Latent_Day10_Online_B1_ComMan3d.svg'
 fig_online.savefig(image_name, format=image_format, dpi=300)
-image_name = 'Latent_Day3_Batch_B2.svg'
+image_name = 'Latent_Day10_Batch_B1_ComMan3d.svg'
+fig_batch.savefig(image_name, format=image_format, dpi=300)
+
+
+# plotting latent spaces 2D
+x1 = np.array(fig_imagined.axes[0].get_xlim())[:,None]
+x2 = np.array(fig_online.axes[0].get_xlim())[:,None]
+x3 = np.array(fig_batch.axes[0].get_xlim())[:,None]
+x = np.concatenate((x1,x2,x3),axis=1)
+xmin = x.min()
+xmax = x.max()
+y1 = np.array(fig_imagined.axes[0].get_ylim())[:,None]
+y2 = np.array(fig_online.axes[0].get_ylim())[:,None]
+y3 = np.array(fig_batch.axes[0].get_ylim())[:,None]
+y = np.concatenate((y1,y2,y3),axis=1)
+ymin = y.min()
+ymax = y.max()
+fig_online.axes[0].set_xlim(xmin,xmax)
+fig_batch.axes[0].set_xlim(xmin,xmax)
+fig_imagined.axes[0].set_xlim(xmin,xmax)
+fig_online.axes[0].set_ylim(ymin,ymax)
+fig_batch.axes[0].set_ylim(ymin,ymax)
+fig_imagined.axes[0].set_ylim(ymin,ymax)
+fig_online.axes[0].set_xticks(ticks=np.arange(-20,31,10))
+fig_online.axes[0].set_yticks(ticks=np.arange(-15,21,5))
+fig_imagined.axes[0].set_xticks(ticks=np.arange(-20,31,10))
+fig_imagined.axes[0].set_yticks(ticks=np.arange(-15,21,5))
+fig_batch.axes[0].set_xticks(ticks=np.arange(-20,31,10))
+fig_batch.axes[0].set_yticks(ticks=np.arange(-15,21,5))
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Latent_Day10_Imag_2D.svg'
+fig_imagined.savefig(image_name, format=image_format, dpi=300)
+image_name = 'Latent_Day10_Online_2D.svg'
+fig_online.savefig(image_name, format=image_format, dpi=300)
+image_name = 'Latent_Day10_Batch_2D.svg'
 fig_batch.savefig(image_name, format=image_format, dpi=300)
 
 
@@ -365,7 +399,7 @@ print(np.mean(tmp,axis=0))
 
 
 # plotting mean centroid variances over days  (MAIN)
-N=1
+N=2
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
@@ -439,7 +473,7 @@ print(np.mean(tmp,axis=0))
 # plotting mean Mahalanobis distance over days  (MAIN MAIN)
 # over days there is a learning effect where Mahab distance grows between the 
 # actions and Batch is always greater than all others. 
-N=1
+N=2
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')

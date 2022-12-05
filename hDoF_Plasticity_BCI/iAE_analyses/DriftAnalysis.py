@@ -32,6 +32,7 @@ from tempfile import TemporaryFile
 from scipy.ndimage import gaussian_filter1d
 import scipy as scipy
 import scipy.stats as stats
+import statsmodels.api as sm
 # setting up GPU
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -71,6 +72,7 @@ a = np.argmax(Yimagined,axis=1)
 a = np.array([np.where(a==0)[0], np.where(a==1)[0], np.where(a==4)[0]]).flatten()
 condn_data_imagined_day2 = condn_data_imagined[a,:]
 Yimagined_day2 = Yimagined[a,:]
+
 
 # combining all across both days 
 num_classes=3
@@ -185,7 +187,7 @@ fig_imagined.axes[0].yaxis.set_ticklabels([])
 plt.show()
 image_format = 'svg' # e.g .png, .svg, etc.
 image_name = 'LatentRtHand_Days148.svg'
-fig_imagined.savefig(image_name, format=image_format, dpi=300)
+#fig_imagined.savefig(image_name, format=image_format, dpi=300)
 
 # D,z,idx,fig_imagined = plot_latent(model,condn_data_imagined_day1,Yimagined_day1,
 #                                    condn_data_imagined_day1.shape[0],latent_dims)     
@@ -239,7 +241,7 @@ fig.axes[0].yaxis.set_ticks([])
 fig.axes[0].xaxis.set_ticks([])
 image_format = 'svg'
 image_name = 'AverageRtThumbDays148.svg'
-fig.savefig(image_name, format=image_format, dpi=300)
+#fig.savefig(image_name, format=image_format, dpi=300)
 
 hand_knob = [hand_knob_act1,hand_knob_act2,hand_knob_act3]
 plt.figure()
@@ -266,7 +268,7 @@ plt.yticks([0.23,0.25,0.27])
 plt.show()
 image_format = 'svg'
 image_name = 'Drift_Hand_Knob_Days.svg'
-fig.savefig(image_name, format=image_format, dpi=300)
+#fig.savefig(image_name, format=image_format, dpi=300)
 
 #%% PART C -> TRAIN ON A FEW DAYS AND PROJECT HELD OUT DAYS
 
@@ -455,15 +457,15 @@ for days in np.arange(total_days-1)+1:
 
         
 
-plt.figure();
-plt.plot(latent_acc_days);
-plt.ylim([35,60])
+# plt.figure();
+# plt.plot(latent_acc_days);
+# plt.ylim([35,60])
         
-plt.figure();
-mahab_distances_days1 = np.array(mahab_distances_days)
-a=np.median(mahab_distances_days1,axis=1)
-plt.plot(np.median(mahab_distances_days1,axis=1));
-plt.plot(mahab_distances_days1);
+# plt.figure();
+# mahab_distances_days1 = np.array(mahab_distances_days)
+# a=np.median(mahab_distances_days1,axis=1)
+# plt.plot(np.median(mahab_distances_days1,axis=1));
+# plt.plot(mahab_distances_days1);
 
 
 acc_plot=[]
@@ -484,16 +486,41 @@ plt.plot(acc_plot)
 # mahab plot on all 
 mahab_plot=[]
 fig=plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
 days=np.arange(1,10)
 for i in np.arange(len(mahab_distances_days)):
     tmp = mahab_distances_days[i]
     mahab_plot.append(median(tmp))
-    I = days[i]*np.ones(len(tmp)) + 0.01*rnd.randn(len(tmp))
-    plt.scatter(I,tmp,c='k')
-
-plt.figure()
-plt.plot(mahab_plot)   
+    I = days[i]*np.ones(len(tmp)) + 0.00*rnd.randn(len(tmp))
+    plt.scatter(I,tmp,c='k',alpha=0.5,edgecolors='none')
     
+# do curve fitting and plot regression line
+x=days
+y=np.array(mahab_plot)
+p = np.polyfit(x,y,1)
+p = [0.3686,6.3109] #from Robust regression below
+xx = np.concatenate((np.ones((len(x),1)),x[:,None]),axis=1)
+yhat = xx @ np.flip(p)[:,None]
+plt.plot(days,yhat,c='k')
+plt.xticks(ticks=np.arange(9)+1)
+fig.axes[0].xaxis.set_ticklabels([])
+fig.axes[0].yaxis.set_ticklabels([])
+plt.show()
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Day1thru10_Days1thru9_AE.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
+
+# get the pval for the regression
+lm = sm.OLS(y,xx).fit()
+print(lm.summary())
+
+rlm = sm.RLM(y,xx).fit()
+print(rlm.summary())
+
+
 # mahab plot on day 9 
 mahab_plot=[]
 fig=plt.figure()

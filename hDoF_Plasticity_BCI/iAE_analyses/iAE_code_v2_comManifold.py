@@ -16,7 +16,9 @@ AT SAMPLE LEVEL CROSS VALIDATE AND AVERAGE LATENT ACTIVITY AND INVESTIGATE
 STATISTICS
 
 """
-
+#%% PRELIMS
+import os
+os.chdir('C:/Users/nikic/Documents/GitHub/NN/hDoF_Plasticity_BCI/iAE_analyses')
 import torch as torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -28,7 +30,6 @@ import math
 import mat73
 import numpy.random as rnd
 import numpy.linalg as lin
-import os
 plt.rcParams['figure.dpi'] = 200
 from iAE_utils_models import *
 import sklearn as skl
@@ -41,6 +42,8 @@ import scipy.stats as stats
 # setting up GPU
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+#%% SETTING UP MODEL PARAMS
+
 # model params
 input_size=96
 hidden_size=48
@@ -48,7 +51,7 @@ latent_dims=2
 num_classes = 7
 
 # training params 
-num_epochs=100
+num_epochs=150
 batch_size=64
 learning_rate = 1e-3
 batch_val=512
@@ -77,6 +80,8 @@ num_days=10
 
 # iterations to bootstrap
 iterations = 1
+
+#%% SETTING UP VARS 
 
 # init overall variables 
 mahab_distances_imagined_days = np.zeros([21,iterations,10])
@@ -112,6 +117,18 @@ delta_spatial_corr_days = np.zeros([iterations,num_classes*3,num_days])
 beta_spatial_corr_days = np.zeros([iterations,num_classes*3,num_days])
 hg_spatial_corr_days = np.zeros([iterations,num_classes*3,num_days])
 
+#%% MAIN LOOP 
+
+
+# training params 
+latent_dims=3
+num_epochs=150
+batch_size=32
+learning_rate = 1e-3
+batch_val=512
+patience=5
+gradient_clipping=10
+from iAE_utils_models import *
 
 # main loop 
 for days in (np.arange(10)+1):
@@ -170,15 +187,15 @@ for days in (np.arange(10)+1):
         
         print(f'Iteration {loop+1}, Day {days}')
         #### DATA SPLIT OF ALL CONDITIONS FOR CROSS-VALIDATION ####
-        condn_data_imagined_train,condn_data_imagined_test,Yimagined_train,Yimagined_test=training_test_split(condn_data_imagined, Yimagined, 0.8)
-        condn_data_online_train,condn_data_online_test,Yonline_train,Yonline_test=training_test_split(condn_data_online, Yonline, 0.8)            
-        condn_data_batch_train,condn_data_batch_test,Ybatch_train,Ybatch_test=training_test_split(condn_data_batch, Ybatch, 0.8)
-        # condn_data_imagined_train,condn_data_imagined_test = condn_data_imagined,condn_data_imagined
-        # Yimagined_train,Yimagined_test = Yimagined,Yimagined
-        # condn_data_online_train,condn_data_online_test = condn_data_online,condn_data_online
-        # Yonline_train,Yonline_test = Yonline,Yonline
-        # condn_data_batch_train,condn_data_batch_test = condn_data_batch,condn_data_batch
-        # Ybatch_train,Ybatch_test = Ybatch,Ybatch
+        # condn_data_imagined_train,condn_data_imagined_test,Yimagined_train,Yimagined_test=training_test_split(condn_data_imagined, Yimagined, 0.8)
+        # condn_data_online_train,condn_data_online_test,Yonline_train,Yonline_test=training_test_split(condn_data_online, Yonline, 0.8)            
+        # condn_data_batch_train,condn_data_batch_test,Ybatch_train,Ybatch_test=training_test_split(condn_data_batch, Ybatch, 0.8)
+        condn_data_imagined_train,condn_data_imagined_test = condn_data_imagined,condn_data_imagined
+        Yimagined_train,Yimagined_test = Yimagined,Yimagined
+        condn_data_online_train,condn_data_online_test = condn_data_online,condn_data_online
+        Yonline_train,Yonline_test = Yonline,Yonline
+        condn_data_batch_train,condn_data_batch_test = condn_data_batch,condn_data_batch
+        Ybatch_train,Ybatch_test = Ybatch,Ybatch
         
         
         #### STACK EVERYTHING TOGETHER ###
@@ -375,10 +392,11 @@ for days in (np.arange(10)+1):
     hg_spatial_corr_days[:,:,days-1] = hg_spatial_corr_iter.T
       
 
+#%% SAVING
 
 # saving it all 
 # orig filename: whole_dataSamples_stats_results_withBatch_Main_withVariance
-np.savez('NewB1_NoiseDataAugment_CholIndivFeatEqualSize_pt01Noise_StatsAlldata_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr', 
+np.savez('NewB1_NoiseDataAugment_CholIndivFeatEqualSize_pt02Noise_StatsAlldata_3D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr', 
          silhoutte_imagined_days = silhoutte_imagined_days,
          silhoutte_online_days = silhoutte_online_days,
          silhoutte_batch_days = silhoutte_batch_days,
