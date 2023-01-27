@@ -536,7 +536,275 @@ plt.plot(mahab_plot)
     
 
 
+#%% CONTINUATION OF PART C BUT NOW ON ALL THE DATA  for B2
+
+
+import torch as torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.utils
+import torch.distributions
+import numpy as np
+import matplotlib.pyplot as plt
+import math
+import mat73
+import numpy.random as rnd
+import numpy.linalg as lin
+import os
+plt.rcParams['figure.dpi'] = 200
+from iAE_utils_models import *
+import sklearn as skl
+from sklearn.metrics import silhouette_score as sil
+from sklearn.metrics import silhouette_samples as sil_samples
+from tempfile import TemporaryFile
+from scipy.ndimage import gaussian_filter1d
+import scipy as scipy
+import scipy.stats as stats
+import statsmodels.api as sm
+# setting up GPU
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+# model params
+input_size=96
+hidden_size=48
+latent_dims=2
+num_classes = 4
+
+# training params 
+num_epochs=200
+batch_size=32
+learning_rate = 1e-3
+batch_val=512
+patience=5
+gradient_clipping=10
+
+# file location
+root_path = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate B2'
+root_imag_filename = '\B2_condn_data_Imagined_Day'
+root_online_filename = '\B2_condn_data_Online_Day'
+root_batch_filename = '\B2_condn_data_Batch_Day'
+
+
+
+from iAE_utils_models import *
+total_days = [1,2,3,4,5,6]
+mahab_distances_days = []
+Sil_days = []
+latent_acc_days = []
+#total_days = 6
+batch_size=64
+patience = 5
+latent_dims = 3
+plt_close=True
+#for days in np.arange(total_days-1)+1:
+for days in np.arange(len(total_days)-1):
+    print('Processing days thru ' + str(days))
     
+    # train_days = np.arange(days)+1
+    # test_days = np.arange(days+1,total_days+1)
+    train_days = total_days[0:days+1]
+    test_days = total_days[days+1:len(total_days)]
+        
+    # get training data        
+    condn_data_total=np.empty((0,96))
+    Ytotal = np.empty((0,4))
+    for i in np.arange(len(train_days)):
+        imagined_file_name = root_path + root_imag_filename +  str(train_days[i]) + '.mat'
+        condn_data_imagined,Yimagined = get_data_B2(imagined_file_name)
+        online_file_name = root_path + root_online_filename +  str(train_days[i]) + '.mat'
+        condn_data_online,Yonline = get_data_B2(online_file_name)
+        batch_file_name = root_path + root_batch_filename +  str(train_days[i]) + '.mat'
+        if os.path.exists(batch_file_name):
+            condn_data_batch,Ybatch = get_data_B2(batch_file_name)
+        else:
+            condn_data_batch,Ybatch = np.empty([0,96]),np.empty([0,4])
+            
+        # condn_data_total = np.concatenate((condn_data_total,condn_data_imagined,
+        #                                    condn_data_online,condn_data_batch),axis=0)
+        # Ytotal = np.concatenate((Ytotal,Yimagined,
+        #                                    Yonline,Ybatch),axis=0)
+        condn_data_total = np.concatenate((condn_data_total,condn_data_imagined)
+                                           ,axis=0)
+        Ytotal = np.concatenate((Ytotal,Yimagined),axis=0)
+    
+    # # get testing data 
+    # condn_data_heldout=np.empty((0,96))
+    # Yheldout = np.empty((0,7))
+    # for i in np.arange(len(test_days)):
+    #     # imagined_file_name = root_path + root_imag_filename +  str(test_days[i]) + '.mat'
+    #     # condn_data_imagined,Yimagined = get_data(imagined_file_name)    
+    #     online_file_name = root_path + root_online_filename +  str(test_days[i]) + '.mat'
+    #     condn_data_online,Yonline = get_data(online_file_name)
+    #     batch_file_name = root_path + root_batch_filename +  str(test_days[i]) + '.mat'
+    #     condn_data_batch,Ybatch = get_data(batch_file_name)  
+        
+    #     condn_data_heldout = np.concatenate((condn_data_heldout,condn_data_online,condn_data_batch),axis=0)
+    #     Yheldout = np.concatenate((Yheldout, Yonline,Ybatch),axis=0)
+        
+    
+    # build iAE    
+    if 'model' in locals():
+        del model       
+    nn_filename = 'iAE_AcrossDays' + str(days) + '.pth'
+    Ytest = np.zeros((2,2))
+    while len(np.unique(np.argmax(Ytest,axis=1)))<num_classes:
+        Xtrain,Xtest,Ytrain,Ytest = training_test_split(condn_data_total,Ytotal,0.8)      
+    model = iAutoencoder(input_size,hidden_size,latent_dims,num_classes).to(device)                              
+    model,acc = training_loop_iAE(model,num_epochs,batch_size,learning_rate,batch_val,
+                          patience,gradient_clipping,nn_filename,
+                          Xtrain,Ytrain,Xtest,Ytest,
+                          input_size,hidden_size,latent_dims,num_classes)
+
+    D,z,idx,fig_imagined,acc_train = plot_latent_acc(model,condn_data_total,Ytotal,
+                                       latent_dims) 
+    if plt_close == True:
+        plt.close()
+    
+    # # test it on held out data all at once 
+    # D,z,idx,fig_test,acc_test = plot_latent_acc(model,condn_data_heldout,Yheldout,
+    #                                    latent_dims) 
+    # if plt_close == True:
+    #     plt.close()     
+    # latent_acc_days.append(acc_test*100)
+    # Sil_days.append(D)
+    
+    # mahab_distances = get_mahab_distance_latent(z,idx)
+    # mahab_distances = mahab_distances[np.triu_indices(mahab_distances.shape[0])]
+    # mahab_distances = mahab_distances[mahab_distances>0]
+    # mahab_distances_days.append(mahab_distances)
+    
+    # test it out on held out data one day at a time 
+    mahab_tmp=[]
+    latent_acc_tmp=[]
+    sil_tmp=[]
+    for i in np.arange(len(test_days)):
+            
+        condn_data_heldout=np.empty((0,96))
+        Yheldout = np.empty((0,4))        
+        imagined_file_name = root_path + root_imag_filename +  str(test_days[i]) + '.mat'
+        condn_data_imagined,Yimagined = get_data_B2(imagined_file_name)    
+        online_file_name = root_path + root_online_filename +  str(test_days[i]) + '.mat'
+        condn_data_online,Yonline = get_data_B2(online_file_name)
+        batch_file_name = root_path + root_batch_filename +  str(test_days[i]) + '.mat'
+        if os.path.exists(batch_file_name):
+            condn_data_batch,Ybatch = get_data_B2(batch_file_name)
+        else:
+            condn_data_batch,Ybatch = np.empty([0,96]),np.empty([0,4])
+        
+        
+        # condn_data_heldout = np.concatenate((condn_data_heldout,condn_data_online,condn_data_batch),axis=0)
+        # Yheldout = np.concatenate((Yheldout, Yonline,Ybatch),axis=0)
+        condn_data_heldout = np.concatenate((condn_data_heldout,condn_data_imagined),axis=0)
+        Yheldout = np.concatenate((Yheldout, Yimagined),axis=0)
+        
+        D,z,idx,fig_test,acc_test = plot_latent_acc(model,condn_data_heldout,Yheldout,latent_dims) 
+        
+        if plt_close == True:
+            plt.close()     
+        latent_acc_tmp.append(acc_test*100)
+        sil_tmp.append(D)
+        
+        # # for figure plotting
+        # ch =[0,2,6]
+        # fig_ex = plot_latent_select(model,condn_data_heldout,Yheldout,latent_dims,ch)        
+        # fig_ex.axes[0].xaxis.set_ticklabels([])
+        # fig_ex.axes[0].yaxis.set_ticklabels([])
+        # fig_ex.axes[0].zaxis.set_ticklabels([])
+        # fig_ex.axes[0].view_init(elev=24, azim=-130)
+        # plt.show()
+        # image_format = 'svg' # e.g .png, .svg, etc.
+        # image_name = 'Hand_Day10_Days1thru9_AE.svg'
+        # fig_ex.savefig(image_name, format=image_format, dpi=300)
+
+        
+        mahab_distances = get_mahab_distance_latent_B2(z,idx)
+        mahab_distances = mahab_distances[np.triu_indices(mahab_distances.shape[0])]
+        mahab_distances = mahab_distances[mahab_distances>0]
+        mahab_tmp.append(np.median(mahab_distances))
+    
+    #mahab_distances_days.append(np.median(mahab_distances))
+    mahab_distances_days.append((mahab_tmp))
+    Sil_days.append(np.array(sil_tmp))
+    latent_acc_days.append(np.array(latent_acc_tmp))
+
+       
+
+# plt.figure();
+# plt.plot(latent_acc_days);
+# plt.ylim([35,60])
+        
+# plt.figure();
+# mahab_distances_days1 = np.array(mahab_distances_days)
+# a=np.median(mahab_distances_days1,axis=1)
+# plt.plot(np.median(mahab_distances_days1,axis=1));
+# plt.plot(mahab_distances_days1);
+
+
+acc_plot=[]
+for i in np.arange(len(latent_acc_days)):
+    tmp = latent_acc_days[i]
+    acc_plot.append(mean(tmp))
+
+plt.plot(acc_plot)   
+
+
+acc_plot=[]
+for i in np.arange(len(latent_acc_days)):
+    tmp = latent_acc_days[i]
+    acc_plot.append(mean(tmp))
+
+plt.plot(acc_plot)
+
+# mahab plot on all 
+mahab_plot=[]
+fig=plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+days=np.arange(1,len(total_days))
+for i in np.arange(len(mahab_distances_days)):
+    tmp = mahab_distances_days[i]
+    mahab_plot.append(median(tmp))
+    I = days[i]*np.ones(len(tmp)) + 0.00*rnd.randn(len(tmp))
+    plt.scatter(I,tmp,c='k',alpha=0.5,edgecolors='none')
+    
+# do curve fitting and plot regression line
+x=days
+y=np.array(mahab_plot)
+p = np.polyfit(x,y,1)
+#p = [0.3686,6.3109] #from Robust regression below
+xx = np.concatenate((np.ones((len(x),1)),x[:,None]),axis=1)
+yhat = xx @ np.flip(p)[:,None]
+plt.plot(days,yhat,c='k')
+plt.xticks(ticks=np.arange(len(total_days)-1)+1)
+fig.axes[0].xaxis.set_ticklabels(['1-1','1-2','1-3','1-4','1-5'])
+#fig.axes[0].yaxis.set_ticklabels([])
+plt.xlabel('Days used to build latent space')
+plt.ylabel('Mahab distance')
+plt.show()
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'B2_Drift_AE_Days1thru5.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
+
+# get the pval for the regression
+lm = sm.OLS(y,xx).fit()
+print(lm.summary())
+
+rlm = sm.RLM(y,xx).fit()
+print(rlm.summary())
+
+
+# mahab plot on day 9 
+mahab_plot=[]
+fig=plt.figure()
+days=np.arange(1,10)
+for i in np.arange(len(mahab_distances_days)):
+    tmp = mahab_distances_days[i]
+    mahab_plot.append(tmp[-1])    
+
+plt.figure()
+plt.plot(mahab_plot)   
     
 
 

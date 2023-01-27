@@ -29,13 +29,18 @@ import scipy.stats as stats
 import pandas as pd
 from statsmodels.stats.anova import AnovaRM
 
-
+#%%
 # loading it back
 #whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars
 #whole_dataSamples_stats_results_withBatch_Main_withVariance
 #B2_whole_dataSamples_stats_results_withBatch_Main_withVariance
 #whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars
-data=np.load('NewB2_NoiseDataAugment_0.1_Stats_OnTrainingData_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
+
+#
+data =np.load('MAIN_MAIN2_B1_NoiseDataAugment_CholIndivFeatEqualSize_pt01Noise_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
+#data=np.load('MAIN_NewB1_NoiseDataAugment_CholIndivFeatEqualSize_pt01Noise_Stats_HeldOut_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
+#data=np.load('MAIN_MAIN_NewB2_NoiseDataAugmentCholEqualFeat_pt02_Stats_OnAllData_2D_common_Manifold_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
+#data=np.load('ProcessedData_B1_01142023.npz')
 silhoutte_imagined_days = data.get('silhoutte_imagined_days')
 silhoutte_online_days = data.get('silhoutte_online_days')
 silhoutte_batch_days = data.get('silhoutte_batch_days')
@@ -70,7 +75,7 @@ beta_spatial_corr_days=data.get('beta_spatial_corr_days')
 hg_spatial_corr_days=data.get('hg_spatial_corr_days')
 
 
-
+#%%
 # plotting latent spaces 3D
 az=-45
 el=33
@@ -223,12 +228,14 @@ stats.ttest_rel(tmp[:,1],tmp[:,2])
 # plotting variances as boxplot 
 tmp1 = np.squeeze(np.mean(var_online_days,axis=1))
 tmp2 = np.squeeze(np.mean(var_imagined_days,axis=1))
+tmp3 = np.squeeze(np.mean(var_batch_days,axis=1))
 a=np.ndarray.flatten(tmp1)[:,None]
 b=np.ndarray.flatten(tmp2)[:,None]
-c=np.concatenate((a,b),axis=1)
+c=np.ndarray.flatten(tmp3)[:,None]
+d=np.concatenate((b,a,c),axis=1)
 plt.figure()
-plt.boxplot(c)
-c=np.concatenate((var_distances_batch_iter,var_distances_online_iter,
+plt.boxplot(np.log(d))
+d=np.concatenate((var_distances_batch_iter,var_distances_online_iter,
                   var_distances_imagined_iter),axis=1)
 
 # plotting variances 
@@ -247,7 +254,12 @@ tmp2 = gaussian_filter1d(tmp2,sigma=1)
 plt.plot(tmp2,label='batch')
 plt.legend()
 plt.show()
-
+a=np.ndarray.flatten(tmp)[:,None]
+b=np.ndarray.flatten(tmp1)[:,None]
+c=np.ndarray.flatten(tmp2)[:,None]
+d=np.concatenate((a,b,c),axis=1)
+plt.figure()
+plt.boxplot(np.log(d))
 
 
 # plotting distance between means (no mahab) over days (MAIN) with median
@@ -398,7 +410,7 @@ fig.savefig(image_name, format=image_format, dpi=300)
 print(np.mean(tmp,axis=0))
 
 
-# plotting mean centroid variances over days  (MAIN)
+#%% plotting mean centroid variances over days  (MAIN)
 N=2
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
@@ -409,7 +421,7 @@ X=np.arange(10)+1
 X=np.arange(10)+1
 # imagined 
 tmp_main = np.squeeze(np.mean(var_imagined_days,axis=1))
-tmp1 = np.median(tmp_main,axis=0)
+tmp1 = np.mean(tmp_main,axis=0)
 tmp1b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp1 = np.insert(tmp1,0,tmp1[0],axis=0)
 tmp1b = np.insert(tmp1b,0,tmp1b[0],axis=0)
@@ -420,7 +432,7 @@ plt.plot(X,tmp1,color="black",label = 'Imagined')
 plt.fill_between(X, tmp1-tmp1b, tmp1+tmp1b,color="black",alpha=0.2)
 # online
 tmp_main = np.squeeze(np.mean(var_online_days,axis=1))
-tmp2 = np.median(tmp_main,axis=0)
+tmp2 = np.mean(tmp_main,axis=0)
 tmp2b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp2 = np.insert(tmp2,0,tmp2[0],axis=0)
 tmp2b = np.insert(tmp2b,0,tmp2b[0],axis=0)
@@ -432,7 +444,7 @@ plt.plot(X,tmp2,color="blue",label = 'Online')
 plt.fill_between(X, tmp2-tmp2b, tmp2+tmp2b,color="blue",alpha=0.2)
 # batch
 tmp_main = np.squeeze(np.mean(var_batch_days,axis=1))
-tmp3 = np.median(tmp_main,axis=0)
+tmp3 = np.mean(tmp_main,axis=0)
 tmp3b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp3 = np.insert(tmp3,0,tmp3[0],axis=0)
 tmp3b = np.insert(tmp3b,0,tmp3b[0],axis=0)
@@ -455,22 +467,85 @@ tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
 # tmp = np.concatenate((np.ndarray.flatten(var_overall_imagined_days)[:,None],
 #                       np.ndarray.flatten(var_overall_online_days)[:,None],
 #                       np.ndarray.flatten(var_overall_batch_days)[:,None]),axis=1)
+tmp=np.log(tmp)
 fig=plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams.update({'font.size': 6})
-plt.boxplot(np.log(tmp),whis=2,showfliers=False)
+plt.boxplot((tmp),whis=2,showfliers=False)
 plt.xticks(ticks=[1,2,3],labels=('Imagined','Online','Batch'),**hfont)
-plt.ylabel('Centroid variances',**hfont)
+plt.ylabel('Latent variance',**hfont)
 plt.show()
 image_format = 'svg' # e.g .png, .svg, etc.
-image_name = 'Mahab_Dist_Boxplot.svg'
+image_name = 'Latent Variance.svg'
 fig.savefig(image_name, format=image_format, dpi=300)
 print(np.mean(tmp,axis=0))
+print(stats.ttest_rel(tmp[:,1],tmp[:,2]))
+
+# plotting the same but now across days without averaging
+tmp_main = np.squeeze(np.mean(var_imagined_days,axis=1))
+tmp1 = np.ndarray.flatten(tmp_main)
+tmp_main = np.squeeze(np.mean(var_online_days,axis=1))
+tmp2 = np.ndarray.flatten(tmp_main)
+tmp_main = np.squeeze(np.mean(var_batch_days,axis=1))
+tmp3 = np.ndarray.flatten(tmp_main)
+tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
+
+tmp=np.log(tmp)
+fig=plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+plt.boxplot((tmp),whis=2,showfliers=False)
+plt.xticks(ticks=[1,2,3],labels=('Imagined','Online','Batch'),**hfont)
+#plt.ylabel('Latent variance',**hfont)
+plt.show()
+plt.xticks(ticks=[1,2,3],labels='')
+plt.yticks(ticks=[-1,1,3,5],labels='')
+plt.show()
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'New_B1_Latent Variance.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
+
+print(np.mean(tmp,axis=0))
+print(stats.ttest_rel(tmp[:,1],tmp[:,2]))
+
+#as scatter plots
+tmp1=np.log(tmp1)
+tmp2=np.log(tmp2)
+tmp3=np.log(tmp3)
+
+idx = np.where(tmp1>-1)
+tmp1=tmp1[idx]
+idx = np.where(tmp2>-1)
+tmp2=tmp2[idx]
+idx = np.where(tmp3>-1)
+tmp3=tmp3[idx]
+
+fig = plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+x1=np.ones((tmp1.shape[0],1)) + 0.05*rnd.randn(tmp1.shape[0])[:,None]
+x2=2*np.ones((tmp2.shape[0],1)) + 0.05*rnd.randn(tmp2.shape[0])[:,None]
+x3=3*np.ones((tmp3.shape[0],1)) + 0.05*rnd.randn(tmp3.shape[0])[:,None]
+plt.scatter(x1, tmp1,s=5)
+plt.scatter(x2, tmp2,s=5)
+plt.scatter(x3, tmp3,s=5)
+plt.hlines(np.mean(tmp1),0.8,1.2,colors='black',linewidth=3)
+plt.hlines(np.mean(tmp2),1.8,2.2,colors='black',linewidth=3)
+plt.hlines(np.mean(tmp3),2.8,3.2,colors='black',linewidth=3)
+plt.xticks([1,2,3])
+plt.ylim((-1,5))
+#plt.yticks([0.23,0.25,0.27])
+plt.show()
 
 
-# plotting mean Mahalanobis distance over days  (MAIN MAIN)
+
+#%% # plotting mean Mahalanobis distance over days  (MAIN MAIN)
 # over days there is a learning effect where Mahab distance grows between the 
 # actions and Batch is always greater than all others. 
 N=2
@@ -542,9 +617,8 @@ image_name = 'Mahab_Dist_Boxplot.svg'
 fig.savefig(image_name, format=image_format, dpi=300)
 print(np.mean(tmp,axis=0))
 
-
-# plotting mean silhoutte index over days  (MAIN)
-N=2
+#%% plotting mean silhoutte index over days  (MAIN)
+N=1
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
@@ -1154,31 +1228,46 @@ model,acc = training_loop_iAE(model,num_epochs,batch_size,learning_rate,batch_va
                       input_size,hidden_size,latent_dims,num_classes)
 
 
-# PLOTTING (MAIN) THE HEAT MAPS OF RECONSTRUCTED ACTIVITY PASSING THRU AE
+#%% PLOTTING (MAIN) THE HEAT MAPS OF RECONSTRUCTED ACTIVITY PASSING THRU AE
+# plotting some example boxplots comparing channels
+
+query=4
+tmp1 = (hg_recon_imag[query])[:,-8]
+tmp2 = (hg_recon_online[query])[:,8]
+tmp3 = (hg_recon_batch[query])[:,8]
+
+if 'tmp' in locals():
+    del tmp
+    
+tmp = [tmp1,tmp2,tmp3]
+plt.figure();
+plt.boxplot(tmp);
+
+
 query=6
-tmp = np.mean(hg_recon_imag[query],axis=0)
+tmp = np.std(hg_recon_imag[query],axis=0)
 tmp = np.reshape(tmp,(4,8))
 xmax1,xmin1 = tmp.max(),tmp.min()
 plt.figure()
 fig1=plt.imshow(tmp)
-plt.colorbar
+plt.colorbar()
 plt.show
 
 
-tmp = np.mean(hg_recon_online[query],axis=0)
+tmp = np.std(hg_recon_online[query],axis=0)
 tmp = np.reshape(tmp,(4,8))
 xmax2,xmin2 = tmp.max(),tmp.min()
 plt.figure()
-plt.colorbar
 fig2=plt.imshow(tmp)
+plt.colorbar()
 
-
-tmp = np.mean(hg_recon_batch[query],axis=0)
+tmp = np.std(hg_recon_batch[query],axis=0)
 tmp = np.reshape(tmp,(4,8))
 xmax3,xmin3 = tmp.max(),tmp.min()
 plt.figure()
-plt.colorbar
 fig3=plt.imshow(tmp)
+plt.colorbar()
+
 
 
 xmax = np.array([xmax1,xmax2,xmax3])
@@ -1249,12 +1338,12 @@ for query in np.arange(7):
     plt.axis('off')    
     plt.colorbar()
     
-    # a = np.corrcoef(np.ndarray.flatten(tmp1),np.ndarray.flatten(tmp2))[0,1]
-    # b = np.corrcoef(np.ndarray.flatten(tmp1),np.ndarray.flatten(tmp3))[0,1]
-    # c = np.corrcoef(np.ndarray.flatten(tmp2),np.ndarray.flatten(tmp3))[0,1]
-    a = np.dot(tmp1.flatten(),tmp2.flatten())
-    b = np.dot(tmp1.flatten(),tmp3.flatten())
-    c = np.dot(tmp2.flatten(),tmp3.flatten())
+    a = np.corrcoef(np.ndarray.flatten(tmp1),np.ndarray.flatten(tmp2))[0,1]
+    b = np.corrcoef(np.ndarray.flatten(tmp1),np.ndarray.flatten(tmp3))[0,1]
+    c = np.corrcoef(np.ndarray.flatten(tmp2),np.ndarray.flatten(tmp3))[0,1]
+    # a = np.dot(tmp1.flatten(),tmp2.flatten())
+    # b = np.dot(tmp1.flatten(),tmp3.flatten())
+    # c = np.dot(tmp2.flatten(),tmp3.flatten())
     corr_coef_hg = np.append(corr_coef_hg,[a,b,c])
     
     xmax = np.array([xmax1,xmax2,xmax3])
@@ -1610,7 +1699,7 @@ fig.savefig(image_name, format=image_format, dpi=300)
 # fig2.set_clim(xmin.min(),xmax.max())
 
 
-# plotting channel variances after the averaging over iterations and days (MAIN MAIN)
+#%% plotting channel variances after the averaging over iterations and days (MAIN MAIN)
 # high gamma
 var_imag = np.mean(hg_recon_imag_var_days,axis=0)
 var_online = np.mean(hg_recon_online_var_days,axis=0)
@@ -1722,8 +1811,8 @@ print(stats.ks_2samp(x[0],x[1]))
 print(stats.ks_2samp(x[0],x[2]))
 print(stats.ks_2samp(x[1],x[2]))
 
-########### PLOTTING FOR B2 #####################
-# VARIANCE IN LATENT SPACE 
+#%%########### PLOTTING FOR B2 #####################
+# OVERALL VARIANCE IN LATENT SPACE 
 N=2
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
@@ -1790,7 +1879,7 @@ hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams.update({'font.size': 6})
-plt.boxplot(np.log(tmp),showfliers=True)
+plt.boxplot((tmp),showfliers=True)
 #plt.xticks(ticks=[1,2,3],labels=('Imagined','Online','Batch'),**hfont)
 #plt.ylabel('Overall Latent Variance',**hfont)
 plt.xticks(ticks=[1,2,3],labels='')
@@ -1827,7 +1916,13 @@ df = pd.DataFrame({'subject': data_rm[:,0],
 print(AnovaRM(data=df, depvar='variance', subject='subject', within=['decoder']).fit())
 
 
+# rm anova to see if there is a difference between latent mahab distances between 
+# OL and CL1 and CL2
+
+
+
 # MAHAB DISTANCES  (MAIN)
+num_days=6
 N=2
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
@@ -1838,7 +1933,7 @@ X=np.arange(num_days)+1
 X=np.arange(num_days)+1
 # imagined 
 tmp_main = np.squeeze(np.mean(mahab_distances_imagined_days,1))
-tmp1 = np.median(tmp_main,axis=0)
+tmp1 = np.mean(tmp_main,axis=0)
 tmp1b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp1 = tmp1[1:5] # only taking days with batch
 tmp1b = tmp1b[1:5] # only taking days with batch
@@ -1852,7 +1947,7 @@ plt.plot(X[1:5],tmp1,color="black",label = 'Imagined')
 plt.fill_between(X[1:5], tmp1-tmp1b, tmp1+tmp1b,color="black",alpha=0.2)
 # online
 tmp_main = np.squeeze(np.mean(mahab_distances_online_days,1))
-tmp2 = np.median(tmp_main,axis=0)
+tmp2 = np.mean(tmp_main,axis=0)
 tmp2b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp2 = tmp2[1:5] # only taking days with batch
 tmp2b = tmp2b[1:5] # only taking days with batch
@@ -1866,7 +1961,7 @@ plt.plot(X[1:5],tmp2,color="blue",label = 'Online')
 plt.fill_between(X[1:5], tmp2-tmp2b, tmp2+tmp2b,color="blue",alpha=0.2)
 # batch
 tmp_main = np.squeeze(np.mean(mahab_distances_batch_days,1))
-tmp3 = np.median(tmp_main,axis=0)
+tmp3 = np.mean(tmp_main,axis=0)
 tmp3b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp3 = tmp3[1:5] #get only  days when data available
 tmp3b = tmp3b[1:5] #get only days when data available
@@ -1983,7 +2078,8 @@ print(np.mean(tmp,axis=0))
 
 
 # plotting mean centroid variances over days  (MAIN)
-N=1
+N=2
+num_days=6
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
@@ -2047,18 +2143,86 @@ hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams.update({'font.size': 6})
-plt.boxplot((tmp),whis=2,showfliers=False)
-plt.xticks(ticks=[1,2,3],labels=('Imagined','Online','Batch'),**hfont)
-plt.ylabel('Centroid variances',**hfont)
+plt.boxplot((tmp),whis=2,showfliers=True)
+#plt.xticks(ticks=[1,2,3],labels=('Imagined','Online','Batch'),**hfont)
+plt.xticks(ticks=[1,2,3],labels='',**hfont)
+plt.ylabel('',**hfont)
 plt.show()
 image_format = 'svg' # e.g .png, .svg, etc.
-image_name = 'Mahab_Dist_Boxplot.svg'
+image_name = 'B2_Variance_Latent_Centroids.svg'
 fig.savefig(image_name, format=image_format, dpi=300)
 print(np.mean(tmp,axis=0))
 
 
+# plotting the same but now across days without averaging
+tmp_main = np.squeeze(np.mean(var_imagined_days,axis=1))
+tmp_main = tmp_main[:,1:5]
+tmp1 = np.ndarray.flatten(tmp_main)
+tmp_main = np.squeeze(np.mean(var_online_days,axis=1))
+tmp_main = tmp_main[:,1:5]
+tmp2 = np.ndarray.flatten(tmp_main)
+tmp_main = np.squeeze(np.mean(var_batch_days,axis=1))
+tmp_main = tmp_main[:,1:5]
+tmp3 = np.ndarray.flatten(tmp_main)
+tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
 
-# LOOKING AT THE CHANNEL VARIANCES AFTER ITERATING OVER DAYS AND NETWORKS
+
+tmp=np.log(tmp)
+fig=plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+plt.boxplot((tmp),whis=2,showfliers=False)
+plt.xticks(ticks=[1,2,3],labels=('Imagined','Online','Batch'),**hfont)
+plt.ylabel('Latent variance',**hfont)
+plt.show()
+plt.xticks(ticks=[1,2,3],labels='',**hfont)
+plt.yticks(ticks=[0.005,0.015,0.025],labels='',**hfont)
+plt.ylabel('',**hfont)
+plt.show()
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'New_B2_Variance_Latent_Centroids.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
+
+print(np.mean(tmp,axis=0))
+print(stats.ttest_rel(tmp[:,0],tmp[:,1]))
+print(stats.ttest_rel(tmp[:,0],tmp[:,2]))
+print(stats.ttest_rel(tmp[:,1],tmp[:,2]))
+
+#as scatter plots
+tmp1=np.log(tmp1)
+tmp2=np.log(tmp2)
+tmp3=np.log(tmp3)
+
+idx = np.where(tmp1>-1)
+tmp1=tmp1[idx]
+idx = np.where(tmp2>-1)
+tmp2=tmp2[idx]
+idx = np.where(tmp3>-1)
+tmp3=tmp3[idx]
+
+fig = plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+x1=np.ones((tmp1.shape[0],1)) + 0.05*rnd.randn(tmp1.shape[0])[:,None]
+x2=2*np.ones((tmp2.shape[0],1)) + 0.05*rnd.randn(tmp2.shape[0])[:,None]
+x3=3*np.ones((tmp3.shape[0],1)) + 0.05*rnd.randn(tmp3.shape[0])[:,None]
+plt.scatter(x1, tmp1,s=5,c=[.2 ,.2 ,.6])
+plt.scatter(x2, tmp2,s=5,c=[.2 ,.2 ,.6])
+plt.scatter(x3, tmp3,s=5,c=[.2 ,.2 ,.6])
+plt.hlines(np.mean(tmp1),0.8,1.2,colors='black',linewidth=3)
+plt.hlines(np.mean(tmp2),1.8,2.2,colors='black',linewidth=3)
+plt.hlines(np.mean(tmp3),2.8,3.2,colors='black',linewidth=3)
+plt.xticks([1,2,3])
+plt.ylim((-1,5))
+#plt.yticks([0.23,0.25,0.27])
+plt.show()
+
+
+#%% LOOKING AT THE CHANNEL VARIANCES AFTER ITERATING OVER DAYS AND NETWORKS
 # high gamma
 var_imag = np.mean(hg_recon_imag_var_days[:,:,1:5],axis=0)
 var_online = np.mean(hg_recon_online_var_days[:,:,1:5],axis=0)

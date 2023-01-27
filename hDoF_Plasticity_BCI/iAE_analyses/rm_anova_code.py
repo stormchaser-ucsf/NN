@@ -71,6 +71,29 @@ print(res2way)
 
 
 
+# performing a RM anova on the BCI data, Mahab distances for B1 in latent space
+#filename = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker\data_latent_dist_B1.mat'
+filename = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker\Data_RM_B1B2.mat'
+data_dict = mat73.loadmat(filename)
+tmp = data_dict.get('Data_RM_B1B2')
+df = pd.DataFrame({'exp_type': tmp[:,0],                   
+                   'subject':tmp[:,1],
+                   'dist':tmp[:,2]})
+rm2way = AnovaRM(df, depvar='dist', subject='subject',within=['exp_type'])
+res2way = rm2way.fit()
+print(res2way)
+
+# performing a RM anova on the BCI data,B2 latent variance
+#filename = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker\data_latent_dist_B1.mat'
+filename = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker\Data_RM_B2_latentVar.mat'
+data_dict = mat73.loadmat(filename)
+tmp = data_dict.get('Data_RM_B2_latentVar')
+df = pd.DataFrame({'exp_type': tmp[:,0],                   
+                   'subject':tmp[:,1],
+                   'dist':tmp[:,2]})
+rm2way = AnovaRM(df, depvar='dist', subject='subject',within=['exp_type'])
+res2way = rm2way.fit()
+print(res2way)
 
 
 

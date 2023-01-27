@@ -37,7 +37,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 # model params
 input_size=96
 hidden_size=32
-latent_dims=3
+latent_dims=2
 num_classes = 4
 
 # training params 
@@ -67,7 +67,7 @@ dist_var_overall_batch = np.empty([num_days,0])
 mahab_dist_overall_batch = np.empty([num_days,0])
 
 # iterations to bootstrap
-iterations = 50
+iterations = 1
 
 # init overall variables 
 mahab_distances_imagined_days = np.zeros([6,iterations,num_days])

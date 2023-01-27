@@ -3,13 +3,6 @@
 Created on Thu Nov 24 09:24:18 2022
 
 @author: nikic
-"""
-
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Oct 13 22:42:19 2022
-
-@author: nikic
 
 LOOP OVER DAYS, ANALYZE LATENT SPACE FOR IMAGINED AND ONLINE SEPERATELY.
 AT SAMPLE LEVEL CROSS VALIDATE AND AVERAGE LATENT ACTIVITY AND INVESTIGATE 
@@ -84,24 +77,24 @@ iterations = 1
 #%% SETTING UP VARS 
 
 # init overall variables 
-mahab_distances_imagined_days = np.zeros([21,iterations,10])
-mean_distances_imagined_days = np.zeros([21,iterations,10])
-var_imagined_days = np.zeros([7,iterations,10])
-silhoutte_imagined_days = np.zeros((iterations,10))
-accuracy_imagined_days = np.zeros((iterations,10))
-mahab_distances_online_days = np.zeros([21,iterations,10])
-mean_distances_online_days = np.zeros([21,iterations,10])
-var_online_days = np.zeros([7,iterations,10])
-silhoutte_online_days = np.zeros((iterations,10))
-accuracy_online_days = np.zeros((iterations,10))
-mahab_distances_batch_days = np.zeros([21,iterations,10])
-mean_distances_batch_days = np.zeros([21,iterations,10])
-var_batch_days = np.zeros([7,iterations,10])
-silhoutte_batch_days = np.zeros((iterations,10))
-accuracy_batch_days = np.zeros((iterations,10))
-var_overall_imagined_days = np.zeros((iterations,10))
-var_overall_batch_days = np.zeros((iterations,10))
-var_overall_online_days = np.zeros((iterations,10))
+mahab_distances_imagined_days = np.zeros([21,iterations,num_days])
+mean_distances_imagined_days = np.zeros([21,iterations,num_days])
+var_imagined_days = np.zeros([7,iterations,num_days])
+silhoutte_imagined_days = np.zeros((iterations,num_days))
+accuracy_imagined_days = np.zeros((iterations,num_days))
+mahab_distances_online_days = np.zeros([21,iterations,num_days])
+mean_distances_online_days = np.zeros([21,iterations,num_days])
+var_online_days = np.zeros([7,iterations,num_days])
+silhoutte_online_days = np.zeros((iterations,num_days))
+accuracy_online_days = np.zeros((iterations,num_days))
+mahab_distances_batch_days = np.zeros([21,iterations,num_days])
+mean_distances_batch_days = np.zeros([21,iterations,num_days])
+var_batch_days = np.zeros([7,iterations,num_days])
+silhoutte_batch_days = np.zeros((iterations,num_days))
+accuracy_batch_days = np.zeros((iterations,num_days))
+var_overall_imagined_days = np.zeros((iterations,num_days))
+var_overall_batch_days = np.zeros((iterations,num_days))
+var_overall_online_days = np.zeros((iterations,num_days))
 # init vars for channel variance stuff
 delta_recon_imag_var_days = np.zeros([iterations,224,num_days])
 beta_recon_imag_var_days = np.zeros([iterations,224,num_days])
@@ -121,7 +114,7 @@ hg_spatial_corr_days = np.zeros([iterations,num_classes*3,num_days])
 
 
 # training params 
-latent_dims=3
+latent_dims=2
 num_epochs=150
 batch_size=32
 learning_rate = 1e-3
@@ -131,7 +124,7 @@ gradient_clipping=10
 from iAE_utils_models import *
 
 # main loop 
-for days in (np.arange(10)+1):
+for days in (np.arange(num_days)+1):
     imagined_file_name = root_path + root_imag_filename +  str(days) + '.mat'
     condn_data_imagined,Yimagined = get_data(imagined_file_name)
     online_file_name = root_path + root_online_filename +  str(days) + '.mat'
@@ -180,22 +173,22 @@ for days in (np.arange(10)+1):
     condn_data_batch,Ybatch =   data_aug_mlp_chol_feature_equalSize(condn_data_batch,Ybatch,condn_data_imagined.shape[0])
     
     ## plotting options
-    plt_close=True
+    plt_close=False
     
     # inner loop
     for loop in np.arange(iterations):
         
         print(f'Iteration {loop+1}, Day {days}')
-        #### DATA SPLIT OF ALL CONDITIONS FOR CROSS-VALIDATION ####
-        # condn_data_imagined_train,condn_data_imagined_test,Yimagined_train,Yimagined_test=training_test_split(condn_data_imagined, Yimagined, 0.8)
-        # condn_data_online_train,condn_data_online_test,Yonline_train,Yonline_test=training_test_split(condn_data_online, Yonline, 0.8)            
-        # condn_data_batch_train,condn_data_batch_test,Ybatch_train,Ybatch_test=training_test_split(condn_data_batch, Ybatch, 0.8)
-        condn_data_imagined_train,condn_data_imagined_test = condn_data_imagined,condn_data_imagined
-        Yimagined_train,Yimagined_test = Yimagined,Yimagined
-        condn_data_online_train,condn_data_online_test = condn_data_online,condn_data_online
-        Yonline_train,Yonline_test = Yonline,Yonline
-        condn_data_batch_train,condn_data_batch_test = condn_data_batch,condn_data_batch
-        Ybatch_train,Ybatch_test = Ybatch,Ybatch
+        ### DATA SPLIT OF ALL CONDITIONS FOR CROSS-VALIDATION ####
+        condn_data_imagined_train,condn_data_imagined_test,Yimagined_train,Yimagined_test=training_test_split(condn_data_imagined, Yimagined, 0.8)
+        condn_data_online_train,condn_data_online_test,Yonline_train,Yonline_test=training_test_split(condn_data_online, Yonline, 0.8)            
+        condn_data_batch_train,condn_data_batch_test,Ybatch_train,Ybatch_test=training_test_split(condn_data_batch, Ybatch, 0.8)
+        # condn_data_imagined_train,condn_data_imagined_test = condn_data_imagined,condn_data_imagined
+        # Yimagined_train,Yimagined_test = Yimagined,Yimagined
+        # condn_data_online_train,condn_data_online_test = condn_data_online,condn_data_online
+        # Yonline_train,Yonline_test = Yonline,Yonline
+        # condn_data_batch_train,condn_data_batch_test = condn_data_batch,condn_data_batch
+        # Ybatch_train,Ybatch_test = Ybatch,Ybatch
         
         
         #### STACK EVERYTHING TOGETHER ###
@@ -356,6 +349,43 @@ for days in (np.arange(10)+1):
         beta_spatial_corr_iter = np.append(beta_spatial_corr_iter,beta_corr_coef[:,None],axis=1)
         hg_spatial_corr_iter = np.append(hg_spatial_corr_iter,hg_corr_coef[:,None],axis=1)
         
+        
+        # making plot axes equal for example plot 
+        if plt_close == False and latent_dims==3:            
+            az=-149  #play around with these
+            el=27
+            x1 = np.array(fig_imagined.axes[0].get_xlim())[:,None]
+            x2 = np.array(fig_online.axes[0].get_xlim())[:,None]
+            x3 = np.array(fig_batch.axes[0].get_xlim())[:,None]
+            x = np.concatenate((x1,x2,x3),axis=1)
+            xmin = x.min()
+            xmax = x.max()
+            y1 = np.array(fig_imagined.axes[0].get_ylim())[:,None]
+            y2 = np.array(fig_online.axes[0].get_ylim())[:,None]
+            y3 = np.array(fig_batch.axes[0].get_ylim())[:,None]
+            y = np.concatenate((y1,y2,y3),axis=1)
+            ymin = y.min()
+            ymax = y.max()
+            z1 = np.array(fig_imagined.axes[0].get_zlim())[:,None]
+            z2 = np.array(fig_online.axes[0].get_zlim())[:,None]
+            z3 = np.array(fig_batch.axes[0].get_zlim())[:,None]
+            z = np.concatenate((z1,z2,z3),axis=1)
+            zmin = z.min()
+            zmax = z.max()
+            fig_online.axes[0].set_xlim(xmin,xmax)
+            fig_batch.axes[0].set_xlim(xmin,xmax)
+            fig_imagined.axes[0].set_xlim(xmin,xmax)
+            fig_online.axes[0].set_ylim(ymin,ymax)
+            fig_batch.axes[0].set_ylim(ymin,ymax)
+            fig_imagined.axes[0].set_ylim(ymin,ymax)
+            fig_online.axes[0].set_zlim(zmin,zmax)
+            fig_batch.axes[0].set_zlim(zmin,zmax)
+            fig_imagined.axes[0].set_zlim(zmin,zmax)
+            fig_batch.axes[0].view_init(elev=el, azim=az)
+            fig_imagined.axes[0].view_init(elev=el, azim=az)
+            fig_online.axes[0].view_init(elev=el, azim=az)
+        
+    
     
     # store it all 
     mahab_distances_imagined_days[:,:,days-1] = mahab_distances_imagined_iter
@@ -396,7 +426,7 @@ for days in (np.arange(10)+1):
 
 # saving it all 
 # orig filename: whole_dataSamples_stats_results_withBatch_Main_withVariance
-np.savez('NewB1_NoiseDataAugment_CholIndivFeatEqualSize_pt02Noise_StatsAlldata_3D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr', 
+np.savez('ProcessedData_B1_01142023_pt0002', 
          silhoutte_imagined_days = silhoutte_imagined_days,
          silhoutte_online_days = silhoutte_online_days,
          silhoutte_batch_days = silhoutte_batch_days,
