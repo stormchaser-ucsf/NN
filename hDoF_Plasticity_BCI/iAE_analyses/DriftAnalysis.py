@@ -357,10 +357,18 @@ for days in np.arange(total_days-1)+1:
         batch_file_name = root_path + root_batch_filename +  str(train_days[i]) + '.mat'
         condn_data_batch,Ybatch = get_data(batch_file_name)  
         
-        condn_data_total = np.concatenate((condn_data_total,condn_data_imagined,
-                                           condn_data_online,condn_data_batch),axis=0)
-        Ytotal = np.concatenate((Ytotal,Yimagined,
-                                           Yonline,Ybatch),axis=0)
+        condn_data_online,Yonline =   data_aug_mlp_chol_feature_equalSize(condn_data_online,Yonline,condn_data_imagined.shape[0])
+        condn_data_batch,Ybatch =   data_aug_mlp_chol_feature_equalSize(condn_data_batch,Ybatch,condn_data_imagined.shape[0])
+        
+        # only on the imagined data 
+        condn_data_total = np.concatenate((condn_data_total,condn_data_imagined),axis=0)
+        Ytotal = np.concatenate((Ytotal,Yimagined),axis=0)
+        
+        # on all data 
+        # condn_data_total = np.concatenate((condn_data_total,condn_data_imagined,
+        #                                     condn_data_online,condn_data_batch),axis=0)
+        # Ytotal = np.concatenate((Ytotal,Yimagined,
+        #                                     Yonline,Ybatch),axis=0)
     
     # # get testing data 
     # condn_data_heldout=np.empty((0,96))
@@ -416,15 +424,20 @@ for days in np.arange(total_days-1)+1:
             
         condn_data_heldout=np.empty((0,96))
         Yheldout = np.empty((0,7))        
-        # imagined_file_name = root_path + root_imag_filename +  str(test_days[i]) + '.mat'
-        # condn_data_imagined,Yimagined = get_data(imagined_file_name)    
+        imagined_file_name = root_path + root_imag_filename +  str(test_days[i]) + '.mat'
+        condn_data_imagined,Yimagined = get_data(imagined_file_name)    
         online_file_name = root_path + root_online_filename +  str(test_days[i]) + '.mat'
         condn_data_online,Yonline = get_data(online_file_name)
         batch_file_name = root_path + root_batch_filename +  str(test_days[i]) + '.mat'
         condn_data_batch,Ybatch = get_data(batch_file_name)  
         
-        condn_data_heldout = np.concatenate((condn_data_heldout,condn_data_online,condn_data_batch),axis=0)
-        Yheldout = np.concatenate((Yheldout, Yonline,Ybatch),axis=0)
+        # project only imagined data 
+        condn_data_heldout = np.concatenate((condn_data_heldout,condn_data_imagined),axis=0)
+        Yheldout = np.concatenate((Yheldout,Yimagined),axis=0)
+        
+        # project only closed loop data 
+        # condn_data_heldout = np.concatenate((condn_data_heldout,condn_data_online,condn_data_batch),axis=0)
+        # Yheldout = np.concatenate((Yheldout, Yonline,Ybatch),axis=0)
         
         D,z,idx,fig_test,acc_test = plot_latent_acc(model,condn_data_heldout,Yheldout,latent_dims) 
         if plt_close == True:
@@ -432,17 +445,17 @@ for days in np.arange(total_days-1)+1:
         latent_acc_tmp.append(acc_test*100)
         sil_tmp.append(D)
         
-        # for figure plotting
-        ch =[0,2,6]
-        fig_ex = plot_latent_select(model,condn_data_heldout,Yheldout,latent_dims,ch)        
-        fig_ex.axes[0].xaxis.set_ticklabels([])
-        fig_ex.axes[0].yaxis.set_ticklabels([])
-        fig_ex.axes[0].zaxis.set_ticklabels([])
-        fig_ex.axes[0].view_init(elev=24, azim=-130)
-        plt.show()
-        image_format = 'svg' # e.g .png, .svg, etc.
-        image_name = 'Hand_Day10_Days1thru9_AE.svg'
-        fig_ex.savefig(image_name, format=image_format, dpi=300)
+        # # for figure plotting
+        # ch =[0,2,6]
+        # fig_ex = plot_latent_select(model,condn_data_heldout,Yheldout,latent_dims,ch)        
+        # fig_ex.axes[0].xaxis.set_ticklabels([])
+        # fig_ex.axes[0].yaxis.set_ticklabels([])
+        # fig_ex.axes[0].zaxis.set_ticklabels([])
+        # fig_ex.axes[0].view_init(elev=24, azim=-130)
+        # plt.show()
+        # image_format = 'svg' # e.g .png, .svg, etc.
+        # image_name = 'Hand_Day10_Days1thru9_AE.svg'
+        # fig_ex.savefig(image_name, format=image_format, dpi=300)
 
         
         mahab_distances = get_mahab_distance_latent(z,idx)
@@ -501,16 +514,17 @@ for i in np.arange(len(mahab_distances_days)):
 x=days
 y=np.array(mahab_plot)
 p = np.polyfit(x,y,1)
-p = [0.3686,6.3109] #from Robust regression below
+#p = [0.3686,6.3109] #from Robust regression below
 xx = np.concatenate((np.ones((len(x),1)),x[:,None]),axis=1)
 yhat = xx @ np.flip(p)[:,None]
 plt.plot(days,yhat,c='k')
 plt.xticks(ticks=np.arange(9)+1)
 fig.axes[0].xaxis.set_ticklabels([])
 fig.axes[0].yaxis.set_ticklabels([])
+plt.ylim([0,8])
 plt.show()
 image_format = 'svg' # e.g .png, .svg, etc.
-image_name = 'Day1thru10_Days1thru9_AE.svg'
+image_name = 'Day1thru10_Days1thru9_AE_New.svg'
 fig.savefig(image_name, format=image_format, dpi=300)
 
 # get the pval for the regression
@@ -532,8 +546,16 @@ for i in np.arange(len(mahab_distances_days)):
 plt.figure()
 plt.plot(mahab_plot)   
     
-    
-    
+# get the data ready for linear mixed effect model
+data = np.empty([0,2])
+for i in np.arange(len(mahab_distances_days)):
+    tmp = np.array(mahab_distances_days[i])[:,None]
+    tmp_days = np.tile(i+1,tmp.shape[0])[:,None]
+    a= np.concatenate((tmp,tmp_days),axis=1)
+    #a=np.fliplr(np.squeeze(np.array([tmp, tmp_days]).T))
+    data = np.append(data,a,axis=0)
+
+
 
 
 #%% CONTINUATION OF PART C BUT NOW ON ALL THE DATA  for B2
@@ -779,6 +801,7 @@ yhat = xx @ np.flip(p)[:,None]
 plt.plot(days,yhat,c='k')
 plt.xticks(ticks=np.arange(len(total_days)-1)+1)
 fig.axes[0].xaxis.set_ticklabels(['1-1','1-2','1-3','1-4','1-5'])
+#fig.axes[0].xaxis.set_ticklabels([])
 #fig.axes[0].yaxis.set_ticklabels([])
 plt.xlabel('Days used to build latent space')
 plt.ylabel('Mahab distance')

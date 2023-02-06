@@ -180,15 +180,15 @@ for days in (np.arange(num_days)+1):
         
         print(f'Iteration {loop+1}, Day {days}')
         ### DATA SPLIT OF ALL CONDITIONS FOR CROSS-VALIDATION ####
-        condn_data_imagined_train,condn_data_imagined_test,Yimagined_train,Yimagined_test=training_test_split(condn_data_imagined, Yimagined, 0.8)
-        condn_data_online_train,condn_data_online_test,Yonline_train,Yonline_test=training_test_split(condn_data_online, Yonline, 0.8)            
-        condn_data_batch_train,condn_data_batch_test,Ybatch_train,Ybatch_test=training_test_split(condn_data_batch, Ybatch, 0.8)
-        # condn_data_imagined_train,condn_data_imagined_test = condn_data_imagined,condn_data_imagined
-        # Yimagined_train,Yimagined_test = Yimagined,Yimagined
-        # condn_data_online_train,condn_data_online_test = condn_data_online,condn_data_online
-        # Yonline_train,Yonline_test = Yonline,Yonline
-        # condn_data_batch_train,condn_data_batch_test = condn_data_batch,condn_data_batch
-        # Ybatch_train,Ybatch_test = Ybatch,Ybatch
+        # condn_data_imagined_train,condn_data_imagined_test,Yimagined_train,Yimagined_test=training_test_split(condn_data_imagined, Yimagined, 0.8)
+        # condn_data_online_train,condn_data_online_test,Yonline_train,Yonline_test=training_test_split(condn_data_online, Yonline, 0.8)            
+        # condn_data_batch_train,condn_data_batch_test,Ybatch_train,Ybatch_test=training_test_split(condn_data_batch, Ybatch, 0.8)
+        condn_data_imagined_train,condn_data_imagined_test = condn_data_imagined,condn_data_imagined
+        Yimagined_train,Yimagined_test = Yimagined,Yimagined
+        condn_data_online_train,condn_data_online_test = condn_data_online,condn_data_online
+        Yonline_train,Yonline_test = Yonline,Yonline
+        condn_data_batch_train,condn_data_batch_test = condn_data_batch,condn_data_batch
+        Ybatch_train,Ybatch_test = Ybatch,Ybatch
         
         
         #### STACK EVERYTHING TOGETHER ###

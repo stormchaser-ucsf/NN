@@ -144,11 +144,11 @@ fig_imagined.axes[0].set_yticks(ticks=np.arange(-15,21,5))
 fig_batch.axes[0].set_xticks(ticks=np.arange(-20,31,10))
 fig_batch.axes[0].set_yticks(ticks=np.arange(-15,21,5))
 image_format = 'svg' # e.g .png, .svg, etc.
-image_name = 'Latent_Day10_Imag_2D.svg'
+image_name = 'Latent_Day1_Imag_2D_New.svg'
 fig_imagined.savefig(image_name, format=image_format, dpi=300)
-image_name = 'Latent_Day10_Online_2D.svg'
+image_name = 'Latent_Day1_Online_2D_New.svg'
 fig_online.savefig(image_name, format=image_format, dpi=300)
-image_name = 'Latent_Day10_Batch_2D.svg'
+image_name = 'Latent_Day1_Batch_2D_New.svg'
 fig_batch.savefig(image_name, format=image_format, dpi=300)
 
 
@@ -1231,21 +1231,113 @@ model,acc = training_loop_iAE(model,num_epochs,batch_size,learning_rate,batch_va
 #%% PLOTTING (MAIN) THE HEAT MAPS OF RECONSTRUCTED ACTIVITY PASSING THRU AE
 # plotting some example boxplots comparing channels
 
-query=4
-tmp1 = (hg_recon_imag[query])[:,-8]
-tmp2 = (hg_recon_online[query])[:,8]
-tmp3 = (hg_recon_batch[query])[:,8]
-
-if 'tmp' in locals():
-    del tmp
+# chn  18,  ,3 
+chn = [3,18]
+query=1
+for i in np.arange(len(chn)):
+        
+    tmp1 = (hg_recon_imag[query])[:,chn[i]]
+    tmp2 = (hg_recon_online[query])[:,chn[i]]
+    tmp3 = (hg_recon_batch[query])[:,chn[i]]
     
-tmp = [tmp1,tmp2,tmp3]
-plt.figure();
-plt.boxplot(tmp);
+    if 'tmp' in locals():
+        del tmp
+        
+    tmp = [tmp1,tmp2,tmp3]
+    fig=plt.figure()
+    hfont = {'fontname':'Arial'}
+    plt.rc('font',family='Arial')
+    plt.rcParams['figure.dpi'] = 300
+    plt.rcParams.update({'font.size': 6})
+    plt.boxplot(tmp,showfliers=False);
+    plt.title(chn[i])
+    plt.xticks(ticks=[1,2,3],labels=('OL','CL1','CL2'),**hfont)    
+    #plt.tick_params(labelleft=False)
+    plt.show()
+
+
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'BMF_Ch31_hG_Std.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
+
+
+    
+# plot only the desired channel 
+tmp = np.zeros((32,))
+tmp[[31,18]]=1
+tmp = np.reshape(tmp,(4,8))
+plt.figure()
+fig1=plt.imshow(tmp)
+plt.tick_params(labelleft=False,labelbottom=False,bottom=False,left=False)
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Ch18_31.svg'
+plt.savefig(image_name, format=image_format, dpi=300)
+
+
+
+# as scatter plot
+fig = plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+x1=np.ones((tmp1.shape[0],1)) + 0.05*rnd.randn(tmp1.shape[0])[:,None]
+x2=2*np.ones((tmp2.shape[0],1)) + 0.05*rnd.randn(tmp2.shape[0])[:,None]
+x3=3*np.ones((tmp3.shape[0],1)) + 0.05*rnd.randn(tmp3.shape[0])[:,None]
+plt.scatter(x1, tmp1,s=5)
+plt.scatter(x2, tmp2,s=5)
+plt.scatter(x3, tmp3,s=5)
+plt.hlines(np.mean(tmp1),0.8,1.2,colors='black',linewidth=3)
+plt.hlines(np.mean(tmp2),1.8,2.2,colors='black',linewidth=3)
+plt.hlines(np.mean(tmp3),2.8,3.2,colors='black',linewidth=3)
+plt.xticks([1,2,3])
+#plt.ylim((-1,5))
+#plt.yticks([0.23,0.25,0.27])
+plt.show()
+
+
+
+# chn  18,  ,3 
+chn = [29]
+query=6
+for i in np.arange(len(chn)):
+        
+    tmp1 = (beta_recon_imag[query])[:,chn[i]]
+    tmp2 = (beta_recon_online[query])[:,chn[i]]
+    tmp3 = (beta_recon_batch[query])[:,chn[i]]
+    
+    if 'tmp' in locals():
+        del tmp
+        
+    tmp = [tmp1,tmp2,tmp3]
+    plt.figure();
+    plt.boxplot(tmp,showfliers=False);
+    plt.title(chn[i])
+
+# as scatter plot
+fig = plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+x1=np.ones((tmp1.shape[0],1)) + 0.05*rnd.randn(tmp1.shape[0])[:,None]
+x2=2*np.ones((tmp2.shape[0],1)) + 0.05*rnd.randn(tmp2.shape[0])[:,None]
+x3=3*np.ones((tmp3.shape[0],1)) + 0.05*rnd.randn(tmp3.shape[0])[:,None]
+plt.scatter(x1, tmp1,s=5)
+plt.scatter(x2, tmp2,s=5)
+plt.scatter(x3, tmp3,s=5)
+plt.hlines(np.mean(tmp1),0.8,1.2,colors='black',linewidth=3)
+plt.hlines(np.mean(tmp2),1.8,2.2,colors='black',linewidth=3)
+plt.hlines(np.mean(tmp3),2.8,3.2,colors='black',linewidth=3)
+plt.xticks([1,2,3])
+#plt.ylim((-1,5))
+#plt.yticks([0.23,0.25,0.27])
+plt.show()
+
 
 
 query=6
-tmp = np.std(hg_recon_imag[query],axis=0)
+tmp = np.std(beta_recon_imag[query],axis=0)
 tmp = np.reshape(tmp,(4,8))
 xmax1,xmin1 = tmp.max(),tmp.min()
 plt.figure()
@@ -1254,14 +1346,14 @@ plt.colorbar()
 plt.show
 
 
-tmp = np.std(hg_recon_online[query],axis=0)
+tmp = np.std(beta_recon_online[query],axis=0)
 tmp = np.reshape(tmp,(4,8))
 xmax2,xmin2 = tmp.max(),tmp.min()
 plt.figure()
 fig2=plt.imshow(tmp)
 plt.colorbar()
 
-tmp = np.std(hg_recon_batch[query],axis=0)
+tmp = np.std(beta_recon_batch[query],axis=0)
 tmp = np.reshape(tmp,(4,8))
 xmax3,xmin3 = tmp.max(),tmp.min()
 plt.figure()
@@ -1276,6 +1368,7 @@ fig1.set_clim(xmin.min(),xmax.max())
 fig2.set_clim(xmin.min(),xmax.max())
 fig3.set_clim(xmin.min(),xmax.max())
 
+### plotting spatial correlations and recon activity map
 # high gamma
 actions =['Rt Thumb','Left Leg','Lt Thumb','Head','Lips','Tongue','Both Middle Finger']
 corr_coef_hg = np.array([])
@@ -1353,7 +1446,7 @@ for query in np.arange(7):
     fig3.set_clim(xmin.min(),xmax.max())
     
     image_format = 'svg' # e.g .png, .svg, etc.
-    image_name = actions[query] + '_hg_Day5.svg'
+    image_name = actions[query] + '_hg_Day1_New.svg'
     fig.savefig(image_name, format=image_format, dpi=300)
 
 # plotting hand knob activation
@@ -1463,12 +1556,12 @@ for query in np.arange(7):
     plt.axis('off')    
     plt.colorbar()
     
-   # a = np.corrcoef(np.ndarray.flatten(tmp1),np.ndarray.flatten(tmp2))[0,1]
-   # b = np.corrcoef(np.ndarray.flatten(tmp1),np.ndarray.flatten(tmp3))[0,1]
-   # c = np.corrcoef(np.ndarray.flatten(tmp2),np.ndarray.flatten(tmp3))[0,1]
-    a = np.dot(tmp1.flatten(),tmp2.flatten())
-    b = np.dot(tmp1.flatten(),tmp3.flatten())
-    c = np.dot(tmp2.flatten(),tmp3.flatten())
+    a = np.corrcoef(np.ndarray.flatten(tmp1),np.ndarray.flatten(tmp2))[0,1]
+    b = np.corrcoef(np.ndarray.flatten(tmp1),np.ndarray.flatten(tmp3))[0,1]
+    c = np.corrcoef(np.ndarray.flatten(tmp2),np.ndarray.flatten(tmp3))[0,1]
+    # a = np.dot(tmp1.flatten(),tmp2.flatten())
+    # b = np.dot(tmp1.flatten(),tmp3.flatten())
+    # c = np.dot(tmp2.flatten(),tmp3.flatten())
     corr_coef_delta = np.append(corr_coef_delta,[a,b,c])
     
     xmax = np.array([xmax1,xmax2,xmax3])
@@ -1660,12 +1753,39 @@ plt.rcParams['figure.dpi'] = 300
 plt.rcParams.update({'font.size': 6})
 plt.boxplot(x,showfliers=False)
 plt.xticks(ticks=[1,2,3],labels=('Delta','Beta','hG'),**hfont)
-plt.ylabel('Norm. Spatial Correlation',**hfont)
+#plt.ylabel('Norm. Spatial Correlation',**hfont)
 plt.ylim((0.4,1))
 plt.show()
 image_format = 'svg' # e.g .png, .svg, etc.
 image_name = 'Norm. Spatial_Correlation.svg'
 fig.savefig(image_name, format=image_format, dpi=300)
+
+
+
+# plotting all spatial correlations together as boxplot over all days and simulations
+corr_coef_delta = np.mean(delta_spatial_corr_days[:,:,:],axis=0).flatten()
+corr_coef_beta = np.mean(beta_spatial_corr_days[:,:,:],axis=0).flatten()
+corr_coef_hg = np.mean(hg_spatial_corr_days[:,:,:],axis=0).flatten()
+x= [np.square(corr_coef_delta)  ,np.square(corr_coef_beta), np.square(corr_coef_hg)]
+fig=plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+plt.boxplot(x,showfliers=False)
+plt.xticks(ticks=[1,2,3],labels=('Delta','Beta','hG'),**hfont)
+plt.ylabel('Norm. Spatial Correlation',**hfont)
+plt.ylim((0.8,1.01))
+plt.tick_params(labelleft=False,labelbottom=False)
+plt.show()
+plt.ylabel('')
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Norm. Spatial_Correlation_B1_New.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
+
+
+x1 = np.concatenate((corr_coef_delta[:,None],corr_coef_beta[:,None],corr_coef_hg[:,None]))
+x1b = stats.bootstrap([x1,],np.mean)
 
 
 # labels = np.argmax(Yimagined,axis=1)
@@ -1761,14 +1881,14 @@ plt.rcParams.update({'font.size': 6})
 plt.hist(x[0],fc=(.2 ,.2,.2,.5),label='Open Loop')
 plt.hist(x[1],fc=(.2 ,.2,.8,.5),label='Init Seed')
 plt.hist(x[2],fc=(.8 ,.2,.2,.5),label='Batch')
-plt.xlim((0.002,.018))
+plt.xlim((0.00,.016))
 #plt.xlabel('Beta Std. Deviation',**hfont)
 #plt.ylabel('Count',**hfont)
 #plt.legend()
 plt.tick_params(labelleft=False,labelbottom=False)
 plt.show()
 image_format = 'svg' # e.g .png, .svg, etc.
-image_name = 'beta_Variance_Overall_Acrosschannels.svg'
+image_name = 'beta_Variance_Overall_Acrosschannels_New.svg'
 fig.savefig(image_name, format=image_format, dpi=300)
 print(stats.ks_2samp(x[0],x[1]))
 print(stats.ks_2samp(x[0],x[2]))
@@ -1805,7 +1925,7 @@ plt.xlim((0,0.035))
 plt.tick_params(labelleft=False,labelbottom=False)
 plt.show()
 image_format = 'svg' # e.g .png, .svg, etc.
-image_name = 'delta_Variance_Overall_AcrossChannels.svg'
+image_name = 'delta_Variance_Overall_AcrossChannels_New.svg'
 fig.savefig(image_name, format=image_format, dpi=300)
 print(stats.ks_2samp(x[0],x[1]))
 print(stats.ks_2samp(x[0],x[2]))
@@ -2620,7 +2740,7 @@ fig.savefig(image_name, format=image_format, dpi=300)
 corr_coef_delta = np.mean(delta_spatial_corr_days[:,:,1:5],axis=0).flatten()
 corr_coef_beta = np.mean(beta_spatial_corr_days[:,:,1:5],axis=0).flatten()
 corr_coef_hg = np.mean(hg_spatial_corr_days[:,:,1:5],axis=0).flatten()
-x= [corr_coef_delta  ,corr_coef_beta, corr_coef_hg]
+x= [np.square(corr_coef_delta)  ,np.square(corr_coef_beta), np.square(corr_coef_hg)]
 fig=plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
@@ -2629,11 +2749,13 @@ plt.rcParams.update({'font.size': 6})
 plt.boxplot(x,showfliers=False)
 plt.xticks(ticks=[1,2,3],labels=('Delta','Beta','hG'),**hfont)
 plt.ylabel('Norm. Spatial Correlation',**hfont)
-plt.ylim((0.4,1))
+plt.ylim((0.6,1.01))
 plt.tick_params(labelleft=False,labelbottom=False)
 plt.show()
 plt.ylabel('')
 image_format = 'svg' # e.g .png, .svg, etc.
-image_name = 'Norm. Spatial_Correlation_B2.svg'
+image_name = 'Norm. Spatial_Correlation_B2_New.svg'
 fig.savefig(image_name, format=image_format, dpi=300)
 
+x1 = np.concatenate((corr_coef_delta[:,None],corr_coef_beta[:,None],corr_coef_hg[:,None]))
+x1b = stats.bootstrap([x1,],np.mean)
