@@ -5,6 +5,9 @@ Created on Sat Oct 22 08:58:03 2022
 @author: nikic
 """
 
+import os
+os.chdir('C:/Users/nikic/Documents/GitHub/NN/hDoF_Plasticity_BCI/iAE_analyses')
+
 import torch as torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -16,7 +19,7 @@ import math
 import mat73
 import numpy.random as rnd
 import numpy.linalg as lin
-import os
+
 plt.rcParams['figure.dpi'] = 200
 from iAE_utils_models import *
 import sklearn as skl
@@ -2287,7 +2290,7 @@ tmp3 = np.ndarray.flatten(tmp_main)
 tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
 
 
-tmp=np.log(tmp)
+#tmp=np.log(tmp)
 fig=plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
@@ -2367,14 +2370,14 @@ plt.rcParams.update({'font.size': 6})
 plt.hist(x[0],fc=(.2 ,.2,.2,.5),label='Open Loop')
 plt.hist(x[1],fc=(.2 ,.2,.8,.5),label='Init Seed')
 plt.hist(x[2],fc=(.8 ,.2,.2,.5),label='Batch')
-plt.xlim((0.000,0.04))
+plt.xlim((0.000,0.025))
 #plt.xlabel('Beta Std. Deviation',**hfont)
 #plt.ylabel('Count',**hfont)
 #plt.legend()
 plt.tick_params(labelleft=False,labelbottom=False)
 plt.show()
 image_format = 'svg' # e.g .png, .svg, etc.
-image_name = 'hG_Variance_Overall_AcrossChannels_B2.svg'
+image_name = 'hG_Variance_Overall_AcrossChannels_B2_New.svg'
 fig.savefig(image_name, format=image_format, dpi=300)
 #ks test
 print(stats.ks_2samp(x[0],x[1]))
@@ -2405,14 +2408,14 @@ plt.rcParams.update({'font.size': 6})
 plt.hist(x[0],fc=(.2 ,.2,.2,.5),label='Open Loop')
 plt.hist(x[1],fc=(.2 ,.2,.8,.5),label='Init Seed')
 plt.hist(x[2],fc=(.8 ,.2,.2,.5),label='Batch')
-plt.xlim((0.005,.075))
+plt.xlim((0.00,.075))
 #plt.xlabel('Beta Std. Deviation',**hfont)
 #plt.ylabel('Count',**hfont)
 #plt.legend()
 plt.tick_params(labelleft=False,labelbottom=False)
 plt.show()
 image_format = 'svg' # e.g .png, .svg, etc.
-image_name = 'beta_Variance_Overall_Acrosschannels_B2_new.svg'
+image_name = 'beta_Variance_Overall_Acrosschannels_B2_New.svg'
 fig.savefig(image_name, format=image_format, dpi=300)
 #ks test
 print(stats.ks_2samp(x[0],x[1]))
@@ -2443,14 +2446,14 @@ plt.rcParams.update({'font.size': 6})
 plt.hist(x[0],fc=(.2 ,.2,.2,.5),label='Open Loop')
 plt.hist(x[1],fc=(.2 ,.2,.8,.5),label='Init Seed')
 plt.hist(x[2],fc=(.8 ,.2,.2,.5),label='Batch')
-plt.xlim((0,0.035))
+plt.xlim((0,0.12))
 #plt.xlabel('Beta Std. Deviation',**hfont)
 #plt.ylabel('Count',**hfont)
 #plt.legend()
 plt.tick_params(labelleft=False,labelbottom=False)
 plt.show()
 image_format = 'svg' # e.g .png, .svg, etc.
-image_name = 'delta_Variance_Overall_AcrossChannels_B2.svg'
+image_name = 'delta_Variance_Overall_AcrossChannels_B2_New.svg'
 fig.savefig(image_name, format=image_format, dpi=300)
 #ks test
 print(stats.ks_2samp(x[0],x[1]))
