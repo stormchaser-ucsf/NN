@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 """
+Created on Wed Mar  8 14:57:05 2023
+
+@author: nikic
+"""
+
+# -*- coding: utf-8 -*-
+"""
 Created on Thu Nov 24 09:24:18 2022
 
 @author: nikic
@@ -38,10 +45,10 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 #%% SETTING UP MODEL PARAMS
 
 # model params
-input_size=96
+input_size=759
 hidden_size=48
 latent_dims=2
-num_classes = 6
+num_classes = 7
 
 # training params 
 num_epochs=150
@@ -52,24 +59,24 @@ patience=5
 gradient_clipping=10
 
 # file location
-root_path = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker'
-root_imag_filename = '\condn_data_Imagined_Day'
-root_online_filename = '\condn_data_Online_Day'
-root_batch_filename = '\condn_data_Batch_Day'
-
-# init variables across days 
-dist_means_overall_imag = np.empty([10,0])
-dist_var_overall_imag = np.empty([10,0])
-mahab_dist_overall_imag = np.empty([10,0])
-dist_means_overall_online = np.empty([10,0])
-dist_var_overall_online = np.empty([10,0])
-mahab_dist_overall_online = np.empty([10,0])
-dist_means_overall_batch = np.empty([10,0])
-dist_var_overall_batch = np.empty([10,0])
-mahab_dist_overall_batch = np.empty([10,0])
+root_path = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate B3'
+root_imag_filename = '\B3_condn_data_Imagined_Day'
+root_online_filename = '\B3_condn_data_Online_Day'
+root_batch_filename = '\B3_condn_data_Batch_Day'
 
 # num of days
-num_days=10
+num_days=2
+
+# init variables across days 
+dist_means_overall_imag = np.empty([num_days,0])
+dist_var_overall_imag = np.empty([num_days,0])
+mahab_dist_overall_imag = np.empty([num_days,0])
+dist_means_overall_online = np.empty([num_days,0])
+dist_var_overall_online = np.empty([num_days,0])
+mahab_dist_overall_online = np.empty([num_days,0])
+dist_means_overall_batch = np.empty([num_days,0])
+dist_var_overall_batch = np.empty([num_days,0])
+mahab_dist_overall_batch = np.empty([num_days,0])
 
 # iterations to bootstrap
 iterations = 1
@@ -169,8 +176,10 @@ for days in (np.arange(num_days)+1):
     
     #### DATA AUGMENTATION ###
     #condn_data_imagined,Yimagined = data_aug_mlp(condn_data_imagined,Yimagined,3000)
-    condn_data_online,Yonline =   data_aug_mlp_chol_feature_equalSize(condn_data_online,Yonline,condn_data_imagined.shape[0])
-    condn_data_batch,Ybatch =   data_aug_mlp_chol_feature_equalSize(condn_data_batch,Ybatch,condn_data_imagined.shape[0])
+    condn_data_online,Yonline =   data_aug_mlp_chol_feature_equalSize_B3_NoPooling(condn_data_online,
+                                                    Yonline,condn_data_imagined.shape[0])
+    condn_data_batch,Ybatch =   data_aug_mlp_chol_feature_equalSize_B3_NoPooling(condn_data_batch,
+                                                Ybatch,condn_data_imagined.shape[0])
     
     ## plotting options
     plt_close=False
@@ -231,17 +240,17 @@ for days in (np.arange(num_days)+1):
         if plt_close==True:
             plt.close()
         # mahab distance
-        mahab_distances = get_mahab_distance_latent(z,idx)
+        mahab_distances = get_mahab_distance_latent(z,idx,num_classes)
         mahab_distances = mahab_distances[np.triu_indices(mahab_distances.shape[0])]
         mahab_distances = mahab_distances[mahab_distances>0]
         mahab_distances_imagined_iter = np.append(mahab_distances_imagined_iter,
                                                   mahab_distances[:,None],axis=1)
         # euclidean distance between means
-        dist_means = get_distance_means(z,idx)
+        dist_means = get_distance_means(z,idx,num_classes)
         mean_distances_imagined_iter = np.append(mean_distances_imagined_iter,
                                                   dist_means[:,None],axis=1)
         # variance of the data spread in latent space
-        dist_var = get_variances(z,idx)
+        dist_var = get_variances(z,idx,num_classes)
         var_distances_imagined_iter = np.append(var_distances_imagined_iter,
                                                   dist_var[:,None],axis=1)
         
@@ -275,17 +284,17 @@ for days in (np.arange(num_days)+1):
             plt.close()
         silhoutte_online_iter = np.append(silhoutte_online_iter,D)
         # mahab distance
-        mahab_distances = get_mahab_distance_latent(z,idx)
+        mahab_distances = get_mahab_distance_latent(z,idx,num_classes)
         mahab_distances = mahab_distances[np.triu_indices(mahab_distances.shape[0])]
         mahab_distances = mahab_distances[mahab_distances>0]
         mahab_distances_online_iter = np.append(mahab_distances_online_iter,
                                                   mahab_distances[:,None],axis=1)
         # euclidean distance between means
-        dist_means = get_distance_means(z,idx)
+        dist_means = get_distance_means(z,idx,num_classes)
         mean_distances_online_iter = np.append(mean_distances_online_iter,
                                                   dist_means[:,None],axis=1)
         # variance of the data spread in latent space
-        dist_var = get_variances(z,idx)
+        dist_var = get_variances(z,idx,num_classes)
         var_distances_online_iter = np.append(var_distances_online_iter,
                                                   dist_var[:,None],axis=1)
         # variance of overall data spread
@@ -317,17 +326,17 @@ for days in (np.arange(num_days)+1):
             plt.close()
         silhoutte_batch_iter = np.append(silhoutte_batch_iter,D)
         # mahab distance
-        mahab_distances = get_mahab_distance_latent(z,idx)
+        mahab_distances = get_mahab_distance_latent(z,idx,num_classes)
         mahab_distances = mahab_distances[np.triu_indices(mahab_distances.shape[0])]
         mahab_distances = mahab_distances[mahab_distances>0]
         mahab_distances_batch_iter = np.append(mahab_distances_batch_iter,
                                                   mahab_distances[:,None],axis=1)
         # euclidean distance between means
-        dist_means = get_distance_means(z,idx)
+        dist_means = get_distance_means(z,idx,num_classes)
         mean_distances_batch_iter = np.append(mean_distances_batch_iter,
                                                   dist_means[:,None],axis=1)
         # variance of the data spread in latent space
-        dist_var = get_variances(z,idx)
+        dist_var = get_variances(z,idx,num_classes)
         var_distances_batch_iter = np.append(var_distances_batch_iter,
                                                   dist_var[:,None],axis=1)
         # variance of overall data spread

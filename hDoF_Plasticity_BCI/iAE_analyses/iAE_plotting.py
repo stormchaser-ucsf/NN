@@ -112,13 +112,14 @@ fig_imagined.axes[0].set_zlim(zmin,zmax)
 fig_batch.axes[0].view_init(elev=el, azim=az)
 fig_imagined.axes[0].view_init(elev=el, azim=az)
 fig_online.axes[0].view_init(elev=el, azim=az)
-image_format = 'svg' # e.g .png, .svg, etc.
-image_name = 'Latent_Day10_Imag_B1_ComMan3d.svg'
+image_format = 'png' # e.g .png, .svg, etc.
+image_name = 'Latent_Day1_OL_B3_ComMan2d.png'
 fig_imagined.savefig(image_name, format=image_format, dpi=300)
-image_name = 'Latent_Day10_Online_B1_ComMan3d.svg'
+image_name = 'Latent_Day1_CL1_B3_ComMan2d.png'
 fig_online.savefig(image_name, format=image_format, dpi=300)
-image_name = 'Latent_Day10_Batch_B1_ComMan3d.svg'
+image_name = 'Latent_Day1_CL2_B3_ComMan2d.png'
 fig_batch.savefig(image_name, format=image_format, dpi=300)
+fig_imagined.suptitle('OL')
 
 
 # plotting latent spaces 2D
@@ -146,13 +147,14 @@ fig_imagined.axes[0].set_xticks(ticks=np.arange(-20,31,10))
 fig_imagined.axes[0].set_yticks(ticks=np.arange(-15,21,5))
 fig_batch.axes[0].set_xticks(ticks=np.arange(-20,31,10))
 fig_batch.axes[0].set_yticks(ticks=np.arange(-15,21,5))
-image_format = 'svg' # e.g .png, .svg, etc.
-image_name = 'Latent_Day1_Imag_2D_New.svg'
+image_format = 'png' # e.g .png, .svg, etc.
+image_name = 'Latent_Day1_OL_B3_ComMan2d.png'
 fig_imagined.savefig(image_name, format=image_format, dpi=300)
-image_name = 'Latent_Day1_Online_2D_New.svg'
+image_name = 'Latent_Day1_CL1_B3_ComMan2d.png'
 fig_online.savefig(image_name, format=image_format, dpi=300)
-image_name = 'Latent_Day1_Batch_2D_New.svg'
+image_name = 'Latent_Day1_CL2_B3_ComMan2d.png'
 fig_batch.savefig(image_name, format=image_format, dpi=300)
+fig_imagined.suptitle('OL')
 
 
 # plotting overall variances over days (MAIN MAIN)

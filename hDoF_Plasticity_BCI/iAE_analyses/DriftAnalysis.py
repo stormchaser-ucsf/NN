@@ -115,11 +115,11 @@ D,z,idx,fig_imagined = plot_latent(model,condn_data_imagined_day1,Yimagined_day1
                                    condn_data_imagined_day1.shape[0],latent_dims)        
 
 
-#%% # PART 2 combining an action from two separate days and looking at separability 
+#%% # PART 2 combining an action from separate days and looking at separability 
 
 days=1
 imagined_file_name = root_path + root_imag_filename +  str(days) + '.mat'
-condn_data_imagined,Yimagined = get_data(imagined_file_name)
+condn_data_imagined,Yimagined = get_data(imagined_file_name,7)
 a1 = np.argmax(Yimagined,axis=1)
 a1 = np.array([np.where(a1==0)[0]]).flatten()
 condn_data_imagined_day1 = condn_data_imagined[a1,:]
@@ -127,7 +127,7 @@ Yimagined_day1 = Yimagined[a1,:]
 
 days=4
 imagined_file_name = root_path + root_imag_filename +  str(days) + '.mat'
-condn_data_imagined,Yimagined = get_data(imagined_file_name)
+condn_data_imagined,Yimagined = get_data(imagined_file_name,7)
 a2 = np.argmax(Yimagined,axis=1)
 a2 = np.array([np.where(a2==0)[0]]).flatten()
 condn_data_imagined_day2 = condn_data_imagined[a2,:]
@@ -136,12 +136,18 @@ Yimagined_day2 = np.roll(Yimagined_day2,1)
 
 days=8
 imagined_file_name = root_path + root_imag_filename +  str(days) + '.mat'
-condn_data_imagined,Yimagined = get_data(imagined_file_name)
+condn_data_imagined,Yimagined = get_data(imagined_file_name,7)
 a2 = np.argmax(Yimagined,axis=1)
 a2 = np.array([np.where(a2==0)[0]]).flatten()
 condn_data_imagined_day3 = condn_data_imagined[a2,:]
 Yimagined_day3 = Yimagined[a2,:]
 Yimagined_day3 = np.roll(Yimagined_day3,2)
+
+# OPIONAL IMPORTANT
+# remove the mean to see if there is true drift in somatotopy
+condn_data_imagined_day1 = condn_data_imagined_day1 - np.mean(condn_data_imagined_day1,axis=0)
+condn_data_imagined_day2 = condn_data_imagined_day2 - np.mean(condn_data_imagined_day2,axis=0)
+condn_data_imagined_day3 = condn_data_imagined_day3 - np.mean(condn_data_imagined_day3,axis=0)
 
 
 num_classes=3
@@ -157,7 +163,7 @@ for i in np.arange(len(idx)):
     x = np.where(a==idx[i])[0]
     tmpY[x,i]=1
 
-plt.figure(); plt.imshow(tmpY,aspect='auto',interpolation='None');
+#plt.figure(); plt.imshow(tmpY,aspect='auto',interpolation='None');
 
 Yimagined_total = tmpY
 Yimagined_day1 = Yimagined_total[:Yimagined_day1.shape[0],:]
@@ -193,8 +199,23 @@ image_name = 'LatentRtHand_Days148.svg'
 #                                    condn_data_imagined_day1.shape[0],latent_dims)     
 
 delta_recon_imag,beta_recon_imag,hg_recon_imag = return_recon(model,
-                                              condn_data_imagined_total,Yimagined_total)
+                                              condn_data_imagined_total,Yimagined_total,num_classes)
 
+
+# getting correlation
+corr_coef=[]
+tmp1 = np.mean(hg_recon_imag[0],axis=0)
+tmp2 = np.mean(hg_recon_imag[1],axis=0)
+tmp3 = np.mean(hg_recon_imag[2],axis=0)
+a = np.corrcoef(tmp1,tmp2)[0,1]
+b = np.corrcoef(tmp1,tmp3)[0,1]
+c = np.corrcoef(tmp2,tmp3)[0,1]
+corr_coef.append([a,b,c])
+print(corr_coef)
+
+corr_coef_flat = [item for sublist in corr_coef for item in sublist]
+
+   
 # plotting
 hand_channels = np.array([23 ,31]) 
 
@@ -829,9 +850,234 @@ for i in np.arange(len(mahab_distances_days)):
 plt.figure()
 plt.plot(mahab_plot)   
     
+#%% LOOKING AT THE STABILITY OF THE MANIFOLD ACROSS DAYS  (TESTING)
+# plan here is to build a manifold for each day and then examine the orthgonal 
+# procrustus distance between the layers of the manifold 
+
+import os
+os.chdir('C:/Users/nikic/Documents/GitHub/NN/hDoF_Plasticity_BCI/iAE_analyses')
+import torch as torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.utils
+import torch.distributions
+import numpy as np
+import matplotlib.pyplot as plt
+import math
+import mat73
+import numpy.random as rnd
+import numpy.linalg as lin
+plt.rcParams['figure.dpi'] = 200
+from iAE_utils_models import *
+import sklearn as skl
+from sklearn.metrics import silhouette_score as sil
+from sklearn.metrics import silhouette_samples as sil_samples
+from tempfile import TemporaryFile
+from scipy.ndimage import gaussian_filter1d
+import scipy as scipy
+import scipy.stats as stats
+# setting up GPU
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+
+# training params 
+latent_dims=2
+num_epochs=150
+batch_size=32
+learning_rate = 1e-3
+batch_val=512
+patience=5
+gradient_clipping=10
+
+# model params
+input_size=96
+hidden_size=48
+latent_dims=2
+num_classes = 7
+
+# file location
+root_path = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker'
+root_imag_filename = '\condn_data_Imagined_Day'
+root_online_filename = '\condn_data_Online_Day'
+root_batch_filename = '\condn_data_Batch_Day'
+
+# get the first day's data and manifold
+days=3
+imagined_file_name = root_path + root_imag_filename +  str(days) + '.mat'
+condn_data_imagined,Yimagined = get_data(imagined_file_name,num_classes)
+online_file_name = root_path + root_online_filename +  str(days) + '.mat'
+condn_data_online,Yonline = get_data(online_file_name,num_classes)
+batch_file_name = root_path + root_batch_filename +  str(days) + '.mat'
+condn_data_batch,Ybatch = get_data(batch_file_name,num_classes)    
+nn_filename = 'iAE_' + str(days) + '.pth'
+# augment
+condn_data_online,Yonline =   data_aug_mlp_chol_feature_equalSize(condn_data_online,Yonline,condn_data_imagined.shape[0])
+condn_data_batch,Ybatch =   data_aug_mlp_chol_feature_equalSize(condn_data_batch,Ybatch,condn_data_imagined.shape[0])
+# assign to train and testing
+condn_data_imagined_train,condn_data_imagined_test = condn_data_imagined,condn_data_imagined
+Yimagined_train,Yimagined_test = Yimagined,Yimagined
+condn_data_online_train,condn_data_online_test = condn_data_online,condn_data_online
+Yonline_train,Yonline_test = Yonline,Yonline
+condn_data_batch_train,condn_data_batch_test = condn_data_batch,condn_data_batch
+Ybatch_train,Ybatch_test = Ybatch,Ybatch
+
+
+#### STACK EVERYTHING TOGETHER ###
+condn_data_total = np.concatenate((condn_data_imagined_train,condn_data_online_train,condn_data_batch_train),axis=0)    
+Ytotal = np.concatenate((Yimagined_train,Yonline_train,Ybatch_train),axis=0)            
+        
+#### TRAIN THE MODEL
+Ytest = np.zeros((2,2))
+while len(np.unique(np.argmax(Ytest,axis=1)))<num_classes:
+    Xtrain,Xtest,Ytrain,Ytest = training_test_split(condn_data_total,Ytotal,0.8)                        
+    
+if 'model' in locals():
+    del model    
+model1 = iAutoencoder(input_size,hidden_size,latent_dims,num_classes).to(device)        
+model1,acc = training_loop_iAE(model1,num_epochs,batch_size,learning_rate,batch_val,
+                      patience,gradient_clipping,nn_filename,
+                      Xtrain,Ytrain,Xtest,Ytest,
+                      input_size,hidden_size,latent_dims,num_classes)
 
 
 
+# get the second day's data and manifold
+days=9
+imagined_file_name = root_path + root_imag_filename +  str(days) + '.mat'
+condn_data_imagined,Yimagined = get_data(imagined_file_name,num_classes)
+online_file_name = root_path + root_online_filename +  str(days) + '.mat'
+condn_data_online,Yonline = get_data(online_file_name,num_classes)
+batch_file_name = root_path + root_batch_filename +  str(days) + '.mat'
+condn_data_batch,Ybatch = get_data(batch_file_name,num_classes)    
+nn_filename = 'iAE_' + str(days) + '.pth'
+# augment
+condn_data_online,Yonline =   data_aug_mlp_chol_feature_equalSize(condn_data_online,Yonline,condn_data_imagined.shape[0])
+condn_data_batch,Ybatch =   data_aug_mlp_chol_feature_equalSize(condn_data_batch,Ybatch,condn_data_imagined.shape[0])
+# assign to train and testing
+condn_data_imagined_train,condn_data_imagined_test = condn_data_imagined,condn_data_imagined
+Yimagined_train,Yimagined_test = Yimagined,Yimagined
+condn_data_online_train,condn_data_online_test = condn_data_online,condn_data_online
+Yonline_train,Yonline_test = Yonline,Yonline
+condn_data_batch_train,condn_data_batch_test = condn_data_batch,condn_data_batch
+Ybatch_train,Ybatch_test = Ybatch,Ybatch
+
+
+#### STACK EVERYTHING TOGETHER ###
+condn_data_total = np.concatenate((condn_data_imagined_train,condn_data_online_train,condn_data_batch_train),axis=0)    
+Ytotal = np.concatenate((Yimagined_train,Yonline_train,Ybatch_train),axis=0)            
+        
+#### TRAIN THE MODEL
+Ytest = np.zeros((2,2))
+while len(np.unique(np.argmax(Ytest,axis=1)))<num_classes:
+    Xtrain,Xtest,Ytrain,Ytest = training_test_split(condn_data_total,Ytotal,0.8)                        
+    
+if 'model' in locals():
+    del model    
+model2 = iAutoencoder(input_size,hidden_size,latent_dims,num_classes).to(device)        
+model2,acc = training_loop_iAE(model2,num_epochs,batch_size,learning_rate,batch_val,
+                      patience,gradient_clipping,nn_filename,
+                      Xtrain,Ytrain,Xtest,Ytest,
+                      input_size,hidden_size,latent_dims,num_classes)
 
 
 
+# examine the procrustus distance between the two 
+model1.eval()
+model2.eval()
+elu = nn.ELU()
+input_data = torch.randn(200,96).float().to(device)
+#input_data = torch.from_numpy(condn_data_imagined[:200,:]).float().to(device)
+X = elu(model1.encoder.linear1(input_data)).to('cpu').detach().numpy()
+Y = elu(model2.encoder.linear1(input_data)).to('cpu').detach().numpy()
+
+X = X - np.mean(X,axis=0)
+Y = Y - np.mean(X,axis=0)
+#plt.plot(np.mean(X,axis=0))
+a=lin.norm((X.T@X),'fro')
+b=lin.norm((Y.T@Y),'fro')
+c=(lin.norm((Y.T @ X),'fro'))**2
+d = c/(a*b)
+print(d)
+
+
+# compare to null by shuffling weights and bias
+aa = torch.randn(48,96).to(device).float()
+bb = torch.randn(48).to(device).float()
+# matrix multiplication 
+layer1_day1 = (torch.matmul(input_data,torch.transpose(aa,0,1)) 
+               + bb).to('cpu').detach().numpy().T
+aa = torch.randn(48,96).to(device).float()
+bb = torch.randn(48).to(device).float()
+layer1_day2 = (torch.matmul(input_data,torch.transpose(aa,0,1)) 
+               + bb).to('cpu').detach().numpy().T
+#layer1_day2 = model2.encoder.linear1(input_data).to('cpu').detach().numpy().T
+
+a=lin.norm(layer1_day1 @ layer1_day2.T)
+b=lin.norm(layer1_day1 @ layer1_day1.T)
+c=lin.norm(layer1_day2 @ layer1_day2.T)
+d= 1-(a/(b*c))
+print(d)
+
+
+# Linear CKA between two random matrices
+random_data=[]
+for i in range(1000):        
+    X = (torch.randn(200,48)).to('cpu').detach().numpy()
+    Y = (torch.randn(200,48)).to('cpu').detach().numpy()
+    X = X - np.mean(X,axis=0)
+    Y = Y - np.mean(X,axis=0)
+    #plt.plot(np.mean(X,axis=0))
+    a=lin.norm((X.T@X),'fro')
+    b=lin.norm((Y.T@Y),'fro')
+    c=(lin.norm((Y.T @ X),'fro'))**2
+    d = c/(a*b)
+    random_data.append(d)
+
+plt.hist(random_data)
+
+
+# Linear CKA passing real data through random weights 
+input_data = torch.from_numpy(condn_data_imagined).float().to(device)
+random_data=[]
+for i in range(1000):            
+    aa = torch.randn(48,96).to(device).float()
+    bb = torch.randn(48).to(device).float()
+    X = elu(torch.matmul(input_data,torch.transpose(aa,0,1)) 
+                   + bb).to('cpu').detach().numpy()
+    aa = torch.randn(48,96).to(device).float()
+    bb = torch.randn(48).to(device).float()
+    Y = elu(torch.matmul(input_data,torch.transpose(aa,0,1)) 
+                   + bb).to('cpu').detach().numpy()    
+    
+    X = X - np.mean(X,axis=0)
+    Y = Y - np.mean(X,axis=0)
+    #plt.plot(np.mean(X,axis=0))
+    a=lin.norm((X.T@X),'fro')
+    b=lin.norm((Y.T@Y),'fro')
+    c=(lin.norm((Y.T @ X),'fro'))**2
+    d = c/(a*b)
+    random_data.append(d)
+
+plt.hist(random_data)
+
+# Linear CKA between activation of two neural networks across two diff. days
+real_data=[]
+for i in range(1000):
+    #input_data = torch.randn(200,96).float().to(device)   
+    input_data = torch.from_numpy(condn_data_imagined).float().to(device)
+    X = elu(model1.encoder.linear1(input_data)).to('cpu').detach().numpy()
+    #Y = elu(model2.encoder.linear1(input_data)).to('cpu').detach().numpy()
+    Y = elu(model2.encoder.linear1(input_data))
+    Y = elu(model2.encoder.linear2(Y)).to('cpu').detach().numpy()
+    X = X - np.mean(X,axis=0)
+    Y = Y - np.mean(Y,axis=0)    
+    a=lin.norm((X.T@X),'fro')
+    b=lin.norm((Y.T@Y),'fro')
+    c=(lin.norm((Y.T @ X),'fro'))**2
+    d = c/(a*b)
+    real_data.append(d)
+
+plt.figure()
+plt.hist(real_data)
+
+print(1-(np.sum(np.mean(real_data) > random_data) / len(random_data)))

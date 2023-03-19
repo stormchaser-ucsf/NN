@@ -40,36 +40,38 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 # model params
 input_size=96
 hidden_size=48
-latent_dims=2
+latent_dims=3
 num_classes = 6
 
 # training params 
 num_epochs=150
-batch_size=64
+batch_size=32
 learning_rate = 1e-3
-batch_val=512
+batch_val=128
 patience=5
 gradient_clipping=10
 
+
 # file location
 root_path = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker'
-root_imag_filename = '\condn_data_Imagined_Day'
-root_online_filename = '\condn_data_Online_Day'
-root_batch_filename = '\condn_data_Batch_Day'
+root_imag_filename = '\Biomimetic_CenterOut_condn_data_Imagined_Day'
+root_online_filename = '\Biomimetic_CenterOut_condn_data_Online_Day'
+root_batch_filename = '\Biomimetic_CenterOut_condn_data_Batch_Day'
 
-# init variables across days 
-dist_means_overall_imag = np.empty([10,0])
-dist_var_overall_imag = np.empty([10,0])
-mahab_dist_overall_imag = np.empty([10,0])
-dist_means_overall_online = np.empty([10,0])
-dist_var_overall_online = np.empty([10,0])
-mahab_dist_overall_online = np.empty([10,0])
-dist_means_overall_batch = np.empty([10,0])
-dist_var_overall_batch = np.empty([10,0])
-mahab_dist_overall_batch = np.empty([10,0])
 
 # num of days
-num_days=10
+num_days=1
+
+# init variables across days 
+dist_means_overall_imag = np.empty([num_days,0])
+dist_var_overall_imag = np.empty([num_days,0])
+mahab_dist_overall_imag = np.empty([num_days,0])
+dist_means_overall_online = np.empty([num_days,0])
+dist_var_overall_online = np.empty([num_days,0])
+mahab_dist_overall_online = np.empty([num_days,0])
+dist_means_overall_batch = np.empty([num_days,0])
+dist_var_overall_batch = np.empty([num_days,0])
+mahab_dist_overall_batch = np.empty([num_days,0])
 
 # iterations to bootstrap
 iterations = 1
@@ -77,34 +79,34 @@ iterations = 1
 #%% SETTING UP VARS 
 
 # init overall variables 
-mahab_distances_imagined_days = np.zeros([21,iterations,num_days])
-mean_distances_imagined_days = np.zeros([21,iterations,num_days])
-var_imagined_days = np.zeros([7,iterations,num_days])
+mahab_distances_imagined_days = np.zeros([15,iterations,num_days])
+mean_distances_imagined_days = np.zeros([15,iterations,num_days])
+var_imagined_days = np.zeros([6,iterations,num_days])
 silhoutte_imagined_days = np.zeros((iterations,num_days))
 accuracy_imagined_days = np.zeros((iterations,num_days))
-mahab_distances_online_days = np.zeros([21,iterations,num_days])
-mean_distances_online_days = np.zeros([21,iterations,num_days])
-var_online_days = np.zeros([7,iterations,num_days])
+mahab_distances_online_days = np.zeros([15,iterations,num_days])
+mean_distances_online_days = np.zeros([15,iterations,num_days])
+var_online_days = np.zeros([6,iterations,num_days])
 silhoutte_online_days = np.zeros((iterations,num_days))
 accuracy_online_days = np.zeros((iterations,num_days))
-mahab_distances_batch_days = np.zeros([21,iterations,num_days])
-mean_distances_batch_days = np.zeros([21,iterations,num_days])
-var_batch_days = np.zeros([7,iterations,num_days])
+mahab_distances_batch_days = np.zeros([15,iterations,num_days])
+mean_distances_batch_days = np.zeros([15,iterations,num_days])
+var_batch_days = np.zeros([6,iterations,num_days])
 silhoutte_batch_days = np.zeros((iterations,num_days))
 accuracy_batch_days = np.zeros((iterations,num_days))
 var_overall_imagined_days = np.zeros((iterations,num_days))
 var_overall_batch_days = np.zeros((iterations,num_days))
 var_overall_online_days = np.zeros((iterations,num_days))
 # init vars for channel variance stuff
-delta_recon_imag_var_days = np.zeros([iterations,224,num_days])
-beta_recon_imag_var_days = np.zeros([iterations,224,num_days])
-hg_recon_imag_var_days = np.zeros([iterations,224,num_days])
-delta_recon_online_var_days = np.zeros([iterations,224,num_days])
-beta_recon_online_var_days = np.zeros([iterations,224,num_days])
-hg_recon_online_var_days = np.zeros([iterations,224,num_days])
-delta_recon_batch_var_days = np.zeros([iterations,224,num_days])
-beta_recon_batch_var_days = np.zeros([iterations,224,num_days])
-hg_recon_batch_var_days = np.zeros([iterations,224,num_days])
+delta_recon_imag_var_days = np.zeros([iterations,32*num_classes,num_days])
+beta_recon_imag_var_days = np.zeros([iterations,32*num_classes,num_days])
+hg_recon_imag_var_days = np.zeros([iterations,32*num_classes,num_days])
+delta_recon_online_var_days = np.zeros([iterations,32*num_classes,num_days])
+beta_recon_online_var_days = np.zeros([iterations,32*num_classes,num_days])
+hg_recon_online_var_days = np.zeros([iterations,32*num_classes,num_days])
+delta_recon_batch_var_days = np.zeros([iterations,32*num_classes,num_days])
+beta_recon_batch_var_days = np.zeros([iterations,32*num_classes,num_days])
+hg_recon_batch_var_days = np.zeros([iterations,32*num_classes,num_days])
 # init vars for storing day to day spatial corr coeff
 delta_spatial_corr_days = np.zeros([iterations,num_classes*3,num_days])
 beta_spatial_corr_days = np.zeros([iterations,num_classes*3,num_days])
@@ -113,14 +115,6 @@ hg_spatial_corr_days = np.zeros([iterations,num_classes*3,num_days])
 #%% MAIN LOOP 
 
 
-# training params 
-latent_dims=2
-num_epochs=150
-batch_size=32
-learning_rate = 1e-3
-batch_val=512
-patience=5
-gradient_clipping=10
 from iAE_utils_models import *
 
 # main loop 
@@ -134,19 +128,19 @@ for days in (np.arange(num_days)+1):
     nn_filename = 'iAE_' + str(days) + '.pth'
     
     # init vars
-    mahab_distances_imagined_iter = np.empty([21,0])
-    mean_distances_imagined_iter = np.empty([21,0])
-    var_distances_imagined_iter = np.empty([7,0])
+    mahab_distances_imagined_iter = np.empty([15,0])
+    mean_distances_imagined_iter = np.empty([15,0])
+    var_distances_imagined_iter = np.empty([num_classes,0])
     silhoutte_imagined_iter = np.array([])
     accuracy_imagined_iter = np.array([])
-    mahab_distances_online_iter = np.empty([21,0])
-    mean_distances_online_iter = np.empty([21,0])
-    var_distances_online_iter = np.empty([7,0])    
+    mahab_distances_online_iter = np.empty([15,0])
+    mean_distances_online_iter = np.empty([15,0])
+    var_distances_online_iter = np.empty([num_classes,0])    
     silhoutte_online_iter = np.array([])        
     accuracy_online_iter = np.array([])
-    mahab_distances_batch_iter = np.empty([21,0])
-    mean_distances_batch_iter = np.empty([21,0])
-    var_distances_batch_iter = np.empty([7,0])    
+    mahab_distances_batch_iter = np.empty([15,0])
+    mean_distances_batch_iter = np.empty([15,0])
+    var_distances_batch_iter = np.empty([num_classes,0])    
     silhoutte_batch_iter = np.array([])    
     accuracy_batch_iter = np.array([])
     var_overall_imagined_iter = np.array([])
@@ -215,7 +209,7 @@ for days in (np.arange(num_days)+1):
         
         # get reconstructed activity as images in the three bands
         delta_recon_imag,beta_recon_imag,hg_recon_imag = return_recon(model,
-                                                    condn_data_imagined_test,Yimagined_test)
+                                        condn_data_imagined_test,Yimagined_test,num_classes)
         # get the variance of each channel and storing 
         delta_imag_variances = get_recon_channel_variances(delta_recon_imag)
         beta_imag_variances = get_recon_channel_variances(beta_recon_imag)
@@ -231,17 +225,17 @@ for days in (np.arange(num_days)+1):
         if plt_close==True:
             plt.close()
         # mahab distance
-        mahab_distances = get_mahab_distance_latent(z,idx)
+        mahab_distances = get_mahab_distance_latent(z,idx,num_classes)
         mahab_distances = mahab_distances[np.triu_indices(mahab_distances.shape[0])]
         mahab_distances = mahab_distances[mahab_distances>0]
         mahab_distances_imagined_iter = np.append(mahab_distances_imagined_iter,
                                                   mahab_distances[:,None],axis=1)
         # euclidean distance between means
-        dist_means = get_distance_means(z,idx)
+        dist_means = get_distance_means(z,idx,num_classes)
         mean_distances_imagined_iter = np.append(mean_distances_imagined_iter,
                                                   dist_means[:,None],axis=1)
         # variance of the data spread in latent space
-        dist_var = get_variances(z,idx)
+        dist_var = get_variances(z,idx,num_classes)
         var_distances_imagined_iter = np.append(var_distances_imagined_iter,
                                                   dist_var[:,None],axis=1)
         
@@ -258,7 +252,7 @@ for days in (np.arange(num_days)+1):
         
         # get reconstructed activity as images in the three bands
         delta_recon_online,beta_recon_online,hg_recon_online = return_recon(model,
-                                                    condn_data_online_test,Yonline_test)
+                                            condn_data_online_test,Yonline_test,num_classes)
         # get the variance of each channel and storing 
         delta_online_variances = get_recon_channel_variances(delta_recon_online)
         beta_online_variances = get_recon_channel_variances(beta_recon_online)
@@ -275,17 +269,17 @@ for days in (np.arange(num_days)+1):
             plt.close()
         silhoutte_online_iter = np.append(silhoutte_online_iter,D)
         # mahab distance
-        mahab_distances = get_mahab_distance_latent(z,idx)
+        mahab_distances = get_mahab_distance_latent(z,idx,num_classes)
         mahab_distances = mahab_distances[np.triu_indices(mahab_distances.shape[0])]
         mahab_distances = mahab_distances[mahab_distances>0]
         mahab_distances_online_iter = np.append(mahab_distances_online_iter,
                                                   mahab_distances[:,None],axis=1)
         # euclidean distance between means
-        dist_means = get_distance_means(z,idx)
+        dist_means = get_distance_means(z,idx,num_classes)
         mean_distances_online_iter = np.append(mean_distances_online_iter,
                                                   dist_means[:,None],axis=1)
         # variance of the data spread in latent space
-        dist_var = get_variances(z,idx)
+        dist_var = get_variances(z,idx,num_classes)
         var_distances_online_iter = np.append(var_distances_online_iter,
                                                   dist_var[:,None],axis=1)
         # variance of overall data spread
@@ -300,7 +294,7 @@ for days in (np.arange(num_days)+1):
         
         # get reconstructed activity as images in the three bands
         delta_recon_batch,beta_recon_batch,hg_recon_batch = return_recon(model,
-                                                    condn_data_batch_test,Ybatch_test)
+                                            condn_data_batch_test,Ybatch_test,num_classes)
         # get the variance of each channel and storing 
         delta_batch_variances = get_recon_channel_variances(delta_recon_batch)
         beta_batch_variances = get_recon_channel_variances(beta_recon_batch)
@@ -317,17 +311,17 @@ for days in (np.arange(num_days)+1):
             plt.close()
         silhoutte_batch_iter = np.append(silhoutte_batch_iter,D)
         # mahab distance
-        mahab_distances = get_mahab_distance_latent(z,idx)
+        mahab_distances = get_mahab_distance_latent(z,idx,num_classes)
         mahab_distances = mahab_distances[np.triu_indices(mahab_distances.shape[0])]
         mahab_distances = mahab_distances[mahab_distances>0]
         mahab_distances_batch_iter = np.append(mahab_distances_batch_iter,
                                                   mahab_distances[:,None],axis=1)
         # euclidean distance between means
-        dist_means = get_distance_means(z,idx)
+        dist_means = get_distance_means(z,idx,num_classes)
         mean_distances_batch_iter = np.append(mean_distances_batch_iter,
                                                   dist_means[:,None],axis=1)
         # variance of the data spread in latent space
-        dist_var = get_variances(z,idx)
+        dist_var = get_variances(z,idx,num_classes)
         var_distances_batch_iter = np.append(var_distances_batch_iter,
                                                   dist_var[:,None],axis=1)
         # variance of overall data spread

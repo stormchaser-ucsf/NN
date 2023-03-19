@@ -33,18 +33,18 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 # get the data 
-def get_data(filename):
+def get_data(filename,num_classes):
     data_dict = mat73.loadmat(filename)
     data_imagined = data_dict.get('condn_data')
-    condn_data_imagined = np.zeros((0,96))
+    condn_data_imagined = np.zeros((0,data_imagined[0].shape[1]))
     Y = np.zeros(0)
-    for i in np.arange(7):
+    for i in np.arange(num_classes):
         tmp = np.array(data_imagined[i])
         condn_data_imagined = np.concatenate((condn_data_imagined,tmp),axis=0)
         idx = i*np.ones((tmp.shape[0],1))[:,0]
         Y = np.concatenate((Y,idx),axis=0)
 
-    Y_mult = np.zeros((Y.shape[0],7))
+    Y_mult = np.zeros((Y.shape[0],num_classes))
     for i in range(Y.shape[0]):
         tmp = round(Y[i])
         Y_mult[i,tmp]=1
@@ -94,12 +94,12 @@ def scale_zero_one(indata):
     return(indata)
 
 
-def get_distance_means(z,idx):        
+def get_distance_means(z,idx,num_classes):        
     dist_means=np.array([])
-    for i in np.arange(7):
+    for i in np.arange(num_classes):
         idxA = (idx==i).nonzero()[0]
         A = z[idxA,:]        
-        for j in np.arange(i+1,7):
+        for j in np.arange(i+1,num_classes):
             idxB = (idx==j).nonzero()[0]
             B = z[idxB,:]
             d = np.mean(A,axis=0)-np.mean(B,axis=0)
@@ -120,8 +120,8 @@ def get_distance_means_B2(z,idx):
             dist_means = np.append(dist_means,d)
     return dist_means
 
-def get_variances(z,idx):
-    dist_var = np.empty((7,))
+def get_variances(z,idx,num_classes):
+    dist_var = np.empty((num_classes,))
     for i in np.arange(len(np.unique(idx))):
         idxA = (idx==i).nonzero()[0]
         A = z[idxA,:]
@@ -171,8 +171,8 @@ def get_mahab_distance(x,y):
     return D
 
 # function to get mahalanobis distance
-def get_mahab_distance_latent(z,idx):
-    mdist =  np.zeros([7,7])
+def get_mahab_distance_latent(z,idx,num_classes):
+    mdist =  np.zeros([num_classes,num_classes])
     for i in np.arange(len(np.unique(idx))):
         idxA = (idx==i).nonzero()[0]
         A = z[idxA,:]
@@ -374,6 +374,36 @@ class encoder(nn.Module):
         #x=self.lnorm1(x)
         #x=self.tanh(x)
         return x
+    
+# create a autoencoder for b3 with a classifier layer for separation in latent space
+class encoder_b3(nn.Module):
+    def __init__(self,input_size,hidden_size,latent_dims,num_classes):
+        super(encoder_b3,self).__init__()
+        self.hidden_size2 = round(hidden_size/2)
+        self.hidden_size3 = round(hidden_size/4)
+        self.linear1 = nn.Linear(input_size,hidden_size)
+        self.linear2 = nn.Linear(hidden_size,self.hidden_size2)
+        self.linear3 = nn.Linear(self.hidden_size2,self.hidden_size3)        
+        self.linear4 = nn.Linear(self.hidden_size3,latent_dims)
+        self.gelu = nn.ELU()
+        self.tanh = nn.Tanh()
+        self.dropout =  nn.Dropout(p=0.3)
+        #self.lnorm1 = nn.LayerNorm(latent_dims,elementwise_affine=False)
+        
+    def forward(self,x):
+        x=self.linear1(x)
+        x=self.gelu(x)
+        x=self.dropout(x)
+        x=self.linear2(x)        
+        x=self.gelu(x)
+        x=self.dropout(x)
+        x=self.linear3(x)
+        x=self.gelu(x)
+        x=self.dropout(x)
+        x=self.linear4(x)
+        #x=self.lnorm1(x)
+        #x=self.tanh(x)
+        return x
 
 class latent_classifier(nn.Module):
     def __init__(self,latent_dims,num_classes):
@@ -438,6 +468,32 @@ class decoder(nn.Module):
         x=self.linear3(x)        
         return x
 
+class decoder_b3(nn.Module):
+    def __init__(self,input_size,hidden_size,latent_dims,num_classes):
+        super(decoder_b3,self).__init__()
+        self.hidden_size2 = round(hidden_size/2)
+        self.hidden_size3 = round(hidden_size/4)
+        self.linear1 = nn.Linear(latent_dims,self.hidden_size3)
+        self.linear2 = nn.Linear(self.hidden_size3,self.hidden_size2)
+        self.linear3 = nn.Linear(self.hidden_size2,hidden_size)
+        self.linear4 = nn.Linear(hidden_size,input_size)
+        self.gelu = nn.ELU()
+        self.relu = nn.ReLU()
+        self.dropout =  nn.Dropout(p=0.3)
+        
+        
+    def forward(self,x):
+        x=self.linear1(x)
+        x=self.gelu(x)
+        x=self.dropout(x)
+        x=self.linear2(x)
+        x=self.gelu(x)
+        x=self.dropout(x)
+        x=self.linear3(x)        
+        x=self.gelu(x)
+        x=self.dropout(x)
+        x=self.linear4(x)        
+        return x
 
 # combining all into 
 class iAutoencoder(nn.Module):
@@ -468,6 +524,36 @@ class Autoencoder(nn.Module):
         z=self.decoder(z)
         #y=self.recon_classifier(z)
         return z   
+
+# combining all into 
+class iAutoencoder_B3(nn.Module):
+    def __init__(self,input_size,hidden_size,latent_dims,num_classes):
+        super(iAutoencoder_B3,self).__init__()
+        self.encoder = encoder_b3(input_size,hidden_size,latent_dims,num_classes)
+        self.decoder = decoder_b3(input_size,hidden_size,latent_dims,num_classes)
+        self.latent_classifier = latent_classifier(latent_dims,num_classes)
+        #self.recon_classifier = recon_classifier(input_size,num_classes)
+    
+    def forward(self,x):
+        z=self.encoder(x)
+        y=self.latent_classifier(z)
+        z=self.decoder(z)
+        #y=self.recon_classifier(z)
+        return z,y
+    
+# combining all into 
+class Autoencoder(nn.Module):
+    def __init__(self,input_size,hidden_size,latent_dims,num_classes):
+        super(iAutoencoder,self).__init__()
+        self.encoder = encoder(input_size,hidden_size,latent_dims,num_classes)
+        self.decoder = decoder(input_size,hidden_size,latent_dims,num_classes)
+        #self.recon_classifier = recon_classifier(input_size,num_classes)
+    
+    def forward(self,x):
+        z=self.encoder(x)        
+        z=self.decoder(z)
+        #y=self.recon_classifier(z)
+        return z  
 
 
 # function to validate model 
@@ -598,8 +684,8 @@ def training_loop_iAE(model,num_epochs,batch_size,learning_rate,batch_val,
           print('Best val loss and val acc  are')
           print(goat_loss,goat_acc)
           break
-      
-    model_goat = iAutoencoder(input_size,hidden_size,latent_dims,num_classes)
+    model_goat = iAutoencoder(input_size,hidden_size,latent_dims,num_classes)  
+    #model_goat = iAutoencoder_B3(input_size,hidden_size,latent_dims,num_classes)
     model_goat.load_state_dict(torch.load(filename))
     model_goat=model_goat.to(device)
     model_goat.eval()
@@ -618,7 +704,8 @@ def plot_latent(model, data, Y, num_samples,dim):
     z = model.encoder(z)
     z = z.to('cpu').detach().numpy()
     y = y.to('cpu').detach().numpy()        
-    D = sil(z,y)
+    #D = sil(z,y)
+    D=0
     # scale between 0 and 1
     #z=  (z-np.min(z))/(np.max(z)-np.min(z))    
     fig=plt.figure()
@@ -701,7 +788,7 @@ def plot_latent_select(model, data, Y,dim,ch):
     return fig
 
 
-def return_recon(model,data,Y):
+def return_recon(model,data,Y,num_classes):
     data = torch.from_numpy(data).to(device).float()
     Y=torch.from_numpy(Y).to(device).float()
     Y=convert_to_ClassNumbers(Y).to('cpu').detach().numpy()
@@ -709,7 +796,7 @@ def return_recon(model,data,Y):
     hg_recon = []
     beta_recon=[]
     delta_recon=[]
-    for query in np.arange(7):
+    for query in np.arange(num_classes):
         idx = np.where(Y==query)[0]
         data_tmp = data[idx,:]        
         
@@ -959,6 +1046,48 @@ def data_aug_mlp_chol_feature_equalSize(indata,labels,data_size):
     outdata_labels = np.concatenate((labels,labels_aug),axis=0)
     return outdata, outdata_labels
 
+def data_aug_mlp_chol_feature_equalSize_B3_NoPooling(indata,labels,data_size):    
+    labels_idx = np.argmax(labels,axis=1)
+    num_labels = len(np.unique(labels_idx))
+    N = (data_size/num_labels) #data aug factor
+    feat_size = indata.shape[1]
+    condn_data_aug = np.empty([0,feat_size]) 
+    labels_aug=np.empty([0,num_labels])
+    # sample from random gaussian with known mean and cov matrix
+    for query in np.arange(num_labels):
+        idx = np.where(labels_idx==query)[0]
+        idx_len_aug = round(N-len(idx))
+        tmp_data = indata[idx,:]
+        
+        # no pooling -> first 253 features are delta, 2nd 253 are beta and last are hG
+        new_data = np.zeros([idx_len_aug,feat_size]) 
+        for i in np.arange(0,indata.shape[1],253):
+            hg = tmp_data[:,i:i+253] # just keeping the name hG
+            C = np.cov(hg,rowvar=False)
+            if lin.matrix_rank(C)<253:
+                C = np.cov(hg,rowvar=False) +  1e-12*np.eye(hg.shape[1])
+            C12 = lin.cholesky(C)
+            m = np.mean(hg,axis=0)
+            X = rnd.randn(idx_len_aug,hg.shape[1])
+            new_hg = X @ C12 + m
+            new_data[:,i:i+253] = new_hg
+        
+        #add some noise
+        new_data = new_data + 0.02*rnd.randn(new_data.shape[0],new_data.shape[1])
+        
+        # make it unit norm
+        for i in np.arange(new_data.shape[0]):
+            new_data[i,:] = new_data[i,:]/lin.norm(new_data[i,:])
+        
+        condn_data_aug = np.concatenate((condn_data_aug,new_data),axis=0)    
+        tmp_labels = np.zeros([idx_len_aug,num_labels])
+        tmp_labels[:,query]=1        
+        labels_aug = np.concatenate((labels_aug,tmp_labels))
+       
+    outdata = np.concatenate((indata,condn_data_aug),axis=0)
+    outdata_labels = np.concatenate((labels,labels_aug),axis=0)
+    return outdata, outdata_labels
+
 def get_raw_channnel_variances(indata,labels):       
     idx = np.argmax(labels,axis=1)
     num_labels = len(np.unique(idx))
@@ -992,10 +1121,215 @@ def get_raw_channnel_variances(indata,labels):
     return delta_variances,beta_variances,hg_variances
     
     
+
+### CENTERED LINEAR KERNAL ALIGNMENT TO COMPARE TWO FIXED LAYERED AUTOENCODERS
+def linear_cka_dist(input_data,model,model1):
+    # prelims 
+    model.eval()
+    model1.eval()
+    elu=nn.ELU()
+    input_data = torch.from_numpy(input_data).float().to(device)
+    # getting the layers of first manifold
+    layer = []
+    layer.append(model.encoder.linear1.state_dict()['weight'])
+    layer.append(model.encoder.linear2.state_dict()['weight'])
+    layer.append(model.encoder.linear3.state_dict()['weight'])
+    layer.append(model.decoder.linear1.state_dict()['weight'])
+    layer.append(model.decoder.linear2.state_dict()['weight'])
+    layer.append(model.decoder.linear3.state_dict()['weight'])
+    bias = []
+    bias.append(model.encoder.linear1.state_dict()['bias'])
+    bias.append(model.encoder.linear2.state_dict()['bias'])
+    bias.append(model.encoder.linear3.state_dict()['bias'])
+    bias.append(model.decoder.linear1.state_dict()['bias'])
+    bias.append(model.decoder.linear2.state_dict()['bias'])
+    bias.append(model.decoder.linear3.state_dict()['bias'])
+    # getting the layers of second manifold
+    layer1 = []
+    layer1.append(model1.encoder.linear1.state_dict()['weight'])
+    layer1.append(model1.encoder.linear2.state_dict()['weight'])
+    layer1.append(model1.encoder.linear3.state_dict()['weight'])
+    layer1.append(model1.decoder.linear1.state_dict()['weight'])
+    layer1.append(model1.decoder.linear2.state_dict()['weight'])
+    layer1.append(model1.decoder.linear3.state_dict()['weight'])
+    bias1 = []
+    bias1.append(model1.encoder.linear1.state_dict()['bias'])
+    bias1.append(model1.encoder.linear2.state_dict()['bias'])
+    bias1.append(model1.encoder.linear3.state_dict()['bias'])
+    bias1.append(model1.decoder.linear1.state_dict()['bias'])
+    bias1.append(model1.decoder.linear2.state_dict()['bias'])
+    bias1.append(model1.decoder.linear3.state_dict()['bias'])            
     
+    # running the pairwise comparisons 
+    D = np.zeros((6,6))
+    for m in np.arange(len(layer)):
+        out = input_data
+        k=0
+        while k<=m:                        
+            w = torch.transpose(layer[k],0,1)
+            b = bias[k]
+            #shufle
+            idx = torch.randperm(w.nelement())
+            w = w.reshape(-1)[idx].reshape(w.size())
+            idx = torch.randperm(b.nelement())
+            b = b[idx]
+            # compute
+            out = torch.matmul(out, w) + b
+            if k==2 or k==5:
+                out=out
+            else:
+                out = elu(out)
+            k=k+1
+        
+        for n in np.arange(len(layer1)):
+            out1 = input_data
+            k=0
+            while k<=n:                        
+                w = torch.transpose(layer1[k],0,1)
+                b = bias1[k]
+                #shufle
+                idx = torch.randperm(w.nelement())
+                w = w.reshape(-1)[idx].reshape(w.size())
+                idx = torch.randperm(b.nelement())
+                b = b[idx]
+                # compute                        
+                out1 = torch.matmul(out1, w) + b
+                if k==2 or k==5:
+                    out1=out1
+                else:
+                    out1 = elu(out1)
+                k=k+1
+            
+            ### now get the CKA between out and out1
+            X = out.to('cpu').detach().numpy()
+            Y = out1.to('cpu').detach().numpy()
+            X = X - np.mean(X,axis=0)
+            Y = Y - np.mean(Y,axis=0)    
+            ###cka
+            a=lin.norm((X.T@X),'fro')
+            b=lin.norm((Y.T@Y),'fro')
+            c=(lin.norm((Y.T @ X),'fro'))**2
+            d = c/(a*b)
+            ### orthogonal procrustus 1
+            #R, sca = op(X, Y)
+            #d = (lin.norm(X@R - Y))/(lin.norm(Y))
+            ### orthogonal procrustus 2
+            # X = X/lin.norm(X,'fro')
+            # Y = Y/lin.norm(Y,'fro')
+            # a=lin.norm(X,'fro')**2
+            # b=lin.norm(Y,'fro')**2
+            # c=lin.norm(X.T@Y,'nuc')
+            # d = a+b-2*c
+            
+            D[m,n] = d
+            
+    return(D)
+
+
+def linear_cka_dist2(input_data,input_data1,model,model1):
+    # prelims 
+    model.eval()
+    model1.eval()
+    elu=nn.ELU()
+    input_data = torch.from_numpy(input_data).float().to(device)
+    input_data1 = torch.from_numpy(input_data1).float().to(device)
+    # getting the layers of first manifold
+    layer = []
+    layer.append(model.encoder.linear1.state_dict()['weight'])
+    layer.append(model.encoder.linear2.state_dict()['weight'])
+    layer.append(model.encoder.linear3.state_dict()['weight'])
+    layer.append(model.decoder.linear1.state_dict()['weight'])
+    layer.append(model.decoder.linear2.state_dict()['weight'])
+    layer.append(model.decoder.linear3.state_dict()['weight'])
+    bias = []
+    bias.append(model.encoder.linear1.state_dict()['bias'])
+    bias.append(model.encoder.linear2.state_dict()['bias'])
+    bias.append(model.encoder.linear3.state_dict()['bias'])
+    bias.append(model.decoder.linear1.state_dict()['bias'])
+    bias.append(model.decoder.linear2.state_dict()['bias'])
+    bias.append(model.decoder.linear3.state_dict()['bias'])
+    # getting the layers of second manifold
+    layer1 = []
+    layer1.append(model1.encoder.linear1.state_dict()['weight'])
+    layer1.append(model1.encoder.linear2.state_dict()['weight'])
+    layer1.append(model1.encoder.linear3.state_dict()['weight'])
+    layer1.append(model1.decoder.linear1.state_dict()['weight'])
+    layer1.append(model1.decoder.linear2.state_dict()['weight'])
+    layer1.append(model1.decoder.linear3.state_dict()['weight'])
+    bias1 = []
+    bias1.append(model1.encoder.linear1.state_dict()['bias'])
+    bias1.append(model1.encoder.linear2.state_dict()['bias'])
+    bias1.append(model1.encoder.linear3.state_dict()['bias'])
+    bias1.append(model1.decoder.linear1.state_dict()['bias'])
+    bias1.append(model1.decoder.linear2.state_dict()['bias'])
+    bias1.append(model1.decoder.linear3.state_dict()['bias'])
     
+    # compute the activations
+    # act_l1
+    # act_l1
+    # act_l1
+    # act_l1
+    # act_l1
+    # act_l1
     
-   
+    # running the pairwise comparisons 
+    D = np.zeros((6,6))
+    for m in np.arange(len(layer)):
+        out = input_data
+        k=0
+        while k<=m:                        
+            w = torch.transpose(layer[k],0,1)
+            b = bias[k]
+            out = torch.matmul(out, w) + b
+            if k==2 or k==5:
+                out=out
+            else:
+                out = elu(out)
+            k=k+1
+        
+        for n in np.arange(len(layer1)):
+            out1 = input_data1
+            k=0
+            while k<=n:                        
+                w = torch.transpose(layer1[k],0,1)
+                b = bias1[k]
+                out1 = torch.matmul(out1, w) + b
+                if k==2 or k==5:
+                    out1=out1
+                else:
+                    out1 = elu(out1)
+                k=k+1
+            
+            ### now get the CKA between out and out1
+            X = out.to('cpu').detach().numpy()
+            Y = out1.to('cpu').detach().numpy()
+            X = X - np.mean(X,axis=0)
+            Y = Y - np.mean(Y,axis=0)    
+            ###cka
+            a=lin.norm((X.T@X),'fro')
+            b=lin.norm((Y.T@Y),'fro')
+            c=(lin.norm((Y.T @ X),'fro'))**2
+            d = c/(a*b)
+            ### orthogonal procrustus 1
+            #R, sca = op(X, Y)
+            #d = (lin.norm(X@R - Y))/(lin.norm(Y))
+            ### orthogonal procrustus 2
+            # X = X/lin.norm(X,'fro')
+            # Y = Y/lin.norm(Y,'fro')
+            # a=lin.norm(X,'fro')**2
+            # b=lin.norm(Y,'fro')**2
+            # c=lin.norm(X.T@Y,'nuc')
+            # d = a+b-2*c
+            
+            D[m,n] = d
+            
+    return(D)
+
+
+
+ 
+    
+
     
     
     

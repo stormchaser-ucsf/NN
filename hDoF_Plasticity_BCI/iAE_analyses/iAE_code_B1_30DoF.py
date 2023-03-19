@@ -1,5 +1,19 @@
 # -*- coding: utf-8 -*-
 """
+Created on Wed Mar  8 14:59:30 2023
+
+@author: nikic
+"""
+
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Mar  8 14:57:05 2023
+
+@author: nikic
+"""
+
+# -*- coding: utf-8 -*-
+"""
 Created on Thu Nov 24 09:24:18 2022
 
 @author: nikic
@@ -38,12 +52,13 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 #%% SETTING UP MODEL PARAMS
 
 # model params
-input_size=96
-hidden_size=48
-latent_dims=2
-num_classes = 6
+input_size=384
+hidden_size=96
+latent_dims=20
+num_classes = 30
 
 # training params 
+latent_dims=3
 num_epochs=150
 batch_size=64
 learning_rate = 1e-3
@@ -53,23 +68,13 @@ gradient_clipping=10
 
 # file location
 root_path = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker'
-root_imag_filename = '\condn_data_Imagined_Day'
-root_online_filename = '\condn_data_Online_Day'
-root_batch_filename = '\condn_data_Batch_Day'
+root_filename  = '\Data_hdof'
 
 # init variables across days 
-dist_means_overall_imag = np.empty([10,0])
-dist_var_overall_imag = np.empty([10,0])
-mahab_dist_overall_imag = np.empty([10,0])
-dist_means_overall_online = np.empty([10,0])
-dist_var_overall_online = np.empty([10,0])
-mahab_dist_overall_online = np.empty([10,0])
-dist_means_overall_batch = np.empty([10,0])
-dist_var_overall_batch = np.empty([10,0])
-mahab_dist_overall_batch = np.empty([10,0])
-
-# num of days
-num_days=10
+num_days=1
+dist_means_overall_imag = np.empty([num_days,0])
+dist_var_overall_imag = np.empty([num_days,0])
+mahab_dist_overall_imag = np.empty([num_days,0])
 
 # iterations to bootstrap
 iterations = 1
@@ -82,55 +87,17 @@ mean_distances_imagined_days = np.zeros([21,iterations,num_days])
 var_imagined_days = np.zeros([7,iterations,num_days])
 silhoutte_imagined_days = np.zeros((iterations,num_days))
 accuracy_imagined_days = np.zeros((iterations,num_days))
-mahab_distances_online_days = np.zeros([21,iterations,num_days])
-mean_distances_online_days = np.zeros([21,iterations,num_days])
-var_online_days = np.zeros([7,iterations,num_days])
-silhoutte_online_days = np.zeros((iterations,num_days))
-accuracy_online_days = np.zeros((iterations,num_days))
-mahab_distances_batch_days = np.zeros([21,iterations,num_days])
-mean_distances_batch_days = np.zeros([21,iterations,num_days])
-var_batch_days = np.zeros([7,iterations,num_days])
-silhoutte_batch_days = np.zeros((iterations,num_days))
-accuracy_batch_days = np.zeros((iterations,num_days))
 var_overall_imagined_days = np.zeros((iterations,num_days))
-var_overall_batch_days = np.zeros((iterations,num_days))
-var_overall_online_days = np.zeros((iterations,num_days))
-# init vars for channel variance stuff
-delta_recon_imag_var_days = np.zeros([iterations,224,num_days])
-beta_recon_imag_var_days = np.zeros([iterations,224,num_days])
-hg_recon_imag_var_days = np.zeros([iterations,224,num_days])
-delta_recon_online_var_days = np.zeros([iterations,224,num_days])
-beta_recon_online_var_days = np.zeros([iterations,224,num_days])
-hg_recon_online_var_days = np.zeros([iterations,224,num_days])
-delta_recon_batch_var_days = np.zeros([iterations,224,num_days])
-beta_recon_batch_var_days = np.zeros([iterations,224,num_days])
-hg_recon_batch_var_days = np.zeros([iterations,224,num_days])
-# init vars for storing day to day spatial corr coeff
-delta_spatial_corr_days = np.zeros([iterations,num_classes*3,num_days])
-beta_spatial_corr_days = np.zeros([iterations,num_classes*3,num_days])
-hg_spatial_corr_days = np.zeros([iterations,num_classes*3,num_days])
+
 
 #%% MAIN LOOP 
 
-
-# training params 
-latent_dims=2
-num_epochs=150
-batch_size=32
-learning_rate = 1e-3
-batch_val=512
-patience=5
-gradient_clipping=10
 from iAE_utils_models import *
 
 # main loop 
 for days in (np.arange(num_days)+1):
-    imagined_file_name = root_path + root_imag_filename +  str(days) + '.mat'
+    imagined_file_name = root_path + root_filename +  '.mat'
     condn_data_imagined,Yimagined = get_data(imagined_file_name,num_classes)
-    online_file_name = root_path + root_online_filename +  str(days) + '.mat'
-    condn_data_online,Yonline = get_data(online_file_name,num_classes)
-    batch_file_name = root_path + root_batch_filename +  str(days) + '.mat'
-    condn_data_batch,Ybatch = get_data(batch_file_name,num_classes)    
     nn_filename = 'iAE_' + str(days) + '.pth'
     
     # init vars
@@ -139,39 +106,10 @@ for days in (np.arange(num_days)+1):
     var_distances_imagined_iter = np.empty([7,0])
     silhoutte_imagined_iter = np.array([])
     accuracy_imagined_iter = np.array([])
-    mahab_distances_online_iter = np.empty([21,0])
-    mean_distances_online_iter = np.empty([21,0])
-    var_distances_online_iter = np.empty([7,0])    
-    silhoutte_online_iter = np.array([])        
-    accuracy_online_iter = np.array([])
-    mahab_distances_batch_iter = np.empty([21,0])
-    mean_distances_batch_iter = np.empty([21,0])
-    var_distances_batch_iter = np.empty([7,0])    
-    silhoutte_batch_iter = np.array([])    
-    accuracy_batch_iter = np.array([])
     var_overall_imagined_iter = np.array([])
-    var_overall_online_iter = np.array([])
-    var_overall_batch_iter = np.array([])    
-    # variances in reconstruction
-    delta_recon_imag_var_iter = []
-    beta_recon_imag_var_iter = []
-    hg_recon_imag_var_iter = []
-    delta_recon_online_var_iter = []
-    beta_recon_online_var_iter = []
-    hg_recon_online_var_iter = []
-    delta_recon_batch_var_iter = []
-    beta_recon_batch_var_iter = []
-    hg_recon_batch_var_iter = []
-    # spatial correlation arrays
-    delta_spatial_corr_iter = np.empty([num_classes*3,0])
-    beta_spatial_corr_iter = np.empty([num_classes*3,0])
-    hg_spatial_corr_iter = np.empty([num_classes*3,0])
     
     #### DATA AUGMENTATION ###
-    #condn_data_imagined,Yimagined = data_aug_mlp(condn_data_imagined,Yimagined,3000)
-    condn_data_online,Yonline =   data_aug_mlp_chol_feature_equalSize(condn_data_online,Yonline,condn_data_imagined.shape[0])
-    condn_data_batch,Ybatch =   data_aug_mlp_chol_feature_equalSize(condn_data_batch,Ybatch,condn_data_imagined.shape[0])
-    
+    #condn_data_imagined,Yimagined = data_aug_mlp(condn_data_imagined,Yimagined,3000)    
     ## plotting options
     plt_close=False
     
@@ -181,28 +119,22 @@ for days in (np.arange(num_days)+1):
         print(f'Iteration {loop+1}, Day {days}')
         ### DATA SPLIT OF ALL CONDITIONS FOR CROSS-VALIDATION ####
         # condn_data_imagined_train,condn_data_imagined_test,Yimagined_train,Yimagined_test=training_test_split(condn_data_imagined, Yimagined, 0.8)
-        # condn_data_online_train,condn_data_online_test,Yonline_train,Yonline_test=training_test_split(condn_data_online, Yonline, 0.8)            
-        # condn_data_batch_train,condn_data_batch_test,Ybatch_train,Ybatch_test=training_test_split(condn_data_batch, Ybatch, 0.8)
         condn_data_imagined_train,condn_data_imagined_test = condn_data_imagined,condn_data_imagined
         Yimagined_train,Yimagined_test = Yimagined,Yimagined
-        condn_data_online_train,condn_data_online_test = condn_data_online,condn_data_online
-        Yonline_train,Yonline_test = Yonline,Yonline
-        condn_data_batch_train,condn_data_batch_test = condn_data_batch,condn_data_batch
-        Ybatch_train,Ybatch_test = Ybatch,Ybatch
         
         
         #### STACK EVERYTHING TOGETHER ###
-        condn_data_total = np.concatenate((condn_data_imagined_train,condn_data_online_train,condn_data_batch_train),axis=0)    
-        Ytotal = np.concatenate((Yimagined_train,Yonline_train,Ybatch_train),axis=0)            
+        condn_data_total = condn_data_imagined_train
+        Ytotal = Yimagined_train
                 
         #### TRAIN THE MODEL
         Ytest = np.zeros((2,2))
         while len(np.unique(np.argmax(Ytest,axis=1)))<num_classes:
-            Xtrain,Xtest,Ytrain,Ytest = training_test_split(condn_data_total,Ytotal,0.8)                        
+            Xtrain,Xtest,Ytrain,Ytest = training_test_split(condn_data_total,Ytotal,0.8) 
             
         if 'model' in locals():
             del model    
-        model = iAutoencoder(input_size,hidden_size,latent_dims,num_classes).to(device)        
+        model = iAutoencoder_B3(input_size,hidden_size,latent_dims,num_classes).to(device)        
         model,acc = training_loop_iAE(model,num_epochs,batch_size,learning_rate,batch_val,
                               patience,gradient_clipping,nn_filename,
                               Xtrain,Ytrain,Xtest,Ytest,
@@ -213,25 +145,14 @@ for days in (np.arange(num_days)+1):
         acc=0
         accuracy_imagined_iter = np.append(accuracy_imagined_iter,acc)      
         
-        # get reconstructed activity as images in the three bands
-        delta_recon_imag,beta_recon_imag,hg_recon_imag = return_recon(model,
-                                                    condn_data_imagined_test,Yimagined_test)
-        # get the variance of each channel and storing 
-        delta_imag_variances = get_recon_channel_variances(delta_recon_imag)
-        beta_imag_variances = get_recon_channel_variances(beta_recon_imag)
-        hg_imag_variances = get_recon_channel_variances(hg_recon_imag)
-        delta_recon_imag_var_iter.append(delta_imag_variances)
-        beta_recon_imag_var_iter.append(beta_imag_variances)
-        hg_recon_imag_var_iter.append(hg_imag_variances)
-        
         # get latent activity and plot
         D,z,idx,fig_imagined = plot_latent(model,condn_data_imagined_test,Yimagined_test,
-                                           condn_data_imagined_test.shape[0],latent_dims)        
+                                           condn_data_imagined_test.shape[0],3)        
         silhoutte_imagined_iter = np.append(silhoutte_imagined_iter,D)
         if plt_close==True:
             plt.close()
         # mahab distance
-        mahab_distances = get_mahab_distance_latent(z,idx)
+        mahab_distances = get_mahab_distance_latent(z,idx,num_classes)
         mahab_distances = mahab_distances[np.triu_indices(mahab_distances.shape[0])]
         mahab_distances = mahab_distances[mahab_distances>0]
         mahab_distances_imagined_iter = np.append(mahab_distances_imagined_iter,
