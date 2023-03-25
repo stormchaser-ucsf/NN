@@ -24,7 +24,8 @@ import sklearn as skl
 from sklearn.metrics import silhouette_score as sil
 from sklearn.metrics import silhouette_samples as sil_samples
 import scipy.stats as stats
-
+from sklearn.decomposition import PCA as PCA
+pca=PCA(n_components=2)
 
 # setting up GPU
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -370,10 +371,78 @@ class encoder(nn.Module):
         x=self.linear2(x)        
         x=self.gelu(x)
         x=self.dropout(x)
-        x=self.linear3(x)
+        x=self.linear3(x)        
+        #y=self.gelu(x) 
         #x=self.lnorm1(x)
         #x=self.tanh(x)
         return x
+    
+class latent_classifier(nn.Module):
+    def __init__(self,latent_dims,num_classes):
+        super(latent_classifier,self).__init__()
+        self.linear1 = nn.Linear(latent_dims,num_classes)
+        self.weights = torch.randn(latent_dims,num_classes).to(device)        
+    
+    def forward(self,x):
+        x=self.linear1(x)        
+        #x=torch.matmul(x,self.weights)
+        return x
+
+class decoder(nn.Module):
+    def __init__(self,input_size,hidden_size,latent_dims,num_classes):
+        super(decoder,self).__init__()
+        self.hidden_size2 = round(hidden_size/3)
+        self.linear1 = nn.Linear(latent_dims,self.hidden_size2)
+        self.linear2 = nn.Linear(self.hidden_size2,hidden_size)
+        self.linear3 = nn.Linear(hidden_size,input_size)
+        self.gelu = nn.ELU()
+        self.relu = nn.ReLU()
+        self.dropout =  nn.Dropout(p=0.3)
+        
+        
+    def forward(self,x):        
+        x=self.linear1(x)
+        x=self.gelu(x)
+        x=self.dropout(x)
+        x=self.linear2(x)
+        x=self.gelu(x)
+        x=self.dropout(x)
+        x=self.linear3(x)        
+        return x
+
+class mlp_classifier(nn.Module):
+    def __init__(self,input_size,num_nodes,num_classes):
+        super(mlp_classifier,self).__init__()
+        self.linear1 = nn.Linear(input_size,num_nodes)
+        self.linear2 = nn.Linear(num_nodes,num_nodes)
+        self.linear3 = nn.Linear(num_nodes,num_nodes)        
+        self.linear4 = nn.Linear(num_nodes,num_classes)        
+        self.elu = nn.ReLU()
+        self.dropout =  nn.Dropout(p=0.3)
+    
+    def forward(self,x):
+        x=self.linear1(x)
+        x=self.elu(x)
+        x=self.dropout(x)
+        x=self.linear2(x)
+        x=self.elu(x)
+        x=self.dropout(x)
+        x=self.linear3(x)
+        x=self.elu(x)
+        x=self.dropout(x)
+        x=self.linear4(x)
+        return x
+        
+class mlp_classifier_1layer(nn.Module):
+    def __init__(self,input_size,num_nodes,num_classes):
+        super(mlp_classifier_1layer,self).__init__()
+        self.linear1 = nn.Linear(input_size,num_classes)
+        
+    
+    def forward(self,x):
+        x=self.linear1(x)
+        return x     
+
     
 # create a autoencoder for b3 with a classifier layer for separation in latent space
 class encoder_b3(nn.Module):
@@ -405,16 +474,7 @@ class encoder_b3(nn.Module):
         #x=self.tanh(x)
         return x
 
-class latent_classifier(nn.Module):
-    def __init__(self,latent_dims,num_classes):
-        super(latent_classifier,self).__init__()
-        self.linear1 = nn.Linear(latent_dims,num_classes)
-        self.weights = torch.randn(latent_dims,num_classes).to(device)        
-    
-    def forward(self,x):
-        x=self.linear1(x)        
-        #x=torch.matmul(x,self.weights)
-        return x
+
 
 
 # class latent_classifier(nn.Module):
@@ -446,27 +506,7 @@ class recon_classifier(nn.Module):
         x=self.linear1(x)
         return x
 
-class decoder(nn.Module):
-    def __init__(self,input_size,hidden_size,latent_dims,num_classes):
-        super(decoder,self).__init__()
-        self.hidden_size2 = round(hidden_size/3)
-        self.linear1 = nn.Linear(latent_dims,self.hidden_size2)
-        self.linear2 = nn.Linear(self.hidden_size2,hidden_size)
-        self.linear3 = nn.Linear(hidden_size,input_size)
-        self.gelu = nn.ELU()
-        self.relu = nn.ReLU()
-        self.dropout =  nn.Dropout(p=0.3)
-        
-        
-    def forward(self,x):
-        x=self.linear1(x)
-        x=self.gelu(x)
-        x=self.dropout(x)
-        x=self.linear2(x)
-        x=self.gelu(x)
-        x=self.dropout(x)
-        x=self.linear3(x)        
-        return x
+
 
 class decoder_b3(nn.Module):
     def __init__(self,input_size,hidden_size,latent_dims,num_classes):
@@ -690,6 +730,147 @@ def training_loop_iAE(model,num_epochs,batch_size,learning_rate,batch_val,
     model_goat=model_goat.to(device)
     model_goat.eval()
     return model_goat, goat_acc
+
+
+
+
+# function to validate model for mlp
+def validation_loss_mlp(model,X_test,Y_test,batch_val,val_type):    
+    crit_classif_val = nn.CrossEntropyLoss(reduction='sum') #if mean, it is over all samples
+    crit_recon_val = nn.MSELoss(reduction='sum') # if mean, it is over all elements 
+    loss_val=0    
+    accuracy=0
+    recon_error=0
+    if batch_val > X_test.shape[0]:
+        batch_val = X_test.shape[0]
+    
+    idx=np.arange(0,X_test.shape[0],batch_val)    
+    if idx[-1]<X_test.shape[0]:
+        idx=np.append(idx,X_test.shape[0])
+    else:
+        print('something wrong here')
+    
+    iters=(idx.shape[0]-1)
+    
+    for i in np.arange(iters):
+        x=X_test[idx[i]:idx[i+1],:]
+        y=Y_test[idx[i]:idx[i+1],:]     
+        with torch.no_grad():                
+            if val_type==1: #validation
+                x=torch.from_numpy(x).to(device).float()
+                y=torch.from_numpy(y).to(device).float()
+                model.eval()
+                ypred = model(x) 
+                #loss1 = crit_recon_val(out,x)
+                loss2 = crit_classif_val(ypred,y)
+                #loss_val += loss1.item() + loss2.item()
+                loss_val += loss2.item()
+                model.train()
+            else:
+                ypred = model(x) 
+                #loss1 = crit_recon_val(out,x)
+                loss2 = crit_classif_val(ypred,y)
+                #loss_val += loss1.item() + loss2.item()
+                loss_val +=  loss2.item()
+            
+            ylabels = convert_to_ClassNumbers(y)        
+            ypred_labels = convert_to_ClassNumbers(ypred)     
+            accuracy += torch.sum(ylabels == ypred_labels).item()
+            #recon_error += (torch.sum(torch.square(out-x))).item()   
+            
+    loss_val=loss_val/X_test.shape[0]
+    accuracy = accuracy/X_test.shape[0]
+    #recon_error = (recon_error/X_test.shape[0])#.cpu().numpy()
+    torch.cuda.empty_cache()
+    return loss_val,accuracy
+
+def training_loop_mlp(model,num_epochs,batch_size,learning_rate,batch_val,
+                      patience,gradient_clipping,filename,
+                      Xtrain,Ytrain,Xtest,Ytest,
+                      input_size,num_nodes,num_classes):
+    
+   
+    num_batches = math.ceil(Xtrain.shape[0]/batch_size)
+    #recon_criterion = nn.MSELoss(reduction='sum')
+    classif_criterion = nn.CrossEntropyLoss(reduction='sum')    
+    opt = torch.optim.Adam(model.parameters(),lr=learning_rate)
+    print('Starting training')
+    goat_loss=99999
+    counter=0
+    model.train()
+    for epoch in range(num_epochs):
+      #shuffle the data    
+      #shuffle the data    
+      idx = rnd.permutation(Xtrain.shape[0]) 
+      idx_split = np.array_split(idx,num_batches)
+      
+      
+      if epoch>round(num_epochs*0.6):
+          for g in opt.param_groups:
+              g['lr']=1e-4
+        
+      for batch in range(num_batches):
+          # get the batch 
+          samples = idx_split[batch]
+          Xtrain_batch = Xtrain[samples,:]
+          Ytrain_batch = Ytrain[samples,:]        
+          
+          #push to gpu
+          Xtrain_batch = torch.from_numpy(Xtrain_batch).to(device).float()
+          Ytrain_batch = torch.from_numpy(Ytrain_batch).to(device).float()          
+          
+          # forward pass thru network
+          opt.zero_grad() 
+          decodes = model(Xtrain_batch)
+          
+          
+          # get loss      
+          #recon_loss = (recon_criterion(recon,Xtrain_batch))/Xtrain_batch.shape[0]
+          classif_loss = (classif_criterion(decodes,Ytrain_batch))/Xtrain_batch.shape[0]      
+          loss = classif_loss
+          total_loss = loss.item()
+          #print(classif_loss.item())
+          
+          # compute accuracy
+          ylabels = convert_to_ClassNumbers(Ytrain_batch)        
+          ypred_labels = convert_to_ClassNumbers(decodes)     
+          accuracy = (torch.sum(ylabels == ypred_labels).item())/ylabels.shape[0]
+          
+          # backpropagate thru network 
+          loss.backward()
+          nn.utils.clip_grad_value_(model.parameters(), clip_value=gradient_clipping)
+          opt.step()
+      
+      # get validation losses
+      val_loss,val_acc=validation_loss_mlp(model,Xtest,Ytest,batch_val,1)    
+      #val_loss,val_recon=validation_loss_regression(model,Xtest,Ytest,batch_val,1)    
+      
+      
+      print(f'Epoch [{epoch}/{num_epochs}], Val. Loss {val_loss:.2f}, Train Loss {total_loss:.2f}, Val. Acc {val_acc*100:.2f}, Train Acc {accuracy*100:.2f}')
+      #print(f'Epoch [{epoch}/{num_epochs}], Val. Loss {val_loss:.4f}, Train Loss {total_loss:.4f}')
+      
+      if val_loss<goat_loss:
+          goat_loss = val_loss
+          goat_acc = val_acc*100      
+          counter = 0
+          print('Goat loss, saving model')      
+          torch.save(model.state_dict(), filename)
+      else:
+          counter += 1
+    
+      if counter>=patience:
+          print('Early stoppping point reached')
+          print('Best val loss and val acc  are')
+          print(goat_loss,goat_acc)
+          break
+    model_goat = mlp_classifier_1layer(input_size,num_nodes,num_classes)  
+    #model_goat = iAutoencoder_B3(input_size,hidden_size,latent_dims,num_classes)
+    model_goat.load_state_dict(torch.load(filename))
+    model_goat=model_goat.to(device)
+    model_goat.eval()
+    return model_goat, goat_acc
+
+
 
 # plotting and returning latent activations
 def plot_latent(model, data, Y, num_samples,dim):
@@ -1123,7 +1304,7 @@ def get_raw_channnel_variances(indata,labels):
     
 
 ### CENTERED LINEAR KERNAL ALIGNMENT TO COMPARE TWO FIXED LAYERED AUTOENCODERS
-def linear_cka_dist(input_data,model,model1):
+def linear_cka_dist(input_data,model,model1,shuffle_flag,shuffle_flag1):
     # prelims 
     model.eval()
     model1.eval()
@@ -1168,48 +1349,78 @@ def linear_cka_dist(input_data,model,model1):
         while k<=m:                        
             w = torch.transpose(layer[k],0,1)
             b = bias[k]
-            #shufle
-            idx = torch.randperm(w.nelement())
-            w = w.reshape(-1)[idx].reshape(w.size())
-            idx = torch.randperm(b.nelement())
-            b = b[idx]
+            #shuffle
+            if shuffle_flag == True: 
+                idx = torch.randperm(w.nelement())
+                w = w.reshape(-1)[idx].reshape(w.size())
+                idx = torch.randperm(b.nelement())
+                b = b[idx]
             # compute
             out = torch.matmul(out, w) + b
-            if k==2 or k==5:
+            out_compute=out
+            if  k==5 or k==2:
                 out=out
             else:
                 out = elu(out)
             k=k+1
         
-        for n in np.arange(len(layer1)):
+        for n in np.arange(len(layer1)):        
             out1 = input_data
             k=0
             while k<=n:                        
                 w = torch.transpose(layer1[k],0,1)
                 b = bias1[k]
-                #shufle
-                idx = torch.randperm(w.nelement())
-                w = w.reshape(-1)[idx].reshape(w.size())
-                idx = torch.randperm(b.nelement())
-                b = b[idx]
+                if shuffle_flag1 == True:
+                    idx = torch.randperm(w.nelement())
+                    w = w.reshape(-1)[idx].reshape(w.size())
+                    idx = torch.randperm(b.nelement())
+                    b = b[idx]
                 # compute                        
                 out1 = torch.matmul(out1, w) + b
-                if k==2 or k==5:
+                out1_compute=out1
+                if  k==5 or k==2:
                     out1=out1
                 else:
                     out1 = elu(out1)
                 k=k+1
             
             ### now get the CKA between out and out1
+            out = out_compute
+            out1 = out1_compute
             X = out.to('cpu').detach().numpy()
             Y = out1.to('cpu').detach().numpy()
             X = X - np.mean(X,axis=0)
             Y = Y - np.mean(Y,axis=0)    
-            ###cka
+            ###cka using Hinton paper
             a=lin.norm((X.T@X),'fro')
             b=lin.norm((Y.T@Y),'fro')
             c=(lin.norm((Y.T @ X),'fro'))**2
             d = c/(a*b)
+            #print(d)
+            ####cka using Williams paper
+            # a = (X@X.T)
+            # a = np.trace(a.T@a)
+            # b = Y@Y.T
+            # b = np.trace(b.T@b)
+            # c = np.trace((X@X.T) @ (Y@Y.T))
+            # d= c/(np.sqrt(a*b))
+            #print(d)
+            
+            # PCA PLOTTING NOT NEEDED
+            # x=pca.fit_transform(X)
+            # y=convert_to_ClassNumbers(torch.from_numpy(Yonline).to(device).float())
+            # y = y.to('cpu').detach().numpy()       
+            # fig,(ax1,ax2)=plt.subplots(1,2)            
+            # ax1.scatter(x[:, 0], x[:, 1], c=y, cmap='tab10')            
+            # plt.title(str(m))
+            # x=pca.fit_transform(Y)
+            # y=convert_to_ClassNumbers(torch.from_numpy(Yonline).to(device).float())
+            # y = y.to('cpu').detach().numpy()                               
+            # ax2.scatter(x[:, 0], x[:, 1], c=y, cmap='tab10')
+            # plt.show()
+            # plt.title(str(n))
+    
+            
             ### orthogonal procrustus 1
             #R, sca = op(X, Y)
             #d = (lin.norm(X@R - Y))/(lin.norm(Y))
@@ -1224,6 +1435,11 @@ def linear_cka_dist(input_data,model,model1):
             D[m,n] = d
             
     return(D)
+
+
+
+
+
 
 
 def linear_cka_dist2(input_data,input_data1,model,model1):
@@ -1264,14 +1480,7 @@ def linear_cka_dist2(input_data,input_data1,model,model1):
     bias1.append(model1.decoder.linear2.state_dict()['bias'])
     bias1.append(model1.decoder.linear3.state_dict()['bias'])
     
-    # compute the activations
-    # act_l1
-    # act_l1
-    # act_l1
-    # act_l1
-    # act_l1
-    # act_l1
-    
+      
     # running the pairwise comparisons 
     D = np.zeros((6,6))
     for m in np.arange(len(layer)):
@@ -1326,12 +1535,96 @@ def linear_cka_dist2(input_data,input_data1,model,model1):
     return(D)
 
 
-
+def eval_ae_similarity(model,model1,condn_data_total,condn_data_total1,
+                                  Ytotal,Ytotal1):
+    
+    original_features = []
+    recon_features_origManifold = []
+    recon_features_swappedManifold = []
+    
+    # For the first dataset
+    idx = np.argmax(Ytotal,axis=1)
+    for ii in np.arange(len(np.unique(idx))):            
+        # get the indices for movement
+        idx1 = np.where(idx==ii)[0]
+        input_data = condn_data_total[idx1,:]
+        # compute the average
+        avg = np.mean(input_data,axis=0)
+        # pass it thru AEs
+        input_data = torch.from_numpy(input_data).to(device).float()
+        z,y=model(input_data) # pass it thru its own AE 
+        z1,y1=model1(input_data) # pass it thru another day AE
+        # get the data
+        input_data_recon = z.to('cpu').detach().numpy()
+        input_data_recon1 = z1.to('cpu').detach().numpy()
+        input_data = input_data.to('cpu').detach().numpy()
+        # compute error norm
+        recon_error_sameDayManifold = lin.norm((avg - input_data_recon),'fro')
+        recon_error_diffDayManifold = lin.norm((avg - input_data_recon1),'fro')
+        raw_error = lin.norm((avg - input_data),'fro')
+        # store results
+        original_features.append(raw_error)
+        recon_features_origManifold.append(recon_error_sameDayManifold)
+        recon_features_swappedManifold.append(recon_error_diffDayManifold)
+    
+    # for the second dataset
+    idx = np.argmax(Ytotal1,axis=1)
+    for ii in np.arange(len(np.unique(idx))):            
+        # get the indices for movement
+        idx1 = np.where(idx==ii)[0]
+        input_data = condn_data_total1[idx1,:]
+        # compute the average
+        avg = np.mean(input_data,axis=0)
+        # pass it thru AEs
+        input_data = torch.from_numpy(input_data).to(device).float()
+        z,y=model1(input_data) # pass it thru its own AE 
+        z1,y1=model(input_data) # pass it thru another day AE
+        # get the data
+        input_data_recon = z.to('cpu').detach().numpy()
+        input_data_recon1 = z1.to('cpu').detach().numpy()
+        input_data = input_data.to('cpu').detach().numpy()
+        # compute error norm
+        recon_error_sameDayManifold = lin.norm((avg - input_data_recon),'fro')
+        recon_error_diffDayManifold = lin.norm((avg - input_data_recon1),'fro')
+        raw_error = lin.norm((avg - input_data),'fro')
+        # store results
+        original_features.append(raw_error)
+        recon_features_origManifold.append(recon_error_sameDayManifold)
+        recon_features_swappedManifold.append(recon_error_diffDayManifold)
+        # plt.figure();
+        # plt.boxplot([original_features,recon_features_origManifold,
+        # recon_features_swappedManifold])
+    
+    return original_features,recon_features_origManifold,recon_features_swappedManifold
+    
  
     
 
     
+
+
+# dist_recon_error_mean=[]
+# dist_single_trial_mean=[]
+# a = lin.norm(avg)
+
+
+# for i in np.arange(input_data.shape[0]):
+#     err = avg - input_data[i,:]
+#     b = lin.norm(err)
+#     c = (a-b)/a
+#     dist_single_trial_mean.append(b)
     
+#     err = avg - input_data_recon[i,:]
+#     b = lin.norm(err)
+#     c = (a-b)/a
+#     dist_recon_error_mean.append(b)
+
+# plt.figure()
+# plt.boxplot([dist_single_trial_mean,dist_recon_error_mean])
+# plt.ylabel('Error between single trial and mean')
+# plt.xticks(ticks=[1,2],labels=('Raw','Reconstructed from AE'))
+
+
     
     
     
