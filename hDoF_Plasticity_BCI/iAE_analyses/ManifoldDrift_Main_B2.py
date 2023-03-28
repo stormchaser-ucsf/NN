@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Mar 24 15:38:40 2023
+Created on Sun Mar 26 09:51:14 2023
 
 @author: nikic
 """
@@ -59,57 +59,47 @@ gradient_clipping=10
 input_size=96
 hidden_size=48
 latent_dims=2
-num_classes = 6
+num_classes = 4
 
 # file location
-root_path = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker'
-root_imag_filename = '\Biomimetic_CenterOut_condn_data_Imagined_Day'
-root_online_filename = '\Biomimetic_CenterOut_condn_data_Online_Day'
-root_batch_filename = '\Biomimetic_CenterOut_condn_data_Batch_Day'
+root_path = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate B2'
+root_imag_filename = '\B2_condn_data_Imagined_Day'
+root_online_filename = '\B2_condn_data_Online_Day'
+root_batch_filename = '\B2_condn_data_Batch_Day'
 
 #%% MAIN LOOP TO GET THE DATA
 
 pval_results={}
 simal_res={}
 recon_res={}
-num_days=5
+num_days=6
 import time
 t0 = time.time()
-for i in np.arange(num_days)+1: #ROOT DAYS
+for i in np.arange(2,5): #only those days with all three sessions i.e., 2,3,4,5
     # load the data
     print('Processing Day ' + str(i) + ' data')
     imagined_file_name = root_path + root_imag_filename +  str(i) + '.mat'
-    condn_data_imagined,Yimagined = get_data(imagined_file_name,num_classes)
+    condn_data_imagined,Yimagined = get_data_B2(imagined_file_name)
     online_file_name = root_path + root_online_filename +  str(i) + '.mat'
-    condn_data_online,Yonline = get_data(online_file_name,num_classes)
+    condn_data_online,Yonline = get_data_B2(online_file_name)
     batch_file_name = root_path + root_batch_filename +  str(i) + '.mat'
-    condn_data_batch,Ybatch = get_data(batch_file_name,num_classes)    
-    nn_filename = 'iAE_' + str(i) + '.pth'   
+    if os.path.exists(batch_file_name):
+        condn_data_batch,Ybatch = get_data_B2(batch_file_name)    
+    nn_filename = 'iAE_' + str(i) + '.pth'
     
-    # data augment
-    len_data = max([condn_data_online.shape[0],condn_data_imagined.shape[0],
-                    condn_data_batch.shape[0]])
-    if condn_data_online.shape[0]<len_data:
-        condn_data_online,Yonline =   data_aug_mlp_chol_feature_equalSize(condn_data_online,
-                                            Yonline,len_data)
-    if condn_data_imagined.shape[0]<len_data:
-        condn_data_imagined,Yimagined =   data_aug_mlp_chol_feature_equalSize(condn_data_imagined,
-                                            Yimagined,len_data)
-    if condn_data_batch.shape[0]<len_data:
-        condn_data_batch,Ybatch =   data_aug_mlp_chol_feature_equalSize(condn_data_batch,
-                                            Ybatch,len_data)
-        
+    # data augment    
+    condn_data_online,Yonline =   data_aug_mlp_chol_feature_equalSize(condn_data_online,Yonline,condn_data_imagined.shape[0])
+    if os.path.exists(batch_file_name):
+        condn_data_batch,Ybatch =   data_aug_mlp_chol_feature_equalSize(condn_data_batch,Ybatch,condn_data_imagined.shape[0])
+       
     
-    #stack everything together 
-    #condn_data_total = np.concatenate((condn_data_imagined,condn_data_online,condn_data_batch),axis=0)    
-    #Ytotal = np.concatenate((Yimagined,Yonline,Ybatch),axis=0)     
-    condn_data_total = np.concatenate((condn_data_online,condn_data_batch),axis=0)    
-    Ytotal = np.concatenate((Yonline,Ybatch),axis=0)     
+    # stack everything together 
+    condn_data_total = np.concatenate((condn_data_imagined,condn_data_online,condn_data_batch),axis=0)    
+    Ytotal = np.concatenate((Yimagined,Yonline,Ybatch),axis=0)     
     
-    # only imagined 
+    # or use just the imagined data
     # condn_data_total = condn_data_imagined
     # Ytotal = Yimagined
-    
 
     # demean
     #condn_data_total = condn_data_total - np.mean(condn_data_total,axis=0)                   
@@ -131,36 +121,27 @@ for i in np.arange(num_days)+1: #ROOT DAYS
     #                                    condn_data_online.shape[0],latent_dims)        
 
 
-    for j in np.arange(i+1,num_days+1): #COMPARISON TO OTHER DAYS, LAYER BY LAYER
+    for j in np.arange(i+1,6): #COMPARISON TO OTHER DAYS, LAYER BY LAYER
         # load the data
         print('Processing Day ' + str(j) + ' data')
         imagined_file_name = root_path + root_imag_filename +  str(j) + '.mat'
-        condn_data_imagined1,Yimagined1 = get_data(imagined_file_name,num_classes)
+        condn_data_imagined1,Yimagined1 = get_data_B2(imagined_file_name)
         online_file_name = root_path + root_online_filename +  str(j) + '.mat'
-        condn_data_online1,Yonline1 = get_data(online_file_name,num_classes)
+        condn_data_online1,Yonline1 = get_data_B2(online_file_name)
         batch_file_name = root_path + root_batch_filename +  str(j) + '.mat'
-        condn_data_batch1,Ybatch1 = get_data(batch_file_name,num_classes)    
+        if os.path.exists(batch_file_name):
+            condn_data_batch1,Ybatch1 = get_data_B2(batch_file_name)    
         nn_filename = 'iAE_' + str(j) + '.pth'   
         
         # data augment
-        len_data = max([condn_data_online1.shape[0],condn_data_imagined1.shape[0],
-                        condn_data_batch1.shape[0]])
-        if condn_data_online1.shape[0]<len_data:
-            condn_data_online1,Yonline1 =   data_aug_mlp_chol_feature_equalSize(condn_data_online1,
-                                                Yonline1,len_data)
-        if condn_data_imagined1.shape[0]<len_data:
-            condn_data_imagined1,Yimagined1 =   data_aug_mlp_chol_feature_equalSize(condn_data_imagined1,
-                                                Yimagined1,len_data)
-        if condn_data_batch1.shape[0]<len_data:
-            condn_data_batch1,Ybatch1 =   data_aug_mlp_chol_feature_equalSize(condn_data_batch1,
-                                                Ybatch1,len_data)
+        condn_data_online1,Yonline1 =   data_aug_mlp_chol_feature_equalSize(condn_data_online1,Yonline1,condn_data_imagined1.shape[0])
+        condn_data_batch1,Ybatch1 =   data_aug_mlp_chol_feature_equalSize(condn_data_batch1,Ybatch1,condn_data_imagined1.shape[0])
         
         # stack everything together 
-        # condn_data_total1 = np.concatenate((condn_data_imagined1,condn_data_online1,condn_data_batch1),axis=0)    
-        # Ytotal1 = np.concatenate((Yimagined1,Yonline1,Ybatch1),axis=0) 
-        condn_data_total1 = np.concatenate((condn_data_online1,condn_data_batch1),axis=0)    
-        Ytotal1 = np.concatenate((Yonline1,Ybatch1),axis=0)   
+        condn_data_total1 = np.concatenate((condn_data_imagined1,condn_data_online1,condn_data_batch1),axis=0)    
+        Ytotal1 = np.concatenate((Yimagined1,Yonline1,Ybatch1),axis=0)   
         
+        # or just use the imagined data
         # condn_data_total1 = condn_data_imagined1
         # Ytotal1 = Yimagined1
 
@@ -218,13 +199,20 @@ for i in np.arange(num_days)+1: #ROOT DAYS
         # SIMILARITY OF THE RECON TO THE AVERAGE MAP....thru its own or another day AE
         orig, origManifold,swappedManifold = eval_ae_similarity(model,model1,condn_data_total,
                                                                 condn_data_total1,Ytotal,Ytotal1)    
+        # SIMILARITY AFTER SHUFFLING AE
+        # model_shuffle,model1_shuffle = shuffle_weights(model,model1)
+        # orig_s, origManifold_s,swappedManifold_s = eval_ae_similarity(model_shuffle,model1_shuffle,condn_data_total,
+        #                                                         condn_data_total1,Ytotal,Ytotal1)    
+        
+        
+        
         # plt.figure();
         # plt.boxplot([orig, origManifold,swappedManifold])
         
         # STORE RESULTS
-        pval_results[i-1,j-1] = pval
-        simal_res[i-1,j-1] = dmain
-        recon_res[i-1,j-1] = [orig, origManifold,swappedManifold]
+        pval_results[i,j] = pval
+        simal_res[i,j] = dmain
+        recon_res[i,j] = [orig, origManifold,swappedManifold]
         
         # RECONSTRUCTION ERROR FOR A DAY ON ITS OWN MODEL COMPARED TO ANOTHER DAY
         # input_data = torch.from_numpy(condn_data_total).to(device).float()
@@ -286,14 +274,15 @@ print(str(time_taken) + 's')
 pval_results = np.array(list(pval_results.items()),dtype=object)
 simal_res = np.array(list(simal_res.items()),dtype=object)
 recon_res = np.array(list(recon_res.items()),dtype=object)
-np.savez('ManifoldAnalyses_Main_CKD_All_IntDirTowardsTarget45deg_1000boot', 
+np.savez('ManifoldAnalyses_Main_B2_Days2to5_1000Boot', 
          pval_results = pval_results,
          simal_res = simal_res,
          recon_res = recon_res)
 
 #%% PLOTTING THE RESULTS 
 
-data =np.load('ManifoldAnalyses_Main_CKD_All_IntDirTowardsTarget45deg_1000boot.npz',allow_pickle=True)
+from iAE_utils_models import *
+data =np.load('ManifoldAnalyses_Main_B2_Days2to5_1000Boot.npz',allow_pickle=True)
 pval_results = data.get('pval_results')
 simal_res = data.get('simal_res')
 recon_res = data.get('recon_res')
@@ -329,8 +318,8 @@ for i in np.arange(simal_res.shape[0]):
 plt.figure()
 plt.hist(simal)
 
-# plot all the pairwise comparisons... histogram of no. of significant CKA
-pfdr,pfdr_thresh=fdr_threshold(pval,0.01,'Parametric')
+
+pfdr,pfdr_thresh=fdr_threshold(pval,0.05,'Parametric')
 prop_res=  np.zeros((len(pval_results),6))
 for i in np.arange(len(pval_results)):
     tmp = pval_results[i][1][:-1]
@@ -338,7 +327,9 @@ for i in np.arange(len(pval_results)):
     prop_res[i,tmp] = 1
 a= np.sum(prop_res,axis=0)/prop_res.shape[0]
 plt.figure();
-plt.bar(np.arange(len(a)),a)
+plt.bar(np.arange(len(a)),a);
+
+
 
 # pval_results = np.array([1,2,3])
 # simal_res = np.array([12,3])
@@ -363,6 +354,70 @@ plt.bar(np.arange(len(a)),a)
 
 # plt.stem(D[4,:])
 
+def reconstruct_first_2_PCs(hand_R_X,hand_R_Y,hand_L_X,hand_L_Y):
+    stacked_data = np.vstack([hand_R_X,hand_R_Y,hand_L_X,hand_L_Y]).T
+    
+    # Mean center data
+    stacked_data = stacked_data - np.mean(stacked_data,axis=0)
+    
+    # SVD
+    U,S,V = lin.svd(stacked_data)
+    
+    # rows of V are the eigenvectors or PCs
+    # Cols of U are the projections onto those PCs    
+    # verify this
+    pc1 = stacked_data @ V[0,:].T
+    plt.figure();plt.plot(pc1)
+    plt.figure();plt.plot(U[:,0]*S[0]) # have to scale by singular value
+    
+    # reconstruct the data matrix back 
+    S = np.diag(S)
+    recon_PC1 = S[0,0] * (U[:,0][:,None] @  V[0,:][None,:])
+    recon_PC2 = S[1,1] * (U[:,1][:,None] @  V[1,:][None,:])
+    
+    # plot against each other 
+    plt.figure();
+    plt.plot(recon_PC1[:,0])
+    plt.plot(recon_PC1[:,1])
+    
+    plt.plot(recon_PC1[:,0],recon_PC1[:,1])
+    
+    
+    #U_matrix, Sigma,V_transpose = np.linalg.svd(stacked_data)
+    
+    reconstruct_PC1 = Sigma[0] * (U_matrix[:,0][:,None] @ V_transpose[0,:][None,:])
+    reconstruct_PC2 = Sigma[1] * (U_matrix[:,1][:,None] @ V_transpose[1,:][None,:])
+    
+    df1 = pd.DataFrame(reconstruct_PC1, index=pd.MultiIndex.from_product([['PC1'] , ['RX','RY','LX','LY']]),
+                      columns=pd.RangeIndex(0,reconstruct_PC1.shape[1], name='frame_number'))
+    df2 = pd.DataFrame(reconstruct_PC2, index=pd.MultiIndex.from_product([['PC2'] , ['RX','RY','LX','LY']]),
+                      columns=pd.RangeIndex(0,reconstruct_PC2.shape[1], name='frame_number'))
+    
+    return pd.concat([df1,df2], axis=0, ignore_index=False)
 
 
-      
+df =  pd.read_csv('C:/Users/nikic/Downloads/Single Mouse Data.csv')
+tmp_data = df.hand_Rx[1:].to_numpy()
+hand_R_X=np.empty([])
+for i in np.arange(len(tmp_data)):
+    tmp = float(tmp_data[i])
+    hand_R_X=np.append(hand_R_X,tmp)
+    
+tmp_data = df.hand_Ry[1:].to_numpy()
+hand_R_Y=np.empty([])
+for i in np.arange(len(tmp_data)):
+    tmp = float(tmp_data[i])
+    hand_R_Y=np.append(hand_R_Y,tmp)
+
+tmp_data = df.hand_Lx[1:].to_numpy()
+hand_L_X=np.empty([])
+for i in np.arange(len(tmp_data)):
+    tmp = float(tmp_data[i])
+    hand_L_X=np.append(hand_L_X,tmp)
+    
+tmp_data = df.hand_Ly[1:].to_numpy()
+hand_L_Y=np.empty([])
+for i in np.arange(len(tmp_data)):
+    tmp = float(tmp_data[i])
+    hand_L_Y=np.append(hand_L_Y,tmp)
+

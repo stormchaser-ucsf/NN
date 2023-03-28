@@ -145,67 +145,67 @@ plt.figure()
 plt.bar(np.arange(7)+1,class_mem)
 
 
-# # data augmentation on the training samples  -> introduce random noise plus random shift to each  training sample
-# Xtrain_aug = np.zeros(Xtrain.shape)
-# len = Xtrain.shape[2]
-# for i in np.arange(len):
+# data augmentation on the training samples  -> introduce random noise plus random shift to each  training sample
+Xtrain_aug = np.zeros(Xtrain.shape)
+len = Xtrain.shape[2]
+for i in np.arange(len):
     
-#     print(i)
+    print(i)
     
-#     tmp = np.squeeze(Xtrain[:,:,i])
-#     tid = Ytrain[i]
+    tmp = np.squeeze(Xtrain[:,:,i])
+    tid = Ytrain[i]
     
-#     # first 128, high gamma
-#     tmp1 = tmp[:,:128]
-#     # add noise
-#     var_noise = 0.3
-#     std_dev = np.std(np.concatenate(tmp1))
-#     add_noise = rnd.randn(tmp1.shape[0],tmp1.shape[1]) * std_dev * var_noise
-#     tmp1n = tmp1 + add_noise
-#     #plt.figure();plt.plot(tmp1[:,13]);plt.plot(tmp1n[:,13]);plt.show()    
-#     # add variable mean offset
-#     m=np.mean(tmp1,0)
-#     add_mean = m*0.1
-#     flip_sign = rnd.rand(add_mean.shape[0])
-#     flip_sign[flip_sign>0.5]=1
-#     flip_sign[flip_sign<=0.5]=-1
-#     add_mean = np.multiply(flip_sign,add_mean) + m
-#     tmp1m = tmp1n + add_mean
-#     #tmp1m  = (tmp1m-tmp1m.min())/(tmp1m.max()-tmp1m.min())    
-#     #plt.figure();plt.plot(tmp1[:,13]);plt.plot(tmp1m[:,13]);plt.show()
+    # first 128, high gamma
+    tmp1 = tmp[:,:128]
+    # add noise
+    var_noise = 0.3
+    std_dev = np.std(np.concatenate(tmp1))
+    add_noise = rnd.randn(tmp1.shape[0],tmp1.shape[1]) * std_dev * var_noise
+    tmp1n = tmp1 + add_noise
+    #plt.figure();plt.plot(tmp1[:,13]);plt.plot(tmp1n[:,13]);plt.show()    
+    # add variable mean offset
+    m=np.mean(tmp1,0)
+    add_mean = m*0.1
+    flip_sign = rnd.rand(add_mean.shape[0])
+    flip_sign[flip_sign>0.5]=1
+    flip_sign[flip_sign<=0.5]=-1
+    add_mean = np.multiply(flip_sign,add_mean) + m
+    tmp1m = tmp1n + add_mean
+    #tmp1m  = (tmp1m-tmp1m.min())/(tmp1m.max()-tmp1m.min())    
+    #plt.figure();plt.plot(tmp1[:,13]);plt.plot(tmp1m[:,13]);plt.show()
     
-#     # next 128, LFOs
-#     tmp2 = tmp[:,128:]
-#     # add noise
-#     var_noise = 0.3
-#     std_dev = np.std(np.concatenate(tmp2))
-#     add_noise = rnd.randn(tmp2.shape[0],tmp2.shape[1]) * std_dev * var_noise
-#     tmp2n = tmp2 + add_noise
-#     #plt.figure();plt.plot(tmp2[:,13]);plt.plot(tmp2n[:,13]);plt.show()    
-#     # add variable mean offset
-#     m=np.mean(tmp2,0)
-#     add_mean = m*0.15
-#     flip_sign = rnd.rand(add_mean.shape[0])
-#     flip_sign[flip_sign>0.5]=1
-#     flip_sign[flip_sign<=0.5]=-1
-#     add_mean = np.multiply(flip_sign,add_mean) + m
-#     tmp2m = tmp2n + add_mean
-#     #tmp2m  = (tmp2m-tmp2m.min())/(tmp2m.max()-tmp2m.min())    
-#     #plt.figure();plt.plot(tmp2[:,13]);plt.plot(tmp2m[:,13]);plt.show()
+    # next 128, LFOs
+    tmp2 = tmp[:,128:]
+    # add noise
+    var_noise = 0.3
+    std_dev = np.std(np.concatenate(tmp2))
+    add_noise = rnd.randn(tmp2.shape[0],tmp2.shape[1]) * std_dev * var_noise
+    tmp2n = tmp2 + add_noise
+    #plt.figure();plt.plot(tmp2[:,13]);plt.plot(tmp2n[:,13]);plt.show()    
+    # add variable mean offset
+    m=np.mean(tmp2,0)
+    add_mean = m*0.15
+    flip_sign = rnd.rand(add_mean.shape[0])
+    flip_sign[flip_sign>0.5]=1
+    flip_sign[flip_sign<=0.5]=-1
+    add_mean = np.multiply(flip_sign,add_mean) + m
+    tmp2m = tmp2n + add_mean
+    #tmp2m  = (tmp2m-tmp2m.min())/(tmp2m.max()-tmp2m.min())    
+    #plt.figure();plt.plot(tmp2[:,13]);plt.plot(tmp2m[:,13]);plt.show()
     
-#     tmp=np.concatenate((tmp1m,tmp2m),axis=1)
+    tmp=np.concatenate((tmp1m,tmp2m),axis=1)
     
-#     Ytrain = np.append(Ytrain,tid) 
-#     Xtrain_aug[:,:,i] =tmp
-#     #Xtrain[:,:,Xtrain.shape[2]+1] = tmp
-#     #Xtrain=np.dstack((Xtrain,tmp))
-#     #Xtrain = np.append(Xtrain,np.atleast_3d(tmp),axis=2)
-#     #Xtrain = np.concatenate((Xtrain,np.atleast_3d(tmp)),axis=2)
+    Ytrain = np.append(Ytrain,tid) 
+    Xtrain_aug[:,:,i] =tmp
+    #Xtrain[:,:,Xtrain.shape[2]+1] = tmp
+    #Xtrain=np.dstack((Xtrain,tmp))
+    #Xtrain = np.append(Xtrain,np.atleast_3d(tmp),axis=2)
+    #Xtrain = np.concatenate((Xtrain,np.atleast_3d(tmp)),axis=2)
 
 
-# Xtrain = np.concatenate((Xtrain,Xtrain_aug),axis=2)
-# del Xtrain_aug
-# del condn_data_new
+Xtrain = np.concatenate((Xtrain,Xtrain_aug),axis=2)
+del Xtrain_aug
+del condn_data_new
 print('Data augmentation also done')
 
 class_mem = np.empty([0])
@@ -430,6 +430,167 @@ model = model.to(device)
                                     
 #out = model(x_train)
 
+#### MODEL FROM CHAT GPT ####
+class SpatioTemporalTransformer(nn.Module):
+    def __init__(self, input_size, num_heads, num_layers, dropout_rate, output_size):
+        super(SpatioTemporalTransformer, self).__init__()
+        self.transformer_encoder = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(
+                d_model=input_size,
+                nhead=num_heads,
+                dropout=dropout_rate
+            ),
+            num_layers=num_layers
+        )
+        self.fc = nn.Linear(input_size, output_size)
+        
+    def forward(self, x):
+        x = x.permute(1, 0, 2) # transpose to (seq_len, batch_size, input_size)
+        x = self.transformer_encoder(x)
+        x = x[-1] # take only the last time step output
+        x = self.fc(x)
+        return x
+
+input_size = 256 # number of input features
+num_heads = 2 # number of attention heads
+num_layers = 2 # number of transformer layers
+dropout_rate = 0.1 # dropout rate for transformer
+output_size = 7 # number of classes for classification
+
+model = SpatioTemporalTransformer(input_size, num_heads, num_layers, dropout_rate, output_size)
+model = model.to(device)
+tmp = torch.from_numpy(Xtrain[:,:,:32]).to(device).float()
+tmp = torch.permute(tmp, (2,0,1))
+out = model(tmp)
+
+
+##### ANOTHER MODEL FROM CHAT GPT ####
+
+class GatedTransformer(nn.Module):
+    def __init__(self, input_dim, d_model, nhead, num_layers, dropout,output_dim):
+        super().__init__()
+        
+        self.input_dim = input_dim
+        self.d_model = d_model
+        self.nhead = nhead
+        self.num_layers = num_layers
+        self.dropout = dropout
+        self.linear_layer = nn.Linear(d_model,output_dim)
+        
+        # Positional encoding
+        self.pos_encoder = PositionalEncoding(d_model)
+        
+        # Gated Transformer encoder
+        encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dropout=dropout)
+        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+        
+        # Final linear layer
+        self.fc = nn.Linear(d_model, 1)
+        
+    def forward(self, x):
+        
+        x = x.permute(1, 0, 2) # transpose to (seq_len, batch_size, input_size)
+        
+        # Add positional encoding to input tensor
+        x = self.pos_encoder(x)
+        
+        # Transpose input tensor to match TransformerEncoder input format
+        x = x.transpose(0, 1)
+        
+        # Pass input through Gated Transformer encoder
+        x = self.encoder(x)
+        
+        # Average over time dimension
+        x = torch.mean(x, dim=1)
+        
+        # Pass through final linear layer
+        x = self.linear_layer(x)
+        
+        return x
+    
+class PositionalEncoding(nn.Module):
+    def __init__(self, d_model, dropout=0.1, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        position = torch.arange(0, max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
+        pe = torch.zeros(1, max_len, d_model)
+        pe[0, :, 0::2] = torch.sin(position * div_term)
+        pe[0, :, 1::2] = torch.cos(position * div_term)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        x = x + self.pe[:, :x.size(1)]
+        return self.dropout(x)
+
+
+
+input_size = 256 # number of input features
+output_size = 7 # number of classes for classification
+d_model = 128
+nhead = 2 # number of attention heads
+num_layers = 2 # number of transformer layers
+dropout = 0.3 # dropout rate for transformer
+
+model = GatedTransformer(input_size, d_model, nhead, num_layers, dropout,output_size)
+model = model.to(device)
+tmp = torch.from_numpy(Xtrain[:,:,:32]).to(device).float()
+tmp = torch.permute(tmp, (2,0,1))
+out = model(tmp)
+
+###### ANOTHER MODEL FROM CHAT GPT
+
+# Define the spatiotemporal transformer model
+class SpatiotemporalTransformer(nn.Module):
+    def __init__(self, input_dim, output_dim, hidden_dim, num_layers, dropout):
+        super(SpatiotemporalTransformer, self).__init__()
+
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.hidden_dim = hidden_dim
+        self.num_layers = num_layers
+        self.dropout = dropout
+
+        # Temporal Encoder
+        self.temporal_encoder_layer = nn.TransformerEncoderLayer(d_model=input_dim, nhead=4)
+        self.temporal_encoder = nn.TransformerEncoder(self.temporal_encoder_layer, num_layers=num_layers)
+
+        # Spatial Encoder
+        self.spatial_encoder_layer = nn.TransformerEncoderLayer(d_model=input_dim, nhead=4)
+        self.spatial_encoder = nn.TransformerEncoder(self.spatial_encoder_layer, num_layers=num_layers)
+
+        # Linear Layers
+        self.linear1 = nn.Linear(input_dim * 2, hidden_dim)
+        self.dropout1 = nn.Dropout(dropout)
+        self.linear2 = nn.Linear(hidden_dim, output_dim)
+
+    def forward(self, x):
+        # x shape: (batch_size, seq_len, input_dim, num_channels)
+
+        # Reshape for temporal transformer
+        x = x.permute(1, 0, 2, 3)  # shape: (seq_len, batch_size, input_dim, num_channels)
+        x = x.reshape(x.size(0), x.size(1), -1)  # shape: (seq_len, batch_size, input_dim * num_channels)
+
+        # Temporal Encoder
+        x = self.temporal_encoder(x)
+
+        # Reshape for spatial transformer
+        x = x.permute(1, 2, 0)  # shape: (batch_size, input_dim * num_channels, seq_len)
+
+        # Spatial Encoder
+        x = self.spatial_encoder(x)
+
+        # Reshape for linear layers
+        x = x.permute(0, 2, 1)  # shape: (batch_size, seq_len, input_dim * num_channels)
+        x = x.mean(dim=1)  # shape: (batch_size, input_dim * num_channels)
+
+        # Linear Layers
+        x = self.linear1(x)
+        x = self.dropout1(x)
+        x = self.linear2(x)
+
+        return x
 
 
 #####################  TRAINING LOOP   ##########################################

@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri Mar 24 15:38:40 2023
+Created on Sun Mar 26 10:18:44 2023
+
+@author: nikic
+"""
+
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Mar 26 09:51:14 2023
 
 @author: nikic
 """
@@ -44,7 +51,6 @@ import scipy.stats as stats
 # GPU
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 import pickle
-from statsmodels.stats.multitest import fdrcorrection as fdr
 
 # training params 
 latent_dims=2
@@ -56,23 +62,23 @@ patience=5
 gradient_clipping=10
 
 # model params
-input_size=96
+input_size=759
 hidden_size=48
 latent_dims=2
-num_classes = 6
+num_classes = 7
 
 # file location
-root_path = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker'
-root_imag_filename = '\Biomimetic_CenterOut_condn_data_Imagined_Day'
-root_online_filename = '\Biomimetic_CenterOut_condn_data_Online_Day'
-root_batch_filename = '\Biomimetic_CenterOut_condn_data_Batch_Day'
+root_path = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate B3'
+root_imag_filename = '\B3_condn_data_Imagined_Day'
+root_online_filename = '\B3_condn_data_Online_Day'
+root_batch_filename = '\B3_condn_data_Batch_Day'
 
 #%% MAIN LOOP TO GET THE DATA
 
 pval_results={}
 simal_res={}
 recon_res={}
-num_days=5
+num_days=2
 import time
 t0 = time.time()
 for i in np.arange(num_days)+1: #ROOT DAYS
@@ -84,32 +90,23 @@ for i in np.arange(num_days)+1: #ROOT DAYS
     condn_data_online,Yonline = get_data(online_file_name,num_classes)
     batch_file_name = root_path + root_batch_filename +  str(i) + '.mat'
     condn_data_batch,Ybatch = get_data(batch_file_name,num_classes)    
-    nn_filename = 'iAE_' + str(i) + '.pth'   
+    nn_filename = 'iAE_' + str(i) + '.pth'
     
-    # data augment
-    len_data = max([condn_data_online.shape[0],condn_data_imagined.shape[0],
-                    condn_data_batch.shape[0]])
-    if condn_data_online.shape[0]<len_data:
-        condn_data_online,Yonline =   data_aug_mlp_chol_feature_equalSize(condn_data_online,
-                                            Yonline,len_data)
-    if condn_data_imagined.shape[0]<len_data:
-        condn_data_imagined,Yimagined =   data_aug_mlp_chol_feature_equalSize(condn_data_imagined,
-                                            Yimagined,len_data)
-    if condn_data_batch.shape[0]<len_data:
-        condn_data_batch,Ybatch =   data_aug_mlp_chol_feature_equalSize(condn_data_batch,
-                                            Ybatch,len_data)
-        
+    # data augment    
+    condn_data_online,Yonline =   data_aug_mlp_chol_feature_equalSize_B3_NoPooling(condn_data_online,
+                                                    Yonline,condn_data_imagined.shape[0])
+    condn_data_batch,Ybatch =   data_aug_mlp_chol_feature_equalSize_B3_NoPooling(condn_data_batch,
+                                                Ybatch,condn_data_imagined.shape[0])
+   
+       
     
-    #stack everything together 
-    #condn_data_total = np.concatenate((condn_data_imagined,condn_data_online,condn_data_batch),axis=0)    
-    #Ytotal = np.concatenate((Yimagined,Yonline,Ybatch),axis=0)     
-    condn_data_total = np.concatenate((condn_data_online,condn_data_batch),axis=0)    
-    Ytotal = np.concatenate((Yonline,Ybatch),axis=0)     
+    # stack everything together 
+    condn_data_total = np.concatenate((condn_data_imagined,condn_data_online,condn_data_batch),axis=0)    
+    Ytotal = np.concatenate((Yimagined,Yonline,Ybatch),axis=0)     
     
-    # only imagined 
+    # or use just the imagined data
     # condn_data_total = condn_data_imagined
     # Ytotal = Yimagined
-    
 
     # demean
     #condn_data_total = condn_data_total - np.mean(condn_data_total,axis=0)                   
@@ -131,7 +128,7 @@ for i in np.arange(num_days)+1: #ROOT DAYS
     #                                    condn_data_online.shape[0],latent_dims)        
 
 
-    for j in np.arange(i+1,num_days+1): #COMPARISON TO OTHER DAYS, LAYER BY LAYER
+    for j in np.arange(i+1,11): #COMPARISON TO OTHER DAYS, LAYER BY LAYER
         # load the data
         print('Processing Day ' + str(j) + ' data')
         imagined_file_name = root_path + root_imag_filename +  str(j) + '.mat'
@@ -139,30 +136,24 @@ for i in np.arange(num_days)+1: #ROOT DAYS
         online_file_name = root_path + root_online_filename +  str(j) + '.mat'
         condn_data_online1,Yonline1 = get_data(online_file_name,num_classes)
         batch_file_name = root_path + root_batch_filename +  str(j) + '.mat'
-        condn_data_batch1,Ybatch1 = get_data(batch_file_name,num_classes)    
+        condn_data_batch1,Ybatch1 = get_data(batch_file_name,num_classes)
         nn_filename = 'iAE_' + str(j) + '.pth'   
         
-        # data augment
-        len_data = max([condn_data_online1.shape[0],condn_data_imagined1.shape[0],
-                        condn_data_batch1.shape[0]])
-        if condn_data_online1.shape[0]<len_data:
-            condn_data_online1,Yonline1 =   data_aug_mlp_chol_feature_equalSize(condn_data_online1,
-                                                Yonline1,len_data)
-        if condn_data_imagined1.shape[0]<len_data:
-            condn_data_imagined1,Yimagined1 =   data_aug_mlp_chol_feature_equalSize(condn_data_imagined1,
-                                                Yimagined1,len_data)
-        if condn_data_batch1.shape[0]<len_data:
-            condn_data_batch1,Ybatch1 =   data_aug_mlp_chol_feature_equalSize(condn_data_batch1,
-                                                Ybatch1,len_data)
+        # data augment    
+        condn_data_online1,Yonline1 =   data_aug_mlp_chol_feature_equalSize_B3_NoPooling(condn_data_online1,
+                                                        Yonline1,condn_data_imagined1.shape[0])
+        condn_data_batch1,Ybatch1 =   data_aug_mlp_chol_feature_equalSize_B3_NoPooling(condn_data_batch1,
+                                                    Ybatch1,condn_data_imagined1.shape[0])
+       
+           
         
         # stack everything together 
-        # condn_data_total1 = np.concatenate((condn_data_imagined1,condn_data_online1,condn_data_batch1),axis=0)    
-        # Ytotal1 = np.concatenate((Yimagined1,Yonline1,Ybatch1),axis=0) 
-        condn_data_total1 = np.concatenate((condn_data_online1,condn_data_batch1),axis=0)    
-        Ytotal1 = np.concatenate((Yonline1,Ybatch1),axis=0)   
+        condn_data_total1 = np.concatenate((condn_data_imagined1,condn_data_online1,condn_data_batch1),axis=0)    
+        Ytotal1 = np.concatenate((Yimagined1,Yonline1,Ybatch1),axis=0)     
         
-        # condn_data_total1 = condn_data_imagined1
-        # Ytotal1 = Yimagined1
+        # or use just the imagined data
+        # condn_data_total = condn_data_imagined
+        # Ytotal = Yimagined
 
         #de-mean                     
         #condn_data_total1 = condn_data_total1 - np.mean(condn_data_total1,axis=0)
@@ -193,7 +184,7 @@ for i in np.arange(num_days)+1: #ROOT DAYS
         
         
         # GETTING THE BOOT STATISTICS AFTER SHUFFLING THE WEIGHTS OF THE AE           
-        boot_val = np.zeros((1000,6))
+        boot_val = np.zeros((100,6))
         for boot in np.arange(boot_val.shape[0]):
             print(boot)
             shuffle_flag=False;shuffle_flag1=True
@@ -286,14 +277,14 @@ print(str(time_taken) + 's')
 pval_results = np.array(list(pval_results.items()),dtype=object)
 simal_res = np.array(list(simal_res.items()),dtype=object)
 recon_res = np.array(list(recon_res.items()),dtype=object)
-np.savez('ManifoldAnalyses_Main_CKD_All_IntDirTowardsTarget45deg_1000boot', 
+np.savez('ManifoldAnalyses_Main', 
          pval_results = pval_results,
          simal_res = simal_res,
          recon_res = recon_res)
 
 #%% PLOTTING THE RESULTS 
 
-data =np.load('ManifoldAnalyses_Main_CKD_All_IntDirTowardsTarget45deg_1000boot.npz',allow_pickle=True)
+data =np.load('ManifoldAnalyses_Main.npz',allow_pickle=True)
 pval_results = data.get('pval_results')
 simal_res = data.get('simal_res')
 recon_res = data.get('recon_res')
@@ -309,36 +300,7 @@ for i in np.arange(recon_res.shape[0]):
 
 plt.figure()
 plt.boxplot([recon_raw,recon_ae_orig,recon_ae_swap])
-print(stats.ttest_rel(recon_ae_swap,recon_raw))
-print(np.mean([recon_raw,recon_ae_orig,recon_ae_swap],axis=1))
-
-
-pval=np.array([])
-for i in np.arange(pval_results.shape[0]):
-    pval = np.append(pval,pval_results[i][1])
-
-plt.figure()
-plt.hist(pval)
-pfdr_out,pfdr = fdr(pval,alpha=0.05)
-print(pfdr_out)
-print(sum(pfdr_out==True)/len(pfdr_out))
-
-simal=np.array([])
-for i in np.arange(simal_res.shape[0]):
-    simal = np.append(simal,simal_res[i][1][1])
-plt.figure()
-plt.hist(simal)
-
-# plot all the pairwise comparisons... histogram of no. of significant CKA
-pfdr,pfdr_thresh=fdr_threshold(pval,0.01,'Parametric')
-prop_res=  np.zeros((len(pval_results),6))
-for i in np.arange(len(pval_results)):
-    tmp = pval_results[i][1][:-1]
-    tmp = np.sum(tmp<=pfdr)
-    prop_res[i,tmp] = 1
-a= np.sum(prop_res,axis=0)/prop_res.shape[0]
-plt.figure();
-plt.bar(np.arange(len(a)),a)
+stats.ttest_rel(recon_ae_swap,recon_raw)
 
 # pval_results = np.array([1,2,3])
 # simal_res = np.array([12,3])

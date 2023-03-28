@@ -30,15 +30,17 @@ def cca(Xa,Xb):
         Caa = Caa + 1e-8 * np.identity(Caa.shape[0])
     
     # cholesky factorization
-    Caa12 = lin.cholesky(Caa)
-    Cbb12 = lin.cholesky(Cbb)
+    Caa12 = (lin.cholesky(Caa)).T
+    Cbb12 = lin.cholesky(Cbb).T
         
     # solver    
-    X = lin.inv(np.transpose(Caa12) ) @ Cab @ lin.inv(Cbb12)
-    U,S,V = lin.svd(X)
+    X = (lin.inv(Caa12.T) @ Cab) @ (lin.inv(Cbb12))
+    #X = lin.solve(Caa12.T, lin.solve(Cbb12,Cab))
+    U,S,V = lin.svd(X,full_matrices=False)
     #U,S,V = sp.linalg.svd(X)
     Wa = lin.inv(Caa12) @ U;
     Wb = lin.inv(Cbb12) @ V;
+    
     
     #canonical variates
     Za = Xa @ Wa;
@@ -49,17 +51,14 @@ def cca(Xa,Xb):
 
 
 
-Xa = np.random.randn(200,2)
-Xb = np.random.randn(200,7)
+Xa = np.random.randn(200,96)
+Xb = np.random.randn(200,96)
 Wa,Wb,S,Za,Zb = cca(Xa,Xb)
 print(S)
-plt.plot(Za[:,0],Zb[:,0],'.')
+#plt.plot(Za[:,0],Zb[:,0],'.')
+plt.stem(S)
+print(S[1:10])
 
-
-Xa = layer1_day1.T
-Xb = layer1_day2.T
-Wa,Wb,S,Za,Zb = cca(Xa,Xb)
-print(S)
 
 cca_func = CCA(n_components=2)
 cca_func.fit(Xa,Xb)

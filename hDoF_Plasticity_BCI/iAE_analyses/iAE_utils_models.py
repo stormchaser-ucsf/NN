@@ -26,6 +26,7 @@ from sklearn.metrics import silhouette_samples as sil_samples
 import scipy.stats as stats
 from sklearn.decomposition import PCA as PCA
 pca=PCA(n_components=2)
+from statsmodels.stats.multitest import fdrcorrection as fdr
 
 # setting up GPU
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -1212,7 +1213,7 @@ def data_aug_mlp_chol_feature_equalSize(indata,labels,data_size):
         new_data[:,np.arange(1,96,3)] = new_beta
         new_data[:,np.arange(2,96,3)] = new_hg
         #add some noise
-        new_data = new_data + 0.02*rnd.randn(new_data.shape[0],new_data.shape[1])
+        new_data = new_data + 0.002*rnd.randn(new_data.shape[0],new_data.shape[1])
         
         # make it unit norm
         for i in np.arange(new_data.shape[0]):
@@ -1535,6 +1536,131 @@ def linear_cka_dist2(input_data,input_data1,model,model1):
     return(D)
 
 
+def shuffle_weights(model,model1):
+    model.eval()
+    model1.eval()
+    elu=nn.ELU()    
+    # getting the layers of first manifold
+    layer = []
+    layer.append(model.encoder.linear1.state_dict()['weight'])
+    layer.append(model.encoder.linear2.state_dict()['weight'])
+    layer.append(model.encoder.linear3.state_dict()['weight'])
+    layer.append(model.decoder.linear1.state_dict()['weight'])
+    layer.append(model.decoder.linear2.state_dict()['weight'])
+    layer.append(model.decoder.linear3.state_dict()['weight'])
+    bias = []
+    bias.append(model.encoder.linear1.state_dict()['bias'])
+    bias.append(model.encoder.linear2.state_dict()['bias'])
+    bias.append(model.encoder.linear3.state_dict()['bias'])
+    bias.append(model.decoder.linear1.state_dict()['bias'])
+    bias.append(model.decoder.linear2.state_dict()['bias'])
+    bias.append(model.decoder.linear3.state_dict()['bias'])
+    # getting the layers of second manifold
+    layer1 = []
+    layer1.append(model1.encoder.linear1.state_dict()['weight'])
+    layer1.append(model1.encoder.linear2.state_dict()['weight'])
+    layer1.append(model1.encoder.linear3.state_dict()['weight'])
+    layer1.append(model1.decoder.linear1.state_dict()['weight'])
+    layer1.append(model1.decoder.linear2.state_dict()['weight'])
+    layer1.append(model1.decoder.linear3.state_dict()['weight'])
+    bias1 = []
+    bias1.append(model1.encoder.linear1.state_dict()['bias'])
+    bias1.append(model1.encoder.linear2.state_dict()['bias'])
+    bias1.append(model1.encoder.linear3.state_dict()['bias'])
+    bias1.append(model1.decoder.linear1.state_dict()['bias'])
+    bias1.append(model1.decoder.linear2.state_dict()['bias'])
+    bias1.append(model1.decoder.linear3.state_dict()['bias'])
+    
+    # shuffle the weights of first NN
+    for n in np.arange(len(layer)):  
+        w = torch.transpose(layer[n],0,1)
+        b = bias[n]        
+        idx = torch.randperm(w.nelement())
+        w = w.reshape(-1)[idx].reshape(w.size())
+        idx = torch.randperm(b.nelement())
+        b = b[idx]
+        layer[n] = torch.transpose(w,0,1)
+        bias[n] = b
+        
+    
+    model.encoder.linear1.state_dict()['weight'].copy_(layer[0])    
+    model.encoder.linear2.state_dict()['weight'].copy_(layer[1])
+    model.encoder.linear3.state_dict()['weight'].copy_(layer[2])
+    model.decoder.linear1.state_dict()['weight'].copy_(layer[3])
+    model.decoder.linear2.state_dict()['weight'].copy_(layer[4])
+    model.decoder.linear3.state_dict()['weight'].copy_(layer[5])
+    model.encoder.linear1.state_dict()['bias'].copy_(bias[0])
+    model.encoder.linear2.state_dict()['bias'].copy_(bias[1])
+    model.encoder.linear3.state_dict()['bias'].copy_(bias[2])
+    model.decoder.linear1.state_dict()['bias'].copy_(bias[3])
+    model.decoder.linear2.state_dict()['bias'].copy_(bias[4])
+    model.decoder.linear3.state_dict()['bias'].copy_(bias[5])
+    
+    
+    
+    # shuffle the weights of second NN
+    for n in np.arange(len(layer1)):  
+        w = torch.transpose(layer1[n],0,1)
+        b = bias1[n]        
+        idx = torch.randperm(w.nelement())
+        w = w.reshape(-1)[idx].reshape(w.size())
+        idx = torch.randperm(b.nelement())
+        b = b[idx]
+        layer1[n] = torch.transpose(w,0,1)
+        bias1[n] = b
+    
+    model1.encoder.linear1.state_dict()['weight'].copy_(layer1[0])    
+    model1.encoder.linear2.state_dict()['weight'].copy_(layer1[1])
+    model1.encoder.linear3.state_dict()['weight'].copy_(layer1[2])
+    model1.decoder.linear1.state_dict()['weight'].copy_(layer1[3])
+    model1.decoder.linear2.state_dict()['weight'].copy_(layer1[4])
+    model1.decoder.linear3.state_dict()['weight'].copy_(layer1[5])
+    model1.encoder.linear1.state_dict()['bias'].copy_(bias1[0])
+    model1.encoder.linear2.state_dict()['bias'].copy_(bias1[1])
+    model1.encoder.linear3.state_dict()['bias'].copy_(bias1[2])
+    model1.decoder.linear1.state_dict()['bias'].copy_(bias1[3])
+    model1.decoder.linear2.state_dict()['bias'].copy_(bias1[4])
+    model1.decoder.linear3.state_dict()['bias'].copy_(bias1[5])
+    
+    return model,model1
+
+
+def shuffle_weights_activations(model1,input_data):
+    layer1 = []
+    layer1.append(model1.encoder.linear1.state_dict()['weight'])
+    layer1.append(model1.encoder.linear2.state_dict()['weight'])
+    layer1.append(model1.encoder.linear3.state_dict()['weight'])
+    layer1.append(model1.decoder.linear1.state_dict()['weight'])
+    layer1.append(model1.decoder.linear2.state_dict()['weight'])
+    layer1.append(model1.decoder.linear3.state_dict()['weight'])
+    bias1 = []
+    bias1.append(model1.encoder.linear1.state_dict()['bias'])
+    bias1.append(model1.encoder.linear2.state_dict()['bias'])
+    bias1.append(model1.encoder.linear3.state_dict()['bias'])
+    bias1.append(model1.decoder.linear1.state_dict()['bias'])
+    bias1.append(model1.decoder.linear2.state_dict()['bias'])
+    bias1.append(model1.decoder.linear3.state_dict()['bias'])
+    elu = nn.ELU()
+    
+    out1=input_data
+    for n in np.arange(len(layer1)):  
+        w = torch.transpose(layer1[n],0,1)
+        b = bias1[n]        
+        idx = torch.randperm(w.nelement())
+        w = w.reshape(-1)[idx].reshape(w.size())
+        idx = torch.randperm(b.nelement())
+        b = b[idx]        
+        out1 = torch.matmul(out1, w) + b
+        if n==2 or n==5:
+            out1=out1
+        else:
+            out1 = elu(out1)
+    
+    return out1
+    
+    
+
+ 
 def eval_ae_similarity(model,model1,condn_data_total,condn_data_total1,
                                   Ytotal,Ytotal1):
     
@@ -1554,14 +1680,17 @@ def eval_ae_similarity(model,model1,condn_data_total,condn_data_total1,
         input_data = torch.from_numpy(input_data).to(device).float()
         z,y=model(input_data) # pass it thru its own AE 
         z1,y1=model1(input_data) # pass it thru another day AE
+        z2 = shuffle_weights_activations(model,input_data)
         # get the data
         input_data_recon = z.to('cpu').detach().numpy()
         input_data_recon1 = z1.to('cpu').detach().numpy()
+        input_data_recon1_shuffle = z2.to('cpu').detach().numpy()
         input_data = input_data.to('cpu').detach().numpy()
         # compute error norm
         recon_error_sameDayManifold = lin.norm((avg - input_data_recon),'fro')
         recon_error_diffDayManifold = lin.norm((avg - input_data_recon1),'fro')
         raw_error = lin.norm((avg - input_data),'fro')
+        recon_error_shuffle = lin.norm((avg - input_data_recon1_shuffle),'fro')
         # store results
         original_features.append(raw_error)
         recon_features_origManifold.append(recon_error_sameDayManifold)
@@ -1597,7 +1726,60 @@ def eval_ae_similarity(model,model1,condn_data_total,condn_data_total1,
     
     return original_features,recon_features_origManifold,recon_features_swappedManifold
     
- 
+
+
+# # pass it thru AE after scrambling its weights
+# model_shuffle,model1_shuffle = shuffle_weights(model,model1)
+# idx1 = np.where(idx==ii)[0]
+# input_data = condn_data_total[idx1,:]
+# input_data = torch.from_numpy(input_data).to(device).float()
+# z2,y2 = model1_shuffle(input_data)
+# input_data_recon_shuffle = z2.to('cpu').detach().numpy()
+# recon_error_diffDayManifold_shuffle = lin.norm((avg - input_data_recon_shuffle),'fro')
+    
+    
+
+
+def fdr_threshold(pval,q,fdrType):
+    """
+    Implementation of the FDR procedure, from EEGLAB code base by Arnaud Delorme
+    Requires as input: pval, the array of p-values
+                       q the query p-value to be thresholded (e.g. 0.05)
+                       fdrType should be 'Parametric' or 'Nonparametric'
+    
+    Output is: pid the thresholded multiple comparison p-value from the input pvas
+               pval_thresholded, True or False if any of the pvals satisfied the threshold 
+    
+    """ 
+    pval= pval[:,None]
+    p = np.sort(pval,axis=0)
+    V = len(p)
+    I = np.arange(V)+1
+    I = I[:,None]
+        
+    cVID = 1;
+    cVN = sum(1./ (np.arange(V)+1))
+    
+    if fdrType == 'Parametric':
+       a=np.where(p<=I/V*q/cVID)[0]       
+       if len(a)>0 :
+           pid = p[np.max(a)]
+       else:
+           pid=0
+     
+    if fdrType == 'Nonparametric':
+        a=np.where(p<=I/V*q/cVN)[0]
+        if len(a)>0 :
+            pid = p[np.max(a)]
+        else:
+            pid=0
+    
+    pval_thresholded = pval<=pid
+    return pid,pval_thresholded
+    
+        
+        
+
     
 
     

@@ -155,7 +155,7 @@ for i in np.arange(num_days)+1: #ROOT DAYS
         
         
         # GETTING THE BOOT STATISTICS AFTER SHUFFLING THE WEIGHTS OF THE AE           
-        boot_val = np.zeros((500,6))
+        boot_val = np.zeros((1000,6))
         for boot in np.arange(boot_val.shape[0]):
             print(boot)
             shuffle_flag=False;shuffle_flag1=True
@@ -180,6 +180,12 @@ for i in np.arange(num_days)+1: #ROOT DAYS
         # SIMILARITY OF THE RECON TO THE AVERAGE MAP....thru its own or another day AE
         orig, origManifold,swappedManifold = eval_ae_similarity(model,model1,condn_data_total,
                                                                 condn_data_total1,Ytotal,Ytotal1)    
+        # # SIMILARITY AFTER SHUFFLING AE
+        # model_shuffle,model1_shuffle = shuffle_weights(model,model1)
+        # orig_s, origManifold_s,swappedManifold_s = eval_ae_similarity(model_shuffle,model1_shuffle,condn_data_total,
+        #                                                         condn_data_total1,Ytotal,Ytotal1)    
+        
+        
         # plt.figure();
         # plt.boxplot([orig, origManifold,swappedManifold])
         
@@ -248,14 +254,15 @@ print(str(time_taken) + 's')
 pval_results = np.array(list(pval_results.items()),dtype=object)
 simal_res = np.array(list(simal_res.items()),dtype=object)
 recon_res = np.array(list(recon_res.items()),dtype=object)
-np.savez('ManifoldAnalyses_Main', 
+np.savez('ManifoldAnalyses_Main_1000Boot', 
          pval_results = pval_results,
          simal_res = simal_res,
          recon_res = recon_res)
 
 #%% PLOTTING THE RESULTS 
 
-data =np.load('ManifoldAnalyses_Main.npz',allow_pickle=True)
+from iAE_utils_models import *
+data =np.load('ManifoldAnalyses_Main_1000Boot.npz',allow_pickle=True)
 pval_results = data.get('pval_results')
 simal_res = data.get('simal_res')
 recon_res = data.get('recon_res')
@@ -271,7 +278,39 @@ for i in np.arange(recon_res.shape[0]):
 
 plt.figure()
 plt.boxplot([recon_raw,recon_ae_orig,recon_ae_swap])
-stats.ttest_rel(recon_ae_swap,recon_raw)
+print(stats.ttest_rel(recon_ae_swap,recon_raw))
+print(np.mean([recon_raw,recon_ae_orig,recon_ae_swap],axis=1))
+
+
+pval=np.array([])
+for i in np.arange(pval_results.shape[0]):
+    pval = np.append(pval,pval_results[i][1])
+
+plt.figure()
+plt.hist(pval)
+pfdr_out,pfdr = fdr(pval,alpha=0.05)
+print(pfdr_out)
+print(sum(pfdr_out==True)/len(pfdr_out))
+
+simal=np.array([])
+for i in np.arange(simal_res.shape[0]):
+    simal = np.append(simal,simal_res[i][1][1])
+plt.figure()
+plt.hist(simal)
+
+
+pfdr,pfdr_thresh=fdr_threshold(pval,0.01,'Parametric')
+prop_res=  np.zeros((len(pval_results),6))
+for i in np.arange(len(pval_results)):
+    tmp = pval_results[i][1][:-1]
+    tmp = np.sum(tmp<=pfdr)
+    prop_res[i,tmp] = 1
+a= np.sum(prop_res,axis=0)/prop_res.shape[0]
+plt.figure();
+plt.bar(np.arange(len(a)),a);
+
+
+
 
 # pval_results = np.array([1,2,3])
 # simal_res = np.array([12,3])
