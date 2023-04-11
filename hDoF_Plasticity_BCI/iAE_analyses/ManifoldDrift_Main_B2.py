@@ -174,7 +174,7 @@ for i in np.arange(2,5): #only those days with all three sessions i.e., 2,3,4,5
         
         
         # GETTING THE BOOT STATISTICS AFTER SHUFFLING THE WEIGHTS OF THE AE           
-        boot_val = np.zeros((1000,6))
+        boot_val = np.zeros((100,6))
         for boot in np.arange(boot_val.shape[0]):
             print(boot)
             shuffle_flag=False;shuffle_flag1=True
@@ -304,7 +304,7 @@ print(np.mean([recon_raw,recon_ae_orig,recon_ae_swap],axis=1))
 
 pval=np.array([])
 for i in np.arange(pval_results.shape[0]):
-    pval = np.append(pval,pval_results[i][1])
+    pval = np.append(pval,pval_results[i][1][:-1])
 
 plt.figure()
 plt.hist(pval)
@@ -319,7 +319,7 @@ plt.figure()
 plt.hist(simal)
 
 
-pfdr,pfdr_thresh=fdr_threshold(pval,0.05,'Parametric')
+pfdr,pfdr_thresh=fdr_threshold(pval,0.01,'Parametric')
 prop_res=  np.zeros((len(pval_results),6))
 for i in np.arange(len(pval_results)):
     tmp = pval_results[i][1][:-1]
@@ -328,7 +328,8 @@ for i in np.arange(len(pval_results)):
 a= np.sum(prop_res,axis=0)/prop_res.shape[0]
 plt.figure();
 plt.bar(np.arange(len(a)),a);
-
+plt.ylim((0,1))
+print(a[:,None])
 
 
 # pval_results = np.array([1,2,3])
@@ -354,70 +355,70 @@ plt.bar(np.arange(len(a)),a);
 
 # plt.stem(D[4,:])
 
-def reconstruct_first_2_PCs(hand_R_X,hand_R_Y,hand_L_X,hand_L_Y):
-    stacked_data = np.vstack([hand_R_X,hand_R_Y,hand_L_X,hand_L_Y]).T
+# def reconstruct_first_2_PCs(hand_R_X,hand_R_Y,hand_L_X,hand_L_Y):
+#     stacked_data = np.vstack([hand_R_X,hand_R_Y,hand_L_X,hand_L_Y]).T
     
-    # Mean center data
-    stacked_data = stacked_data - np.mean(stacked_data,axis=0)
+#     # Mean center data
+#     stacked_data = stacked_data - np.mean(stacked_data,axis=0)
     
-    # SVD
-    U,S,V = lin.svd(stacked_data)
+#     # SVD
+#     U,S,V = lin.svd(stacked_data)
     
-    # rows of V are the eigenvectors or PCs
-    # Cols of U are the projections onto those PCs    
-    # verify this
-    pc1 = stacked_data @ V[0,:].T
-    plt.figure();plt.plot(pc1)
-    plt.figure();plt.plot(U[:,0]*S[0]) # have to scale by singular value
+#     # rows of V are the eigenvectors or PCs
+#     # Cols of U are the projections onto those PCs    
+#     # verify this
+#     pc1 = stacked_data @ V[0,:].T
+#     plt.figure();plt.plot(pc1)
+#     plt.figure();plt.plot(U[:,0]*S[0]) # have to scale by singular value
     
-    # reconstruct the data matrix back 
-    S = np.diag(S)
-    recon_PC1 = S[0,0] * (U[:,0][:,None] @  V[0,:][None,:])
-    recon_PC2 = S[1,1] * (U[:,1][:,None] @  V[1,:][None,:])
+#     # reconstruct the data matrix back 
+#     S = np.diag(S)
+#     recon_PC1 = S[0,0] * (U[:,0][:,None] @  V[0,:][None,:])
+#     recon_PC2 = S[1,1] * (U[:,1][:,None] @  V[1,:][None,:])
     
-    # plot against each other 
-    plt.figure();
-    plt.plot(recon_PC1[:,0])
-    plt.plot(recon_PC1[:,1])
+#     # plot against each other 
+#     plt.figure();
+#     plt.plot(recon_PC1[:,0])
+#     plt.plot(recon_PC1[:,1])
     
-    plt.plot(recon_PC1[:,0],recon_PC1[:,1])
+#     plt.plot(recon_PC1[:,0],recon_PC1[:,1])
     
     
-    #U_matrix, Sigma,V_transpose = np.linalg.svd(stacked_data)
+#     #U_matrix, Sigma,V_transpose = np.linalg.svd(stacked_data)
     
-    reconstruct_PC1 = Sigma[0] * (U_matrix[:,0][:,None] @ V_transpose[0,:][None,:])
-    reconstruct_PC2 = Sigma[1] * (U_matrix[:,1][:,None] @ V_transpose[1,:][None,:])
+#     reconstruct_PC1 = Sigma[0] * (U_matrix[:,0][:,None] @ V_transpose[0,:][None,:])
+#     reconstruct_PC2 = Sigma[1] * (U_matrix[:,1][:,None] @ V_transpose[1,:][None,:])
     
-    df1 = pd.DataFrame(reconstruct_PC1, index=pd.MultiIndex.from_product([['PC1'] , ['RX','RY','LX','LY']]),
-                      columns=pd.RangeIndex(0,reconstruct_PC1.shape[1], name='frame_number'))
-    df2 = pd.DataFrame(reconstruct_PC2, index=pd.MultiIndex.from_product([['PC2'] , ['RX','RY','LX','LY']]),
-                      columns=pd.RangeIndex(0,reconstruct_PC2.shape[1], name='frame_number'))
+#     df1 = pd.DataFrame(reconstruct_PC1, index=pd.MultiIndex.from_product([['PC1'] , ['RX','RY','LX','LY']]),
+#                       columns=pd.RangeIndex(0,reconstruct_PC1.shape[1], name='frame_number'))
+#     df2 = pd.DataFrame(reconstruct_PC2, index=pd.MultiIndex.from_product([['PC2'] , ['RX','RY','LX','LY']]),
+#                       columns=pd.RangeIndex(0,reconstruct_PC2.shape[1], name='frame_number'))
     
-    return pd.concat([df1,df2], axis=0, ignore_index=False)
+#     return pd.concat([df1,df2], axis=0, ignore_index=False)
 
 
-df =  pd.read_csv('C:/Users/nikic/Downloads/Single Mouse Data.csv')
-tmp_data = df.hand_Rx[1:].to_numpy()
-hand_R_X=np.empty([])
-for i in np.arange(len(tmp_data)):
-    tmp = float(tmp_data[i])
-    hand_R_X=np.append(hand_R_X,tmp)
+# df =  pd.read_csv('C:/Users/nikic/Downloads/Single Mouse Data.csv')
+# tmp_data = df.hand_Rx[1:].to_numpy()
+# hand_R_X=np.empty([])
+# for i in np.arange(len(tmp_data)):
+#     tmp = float(tmp_data[i])
+#     hand_R_X=np.append(hand_R_X,tmp)
     
-tmp_data = df.hand_Ry[1:].to_numpy()
-hand_R_Y=np.empty([])
-for i in np.arange(len(tmp_data)):
-    tmp = float(tmp_data[i])
-    hand_R_Y=np.append(hand_R_Y,tmp)
+# tmp_data = df.hand_Ry[1:].to_numpy()
+# hand_R_Y=np.empty([])
+# for i in np.arange(len(tmp_data)):
+#     tmp = float(tmp_data[i])
+#     hand_R_Y=np.append(hand_R_Y,tmp)
 
-tmp_data = df.hand_Lx[1:].to_numpy()
-hand_L_X=np.empty([])
-for i in np.arange(len(tmp_data)):
-    tmp = float(tmp_data[i])
-    hand_L_X=np.append(hand_L_X,tmp)
+# tmp_data = df.hand_Lx[1:].to_numpy()
+# hand_L_X=np.empty([])
+# for i in np.arange(len(tmp_data)):
+#     tmp = float(tmp_data[i])
+#     hand_L_X=np.append(hand_L_X,tmp)
     
-tmp_data = df.hand_Ly[1:].to_numpy()
-hand_L_Y=np.empty([])
-for i in np.arange(len(tmp_data)):
-    tmp = float(tmp_data[i])
-    hand_L_Y=np.append(hand_L_Y,tmp)
+# tmp_data = df.hand_Ly[1:].to_numpy()
+# hand_L_Y=np.empty([])
+# for i in np.arange(len(tmp_data)):
+#     tmp = float(tmp_data[i])
+#     hand_L_Y=np.append(hand_L_Y,tmp)
 

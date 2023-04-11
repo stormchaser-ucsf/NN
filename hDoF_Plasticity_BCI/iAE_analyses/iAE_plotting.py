@@ -40,9 +40,9 @@ from statsmodels.stats.anova import AnovaRM
 #whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars
 
 #
-data =np.load('MAIN_MAIN2_B1_NoiseDataAugment_CholIndivFeatEqualSize_pt01Noise_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
+#data =np.load('MAIN_MAIN2_B1_NoiseDataAugment_CholIndivFeatEqualSize_pt01Noise_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
 #data=np.load('MAIN_NewB1_NoiseDataAugment_CholIndivFeatEqualSize_pt01Noise_Stats_HeldOut_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
-#data=np.load('MAIN_MAIN_NewB2_NoiseDataAugmentCholEqualFeat_pt02_Stats_OnAllData_2D_common_Manifold_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
+data=np.load('MAIN_MAIN_NewB2_NoiseDataAugmentCholEqualFeat_pt02_Stats_OnAllData_2D_common_Manifold_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
 #data=np.load('ProcessedData_B1_01142023.npz')
 silhoutte_imagined_days = data.get('silhoutte_imagined_days')
 silhoutte_online_days = data.get('silhoutte_online_days')
@@ -342,7 +342,7 @@ print(np.mean(tmp,axis=0))
 
 
 # plotting distance between means (no mahab) over days (MAIN) with mean
-N=1
+N=2
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
@@ -562,8 +562,8 @@ plt.rcParams.update({'font.size': 6})
 X=np.arange(10)+1
 X=np.arange(10)+1
 # imagined 
-tmp_main = np.squeeze(np.mean(mahab_distances_imagined_days,axis=1))
-tmp1 = np.mean(tmp_main,axis=0)
+tmp_main = np.squeeze(np.median(mahab_distances_imagined_days,axis=1))
+tmp1 = np.median(tmp_main,axis=0)
 tmp1b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp1 = np.insert(tmp1,0,tmp1[0],axis=0)
 tmp1b = np.insert(tmp1b,0,tmp1b[0],axis=0)
@@ -573,8 +573,8 @@ tmp1b = tmp1b[1:]
 plt.plot(X,tmp1,color="black",label = 'Imagined')
 plt.fill_between(X, tmp1-tmp1b, tmp1+tmp1b,color="black",alpha=0.2)
 # online
-tmp_main = np.squeeze(np.mean(mahab_distances_online_days,1))
-tmp2 = np.mean(tmp_main,axis=0)
+tmp_main = np.squeeze(np.median(mahab_distances_online_days,1))
+tmp2 = np.median(tmp_main,axis=0)
 tmp2b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp2 = np.insert(tmp2,0,tmp2[0],axis=0)
 tmp2b = np.insert(tmp2b,0,tmp2b[0],axis=0)
@@ -585,8 +585,8 @@ tmp2b = tmp2b[1:]
 plt.plot(X,tmp2,color="blue",label = 'Online')
 plt.fill_between(X, tmp2-tmp2b, tmp2+tmp2b,color="blue",alpha=0.2)
 # batch
-tmp_main = np.squeeze(np.mean(mahab_distances_batch_days,1))
-tmp3 = np.mean(tmp_main,axis=0)
+tmp_main = np.squeeze(np.median(mahab_distances_batch_days,1))
+tmp3 = np.median(tmp_main,axis=0)
 tmp3b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp3 = np.insert(tmp3,0,tmp3[0],axis=0)
 tmp3b = np.insert(tmp3b,0,tmp3b[0],axis=0)
@@ -2764,3 +2764,363 @@ fig.savefig(image_name, format=image_format, dpi=300)
 
 x1 = np.concatenate((corr_coef_delta[:,None],corr_coef_beta[:,None],corr_coef_hg[:,None]))
 x1b = stats.bootstrap([x1,],np.mean)
+
+#%% PLOTTING MANIFOLD DRIFT STATISTICS
+
+# load data for stereotyped movements 
+data =np.load('MAIN_MAIN2_B1_NoiseDataAugment_CholIndivFeatEqualSize_pt01Noise_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
+mahab_distances_online_days = data.get('mahab_distances_online_days')
+mahab_distances_imagined_days = data.get('mahab_distances_imagined_days')
+mahab_distances_batch_days = data.get('mahab_distances_batch_days')
+
+N=2
+fig = plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+X=np.arange(10)+1
+X=np.arange(10)+1
+# imagined 
+tmp_main = np.squeeze(np.mean(mahab_distances_imagined_days,axis=1))
+tmp1 = np.mean(tmp_main,axis=0)
+tmp1b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
+tmp1 = np.insert(tmp1,0,tmp1[0],axis=0)
+tmp1b = np.insert(tmp1b,0,tmp1b[0],axis=0)
+tmp1 = np.convolve(tmp1, np.ones(N)/N, mode='same')
+tmp1 = tmp1[1:]
+tmp1b = tmp1b[1:]
+plt.plot(X,tmp1,color="black",label = 'Imagined')
+plt.fill_between(X, tmp1-tmp1b, tmp1+tmp1b,color="black",alpha=0.2)
+# online
+tmp_main = np.squeeze(np.mean(mahab_distances_online_days,1))
+tmp2 = np.mean(tmp_main,axis=0)
+tmp2b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
+tmp2 = np.insert(tmp2,0,tmp2[0],axis=0)
+tmp2b = np.insert(tmp2b,0,tmp2b[0],axis=0)
+tmp2 = np.convolve(tmp2, np.ones(N)/N, mode='same')
+tmp2b = np.convolve(tmp2b, np.ones(N)/N, mode='same')
+tmp2 = tmp2[1:]
+tmp2b = tmp2b[1:]
+plt.plot(X,tmp2,color="blue",label = 'Online')
+plt.fill_between(X, tmp2-tmp2b, tmp2+tmp2b,color="blue",alpha=0.2)
+# batch
+tmp_main = np.squeeze(np.mean(mahab_distances_batch_days,1))
+tmp3 = np.mean(tmp_main,axis=0)
+tmp3b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
+tmp3 = np.insert(tmp3,0,tmp3[0],axis=0)
+tmp3b = np.insert(tmp3b,0,tmp3b[0],axis=0)
+tmp3 = np.convolve(tmp3, np.ones(N)/N, mode='same')
+tmp3b = np.convolve(tmp3b, np.ones(N)/N, mode='same')
+tmp3 = tmp3[1:]
+tmp3b = tmp3b[1:]
+plt.plot(X,tmp3,color="red",label = 'Batch')
+plt.fill_between(X, tmp3-tmp3b, tmp3+tmp3b,color="red",alpha=0.2)
+plt.legend(loc='upper left')
+plt.xlabel('Days',**hfont)
+plt.ylabel('Mahalanobis Distances',**hfont)
+plt.show()
+tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
+tmp = np.concatenate((tmp2[:,None],tmp3[:,None]),axis=1)
+#tmp =(tmp1[:,None])
+mahab_stereo = tmp.flatten()
+
+data =np.load('ProcessedData_B1_CKD_First3s.npz')
+mahab_distances_online_days = data.get('mahab_distances_online_days')
+mahab_distances_imagined_days = data.get('mahab_distances_imagined_days')
+mahab_distances_batch_days = data.get('mahab_distances_batch_days')
+num_days=5
+N=2
+fig = plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+X=np.arange(num_days)+1
+# imagined 
+tmp_main = np.squeeze(np.mean(mahab_distances_imagined_days,axis=1))
+tmp1 = np.mean(tmp_main,axis=0)
+tmp1b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
+tmp1 = np.insert(tmp1,0,tmp1[0],axis=0)
+tmp1b = np.insert(tmp1b,0,tmp1b[0],axis=0)
+tmp1 = np.convolve(tmp1, np.ones(N)/N, mode='same')
+tmp1 = tmp1[1:]
+tmp1b = tmp1b[1:]
+plt.plot(X,tmp1,color="black",label = 'Imagined')
+plt.fill_between(X, tmp1-tmp1b, tmp1+tmp1b,color="black",alpha=0.2)
+# online
+tmp_main = np.squeeze(np.mean(mahab_distances_online_days,1))
+tmp2 = np.mean(tmp_main,axis=0)
+tmp2b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
+tmp2 = np.insert(tmp2,0,tmp2[0],axis=0)
+tmp2b = np.insert(tmp2b,0,tmp2b[0],axis=0)
+tmp2 = np.convolve(tmp2, np.ones(N)/N, mode='same')
+tmp2b = np.convolve(tmp2b, np.ones(N)/N, mode='same')
+tmp2 = tmp2[1:]
+tmp2b = tmp2b[1:]
+plt.plot(X,tmp2,color="blue",label = 'Online')
+plt.fill_between(X, tmp2-tmp2b, tmp2+tmp2b,color="blue",alpha=0.2)
+# batch
+tmp_main = np.squeeze(np.mean(mahab_distances_batch_days,1))
+tmp3 = np.mean(tmp_main,axis=0)
+tmp3b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
+tmp3 = np.insert(tmp3,0,tmp3[0],axis=0)
+tmp3b = np.insert(tmp3b,0,tmp3b[0],axis=0)
+tmp3 = np.convolve(tmp3, np.ones(N)/N, mode='same')
+tmp3b = np.convolve(tmp3b, np.ones(N)/N, mode='same')
+tmp3 = tmp3[1:]
+tmp3b = tmp3b[1:]
+plt.plot(X,tmp3,color="red",label = 'Batch')
+plt.fill_between(X, tmp3-tmp3b, tmp3+tmp3b,color="red",alpha=0.2)
+plt.legend(loc='upper left')
+plt.xlabel('Days',**hfont)
+plt.ylabel('Mahalanobis Distances',**hfont)
+plt.show()
+#tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
+tmp = np.concatenate((tmp2[:,None],tmp3[:,None]),axis=1)
+#tmp =(tmp1[:,None])
+
+mahab_ckd_3s = tmp.flatten()
+
+
+data =np.load('ProcessedData_B1_CKD_45Deg_IntVel.npz')
+mahab_distances_online_days = data.get('mahab_distances_online_days')
+mahab_distances_imagined_days = data.get('mahab_distances_imagined_days')
+mahab_distances_batch_days = data.get('mahab_distances_batch_days')
+num_days=5
+N=2
+fig = plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+X=np.arange(num_days)+1
+# imagined 
+tmp_main = np.squeeze(np.mean(mahab_distances_imagined_days,axis=1))
+tmp1 = np.mean(tmp_main,axis=0)
+tmp1b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
+tmp1 = np.insert(tmp1,0,tmp1[0],axis=0)
+tmp1b = np.insert(tmp1b,0,tmp1b[0],axis=0)
+tmp1 = np.convolve(tmp1, np.ones(N)/N, mode='same')
+tmp1 = tmp1[1:]
+tmp1b = tmp1b[1:]
+plt.plot(X,tmp1,color="black",label = 'Imagined')
+plt.fill_between(X, tmp1-tmp1b, tmp1+tmp1b,color="black",alpha=0.2)
+# online
+tmp_main = np.squeeze(np.mean(mahab_distances_online_days,1))
+tmp2 = np.mean(tmp_main,axis=0)
+tmp2b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
+tmp2 = np.insert(tmp2,0,tmp2[0],axis=0)
+tmp2b = np.insert(tmp2b,0,tmp2b[0],axis=0)
+tmp2 = np.convolve(tmp2, np.ones(N)/N, mode='same')
+tmp2b = np.convolve(tmp2b, np.ones(N)/N, mode='same')
+tmp2 = tmp2[1:]
+tmp2b = tmp2b[1:]
+plt.plot(X,tmp2,color="blue",label = 'Online')
+plt.fill_between(X, tmp2-tmp2b, tmp2+tmp2b,color="blue",alpha=0.2)
+# batch
+tmp_main = np.squeeze(np.mean(mahab_distances_batch_days,1))
+tmp3 = np.mean(tmp_main,axis=0)
+tmp3b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
+tmp3 = np.insert(tmp3,0,tmp3[0],axis=0)
+tmp3b = np.insert(tmp3b,0,tmp3b[0],axis=0)
+tmp3 = np.convolve(tmp3, np.ones(N)/N, mode='same')
+tmp3b = np.convolve(tmp3b, np.ones(N)/N, mode='same')
+tmp3 = tmp3[1:]
+tmp3b = tmp3b[1:]
+plt.plot(X,tmp3,color="red",label = 'Batch')
+plt.fill_between(X, tmp3-tmp3b, tmp3+tmp3b,color="red",alpha=0.2)
+plt.legend(loc='upper left')
+plt.xlabel('Days',**hfont)
+plt.ylabel('Mahalanobis Distances',**hfont)
+plt.show()
+
+#tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
+tmp = np.concatenate((tmp2[:,None],tmp3[:,None]),axis=1)
+#tmp =(tmp1[:,None])
+mahab_ckd_45deg = tmp.flatten()
+
+# mahab_stereo = np.log(mahab_stereo)
+# mahab_ckd_3s = np.log(mahab_ckd_3s)
+# mahab_ckd_45deg = np.log(mahab_ckd_45deg)
+fig=plt.figure()
+plt.boxplot([mahab_stereo,mahab_ckd_3s,mahab_ckd_45deg])
+plt.yticks(np.arange(-2,4.1,2))
+plt.xticks([1,2,3])
+plt.tick_params(labelbottom=False)
+plt.tick_params(labelleft=False)
+# image_format = 'svg' # e.g .png, .svg, etc.
+# image_name = 'CKA_IBID_Mahab_ClosedLoop.svg'
+# fig.savefig(image_name, format=image_format, dpi=300)
+
+# t-test between mahab stereo and ckd
+print(stats.ttest_ind(mahab_stereo,mahab_ckd_3s))
+print(stats.ttest_ind(mahab_stereo,mahab_ckd_45deg))
+print(stats.ttest_rel(mahab_ckd_3s,mahab_ckd_45deg))
+
+#%% DRIFT PLOTTING CONTINUED
+# plotting the number of sig layers in pairwise comparisons
+
+data =np.load('ManifoldAnalyses_Main_CKD_All_IntDirTowardsTarget_All3Loop_1000boot.npz',allow_pickle=True)
+pval_results = data.get('pval_results')
+simal_res = data.get('simal_res')
+recon_res = data.get('recon_res')
+
+pval=np.array([])
+for i in np.arange(pval_results.shape[0]):
+    pval = np.append(pval,pval_results[i][1][:-1])
+
+# plot all the pairwise comparisons... histogram of no. of significant CKA
+pfdr,pfdr_thresh=fdr_threshold(pval,0.05,'Parametric')
+prop_res=  np.zeros((len(pval_results),6))
+for i in np.arange(len(pval_results)):
+    tmp = pval_results[i][1][:-1]
+    tmp = np.sum(tmp<=pfdr)
+    prop_res[i,tmp] = 1
+a= np.sum(prop_res,axis=0)/prop_res.shape[0]
+t = np.arange(6)
+plt.figure();
+plt.bar(t,a,width=0.8,color=(0.5,0.5,0.5));   
+plt.ylim((0,1))
+plt.yticks(np.arange(0,1.01,0.2))
+plt.show()
+print(a[:,None])
+
+
+data =np.load('ManifoldAnalyses_Main_CKD_All_First3s_All3Loop_1000boot.npz',allow_pickle=True)
+pval_results = data.get('pval_results')
+simal_res = data.get('simal_res')
+recon_res = data.get('recon_res')
+
+pval=np.array([])
+for i in np.arange(pval_results.shape[0]):
+    pval = np.append(pval,pval_results[i][1][:-1])
+
+# plot all the pairwise comparisons... histogram of no. of significant CKA
+pfdr,pfdr_thresh=fdr_threshold(pval,0.05,'Parametric')
+prop_res=  np.zeros((len(pval_results),6))
+for i in np.arange(len(pval_results)):
+    tmp = pval_results[i][1][:-1]
+    tmp = np.sum(tmp<=pfdr)
+    prop_res[i,tmp] = 1
+b= np.sum(prop_res,axis=0)/prop_res.shape[0]
+t = np.arange(6)
+plt.figure();
+plt.bar(t,b,width=0.8,color=(0.5,0.5,0.5));   
+plt.ylim((0,1))
+plt.yticks(np.arange(0,1.01,0.2))
+plt.show()
+print(b[:,None])
+
+res = np.vstack((a[None,:][0],b[None,:][0]))
+m = np.mean(res,axis=0)
+t = np.arange(6)
+fig=plt.figure();
+plt.bar(t,m,width=0.8,color=(0.5,0.5,0.5));   
+plt.scatter(t+(rnd.randn(len(t))*0.05), res[0,:],color = (0.2,0.2,0.8))
+plt.scatter(t+(rnd.randn(len(t))*0.05), res[1,:],color=(0.2,0.2,0.8))
+plt.xticks(t)
+plt.yticks(np.arange(0,1.01,0.2))
+plt.ylim((0,1))
+plt.show()
+plt.tick_params(labelleft=False)
+plt.tick_params(labelbottom=False)
+# image_format = 'svg' # e.g .png, .svg, etc.
+# image_name = 'CKA_res_CKD_B1.svg'
+# fig.savefig(image_name, format=image_format, dpi=300)
+
+
+
+# PLOTTING THE SIMILARITIES LAYER BY LAYER FOR BOTH CKD AND IBID
+data =np.load('ManifoldAnalyses_Main_CKD_All_First3s_All3Loop_1000boot.npz',allow_pickle=True)
+simal_res_ckd1 = data.get('simal_res')
+data =np.load('ManifoldAnalyses_Main_CKD_All_IntDirTowardsTarget_All3Loop_1000boot.npz',allow_pickle=True)
+simal_res_ckd2 = data.get('simal_res')
+data=np.load('ManifoldAnalyses_Main_1000Boot.npz',allow_pickle=True)
+simal_res = data.get('simal_res')
+
+simal_CKD1=np.empty([0,5])
+for i in np.arange(simal_res_ckd1.shape[0]):
+    #simal_IBID = np.append(simal_IBID,simal_res[i][1])
+    tmp = simal_res_ckd1[i][1][:-1][None,:]
+    simal_CKD1 = np.concatenate((simal_CKD1,tmp),axis=0)
+
+simal_CKD2=np.empty([0,5])
+for i in np.arange(simal_res_ckd2.shape[0]):
+    #simal_IBID = np.append(simal_IBID,simal_res[i][1])
+    tmp = simal_res_ckd2[i][1][:-1][None,:]
+    simal_CKD2 = np.concatenate((simal_CKD2,tmp),axis=0)
+
+simal_ibid=np.empty([0,5])
+for i in np.arange(simal_res.shape[0]):
+    #simal_IBID = np.append(simal_IBID,simal_res[i][1])
+    tmp = simal_res[i][1][:-1][None,:]
+    simal_ibid = np.concatenate((simal_ibid,tmp),axis=0)
+
+plt.figure();
+plt.boxplot([simal_CKD1.flatten(),simal_CKD2.flatten(),simal_ibid.flatten()])
+
+
+# plot median with error bars 
+m1 = np.median(simal_CKD1.flatten())
+m1b = stats.bootstrap((simal_CKD1.flatten(),), np.median,method='percentile')
+m1ci = m1b.confidence_interval
+m2 = np.median(simal_CKD2.flatten())
+m2b = stats.bootstrap((simal_CKD2.flatten(),), np.median,method='percentile')
+m2ci = m2b.confidence_interval
+m3 = np.median(simal_ibid.flatten())
+m3b = stats.bootstrap((simal_ibid.flatten(),), np.median,method='percentile')
+m3ci = m3b.confidence_interval
+yerr=np.empty((2,3))
+yerr[0,:] = [m1-m1ci.low,m2-m2ci.low,m3-m3ci.low]
+yerr[1,:] = [m1ci[1]-m1,m2ci[1]-m2,m3ci[1]-m3]
+yerr= yerr[:,[2,0,1]]
+fig=plt.figure();
+plt.errorbar([1,2,3],[m3,m1,m2],yerr=yerr,elinewidth=2,capthick=2,capsize=4,color='k',
+             ls='none');
+plt.xticks(ticks=[1,2,3])
+plt.yticks(ticks=np.arange(0,1.01,0.1))
+plt.ylim((0.1,0.7))
+plt.plot([1,2,3],[m3,m1,m2],'o',markersize=7,markerfacecolor='k',markeredgecolor='k')
+plt.tick_params(labelleft=False)
+plt.tick_params(labelbottom=False)
+plt.show()
+# image_format = 'svg' # e.g .png, .svg, etc.
+# image_name = 'Median_CKA_res_CKD_IBID.svg'
+# fig.savefig(image_name, format=image_format, dpi=300)
+
+
+# plot boxplots layer by layer
+for i in np.arange(simal_CKD1.shape[1]):
+    plt.figure();
+    plt.boxplot([simal_CKD1[:,i],simal_CKD2[:,i],simal_ibid[:,i]])
+    plt.title('Layer ' + str(i+1))
+
+
+
+a=simal_CKD1.flatten()
+b=simal_CKD2.flatten()
+c=simal_ibid.flatten()
+pvalue = bootstrap_difference_test(a,b,'median')
+pvalue = bootstrap_difference_test(a,c,'median')
+pvalue = bootstrap_difference_test(c,b,'median')
+
+#%% PLOTTING THE DECODING ACCURACY OF DISCERNING THE DAY OF RECORDING (B1)
+
+import os
+os.chdir('C:/Users/nikic/Documents/GitHub/NN/hDoF_Plasticity_BCI/iAE_analyses')
+from iAE_utils_models import *
+data=np.load('RepresentationalDrift_Mean_Across_Days_B1.npz',allow_pickle=True)
+res_acc_B1 = data.get('res_acc_B1')
+res_acc_B1_demean = data.get('res_acc_B1_demean')
+
+# bootstrap and plot with confidence intervals 
+plt.plot(X,tmp,color="black",label = 'Imagined')
+plt.fill_between(X, tmp-tmp1, tmp+tmp1,color="black",alpha=0.2)
+
+    
+
+
+
+
+

@@ -291,6 +291,261 @@ image_format = 'svg'
 image_name = 'Drift_Hand_Knob_Days.svg'
 #fig.savefig(image_name, format=image_format, dpi=300)
 
+#%% (MAIN) BUILDING A COMMON MANIFOLD ACROSS DAYS AND LOOKING AT SEPARATION IN MEAN
+# have to do it condition by condition to evaluate stats 
+
+import os
+os.chdir('C:/Users/nikic/Documents/GitHub/NN/hDoF_Plasticity_BCI/iAE_analyses')
+from iAE_utils_models import *
+
+# model params
+num_days=10
+input_size=96
+hidden_size=48
+latent_dims=3
+num_classes = num_days
+
+# training params 
+num_epochs=200
+batch_size=64
+learning_rate = 1e-3
+batch_val=512
+patience=5
+gradient_clipping=10
+
+# file location
+root_path = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker'
+root_imag_filename = '\condn_data_Imagined_Day'
+root_online_filename = '\condn_data_Online_Day'
+root_batch_filename = '\condn_data_Batch_Day'
+
+res_acc = np.empty((0,10))
+#res_acc_demean = np.empty((0,10))
+num_iterations = 25
+
+for iterations in np.arange(num_iterations):
+    
+    condn_data_total=np.empty((0,96))
+    Ytotal_tmp = np.empty((0,1))
+    for days in np.arange(num_days)+1:
+        print('Processing day number ' + str(days))
+        imagined_file_name = root_path + root_imag_filename +  str(days) + '.mat'
+        condn_data_imagined,Yimagined = get_data(imagined_file_name,7)  
+        condn_data_imagined,Yimagined = data_aug_mlp_chol_feature_equalSize(condn_data_imagined,
+                                                        Yimagined,3000)
+        # idx = np.argmax(Yimagined,axis=1)
+        # idx = np.where(idx==1)[0]
+        # condn_data_imagined = condn_data_imagined[idx,:]
+        # null - remove the mean
+        #condn_data_imagined = condn_data_imagined - np.mean(condn_data_imagined,axis=0)
+        # Yimagined = Yimagined[idx,:]
+        tmp_y = days*np.ones(condn_data_imagined.shape[0])
+        Ytotal_tmp = np.append(Ytotal_tmp,tmp_y)
+        condn_data_total = np.concatenate((condn_data_total, condn_data_imagined),axis=0)
+        
+    Ytotal = np.zeros((Ytotal_tmp.shape[0],num_classes))
+    for i in range(Ytotal_tmp.shape[0]):
+        tmp = round(Ytotal_tmp[i])
+        Ytotal[i,tmp-1]=1
+    
+    plt.figure();
+    plt.imshow(Ytotal,aspect='auto',interpolation='none')
+    plt.xticks(ticks=np.arange(10))
+    plt.close()
+    
+    # split into training and testing datasets
+    Ytest = np.zeros((2,2))
+    while len(np.unique(np.argmax(Ytest,axis=1)))<num_classes:
+        Xtrain,Xtest,Ytrain,Ytest = training_test_split(condn_data_total,Ytotal,0.8)      
+    condn_data_total_train = Xtrain
+    Ytotal_train = Ytrain
+    
+    # build an AE
+    if 'model' in locals():
+        del model   
+    nn_filename = 'iAE_AcrossDays' + str(days) + '.pth'
+    Yval = np.zeros((2,2))
+    # split into training and validation sets
+    while len(np.unique(np.argmax(Yval,axis=1)))<num_classes:
+        Xtrain,Xval,Ytrain,Yval = training_test_split(condn_data_total_train,Ytotal_train,0.85)      
+    model = iAutoencoder(input_size,hidden_size,latent_dims,num_classes).to(device)                              
+    model,acc = training_loop_iAE(model,num_epochs,batch_size,learning_rate,batch_val,
+                          patience,gradient_clipping,nn_filename,
+                          Xtrain,Ytrain,Xval,Yval,
+                          input_size,hidden_size,latent_dims,num_classes)
+    # on training data 
+    D,z,idx,fig_imagined,acc_train,ypred = plot_latent_acc(model,condn_data_total_train,Ytotal_train,
+                                       latent_dims) 
+    plt.close()       
+    
+    # on held out data 
+    D,z,idx,fig_imagined,acc_test,ypred = plot_latent_acc(model,Xtest,Ytest,
+                                       latent_dims)        
+    plt.close()       
+    print(acc_test*100)
+    
+    # accuracy or confusion matrix 
+    conf_matrix = np.zeros((len(np.unique(idx)),len(np.unique(idx))))
+    for i in np.arange(len(idx)):
+        conf_matrix[idx[i],ypred[i]] = conf_matrix[idx[i],ypred[i]]+1
+    
+    for i in np.arange(conf_matrix.shape[0]):
+        conf_matrix[i,:] = conf_matrix[i,:] / np.sum(conf_matrix[i,:])
+    
+    
+    plt.imshow(conf_matrix,aspect='auto',interpolation='none')    
+    plt.close()
+    
+    res_acc = np.concatenate((res_acc,np.diag(conf_matrix)[None,:]),axis=0)
+    #res_acc_demean = np.concatenate((res_acc_demean,np.diag(conf_matrix)[None,:]),axis=0)
+
+
+
+res_acc_B1_demean = res_acc_demean
+res_acc_B1 = res_acc
+
+fig=plt.figure();
+plt.plot(np.mean(res_acc_B1_demean,axis=0))
+plt.plot(np.mean(res_acc_B1,axis=0))
+plt.ylim((0,1))
+plt.hlines(1/num_days,0,num_days-1,color='r')
+
+np.savez('RepresentationalDrift_Mean_Across_Days_B1', 
+         res_acc_B1_demean = res_acc_B1_demean,
+         res_acc_B1=res_acc_B1)
+
+
+
+#%% (MAIN) BUILDING A COMMON MANIFOLD (B2) ACROSS DAYS AND LOOKING AT SEPARATION IN MEAN
+# have to do it condition by condition to evaluate stats 
+
+import os
+os.chdir('C:/Users/nikic/Documents/GitHub/NN/hDoF_Plasticity_BCI/iAE_analyses')
+from iAE_utils_models import *
+
+# model params
+num_days=5
+input_size=96
+hidden_size=48
+latent_dims=3
+num_classes = num_days
+
+# training params 
+num_epochs=200
+batch_size=32
+learning_rate = 1e-3
+batch_val=128
+patience=5
+gradient_clipping=10
+
+# file location
+root_path = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate B2'
+root_imag_filename = '\B2_condn_data_Imagined_Day'
+root_online_filename = '\B2_condn_data_Online_Day'
+root_batch_filename = '\B2_condn_data_Batch_Day'
+
+res_acc = np.empty((0,num_days))
+res_acc_demean = np.empty((0,num_days))
+num_iterations=50
+
+for iterations in np.arange(num_iterations):
+    
+    condn_data_total=np.empty((0,96))
+    Ytotal_tmp = np.empty((0,1))
+    for days in np.arange(num_days)+1:
+        print('Processing day number ' + str(days))
+        imagined_file_name = root_path + root_imag_filename +  str(days) + '.mat'
+        condn_data_imagined,Yimagined = get_data_B2(imagined_file_name)    
+        condn_data_imagined,Yimagined = data_aug_mlp_chol_feature_equalSize(condn_data_imagined,
+                                                        Yimagined,5500)
+        # idx = np.argmax(Yimagined,axis=1)
+        # idx = np.where(idx==1)[0]
+        # condn_data_imagined = condn_data_imagined[idx,:]
+        # null - remove the mean
+        condn_data_imagined = condn_data_imagined - np.mean(condn_data_imagined,axis=0)
+        # Yimagined = Yimagined[idx,:]
+        tmp_y = days*np.ones(condn_data_imagined.shape[0])
+        Ytotal_tmp = np.append(Ytotal_tmp,tmp_y)
+        condn_data_total = np.concatenate((condn_data_total, condn_data_imagined),axis=0)
+        
+    Ytotal = np.zeros((Ytotal_tmp.shape[0],num_classes))
+    for i in range(Ytotal_tmp.shape[0]):
+        tmp = round(Ytotal_tmp[i])
+        Ytotal[i,tmp-1]=1
+    
+    plt.figure();
+    plt.imshow(Ytotal,aspect='auto',interpolation='none')
+    plt.xticks(ticks=np.arange(num_days))
+    plt.close()
+    
+    # split into training and testing datasets
+    Ytest = np.zeros((2,2))
+    while len(np.unique(np.argmax(Ytest,axis=1)))<num_classes:
+        Xtrain,Xtest,Ytrain,Ytest = training_test_split(condn_data_total,Ytotal,0.8)      
+    condn_data_total_train = Xtrain
+    Ytotal_train = Ytrain
+    
+    # build an AE
+    if 'model' in locals():
+        del model   
+    nn_filename = 'iAE_AcrossDays_B2' + str(days) + '.pth'
+    Yval = np.zeros((2,2))
+    # split into training and validation sets
+    while len(np.unique(np.argmax(Yval,axis=1)))<num_classes:
+        Xtrain,Xval,Ytrain,Yval = training_test_split(condn_data_total_train,Ytotal_train,0.85)      
+    model = iAutoencoder(input_size,hidden_size,latent_dims,num_classes).to(device)                              
+    model,acc = training_loop_iAE(model,num_epochs,batch_size,learning_rate,batch_val,
+                          patience,gradient_clipping,nn_filename,
+                          Xtrain,Ytrain,Xval,Yval,
+                          input_size,hidden_size,latent_dims,num_classes)
+    # on training data 
+    D,z,idx,fig_imagined,acc_train,ypred = plot_latent_acc(model,condn_data_total_train,Ytotal_train,
+                                       latent_dims) 
+    plt.close()       
+    
+    # on held out data 
+    D,z,idx,fig_imagined,acc_test,ypred = plot_latent_acc(model,Xtest,Ytest,
+                                       latent_dims)        
+    plt.close()       
+    print(acc_test*100)
+    
+    # accuracy or confusion matrix 
+    conf_matrix = np.zeros((len(np.unique(idx)),len(np.unique(idx))))
+    for i in np.arange(len(idx)):
+        conf_matrix[idx[i],ypred[i]] = conf_matrix[idx[i],ypred[i]]+1
+    
+    for i in np.arange(conf_matrix.shape[0]):
+        conf_matrix[i,:] = conf_matrix[i,:] / np.sum(conf_matrix[i,:])
+    
+    
+    plt.imshow(conf_matrix,aspect='auto',interpolation='none')    
+    plt.close()
+    
+    #res_acc = np.concatenate((res_acc,np.diag(conf_matrix)[None,:]),axis=0)
+    res_acc_demean = np.concatenate((res_acc_demean,np.diag(conf_matrix)[None,:]),axis=0)
+
+
+res_acc_B2 = res_acc
+res_acc_demean_B2 = res_acc_demean
+
+
+fig=plt.figure();
+plt.plot(np.mean(res_acc_demean_B2,axis=0))
+plt.plot(np.mean(res_acc_B2,axis=0))
+plt.ylim((0,1))
+plt.hlines(1/num_days,0,num_days-1,color='r')
+
+res_acc_B2 = res_acc
+
+np.savez('RepresentationalDrift_Mean_Across_Days_B2', 
+         res_acc_B2 = res_acc_B2,
+         res_acc_demean_B2=res_acc_demean_B2)
+
+data=np.load('RepresentationalDrift_Mean_Across_Days_B2.npz',allow_pickle=True)
+res_acc_B2 = data.get('res_acc_B2')
+res_acc_demean_B2 = data.get('res_acc_demean_B2')
+
+
 #%% PART C -> TRAIN ON A FEW DAYS AND PROJECT HELD OUT DAYS
 
 # train on first 5 days for example
@@ -350,7 +605,7 @@ mahab_distances = mahab_distances[np.triu_indices(mahab_distances.shape[0])]
 mahab_distances = mahab_distances[mahab_distances>0]
 print(np.mean(mahab_distances))
 
-#%% CONTINUATION OF PART C BUT NOW ON ALL THE DATA 
+#%% CONTINUATION OF PART C BUT NOW ON ALL THE DATA (MAIN)
 
 from iAE_utils_models import *
 mahab_distances_days = []
@@ -579,7 +834,7 @@ for i in np.arange(len(mahab_distances_days)):
 
 
 
-#%% CONTINUATION OF PART C BUT NOW ON ALL THE DATA  for B2
+#%% CONTINUATION OF PART C BUT NOW ON ALL THE DATA  for B2 (MAIN)
 
 
 import torch as torch

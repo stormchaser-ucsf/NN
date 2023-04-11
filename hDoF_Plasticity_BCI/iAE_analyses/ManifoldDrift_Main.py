@@ -84,8 +84,10 @@ for i in np.arange(num_days)+1: #ROOT DAYS
     condn_data_batch,Ybatch =   data_aug_mlp_chol_feature_equalSize(condn_data_batch,Ybatch,condn_data_imagined.shape[0])
     
     # stack everything together 
-    condn_data_total = np.concatenate((condn_data_imagined,condn_data_online,condn_data_batch),axis=0)    
-    Ytotal = np.concatenate((Yimagined,Yonline,Ybatch),axis=0)     
+    # condn_data_total = np.concatenate((condn_data_imagined,condn_data_online,condn_data_batch),axis=0)    
+    # Ytotal = np.concatenate((Yimagined,Yonline,Ybatch),axis=0) 
+    condn_data_total = np.concatenate((condn_data_online,condn_data_batch),axis=0)    
+    Ytotal = np.concatenate((Yonline,Ybatch),axis=0)    
 
     # demean
     #condn_data_total = condn_data_total - np.mean(condn_data_total,axis=0)                   
@@ -123,8 +125,10 @@ for i in np.arange(num_days)+1: #ROOT DAYS
         condn_data_batch1,Ybatch1 =   data_aug_mlp_chol_feature_equalSize(condn_data_batch1,Ybatch1,condn_data_imagined1.shape[0])
         
         # stack everything together 
-        condn_data_total1 = np.concatenate((condn_data_imagined1,condn_data_online1,condn_data_batch1),axis=0)    
-        Ytotal1 = np.concatenate((Yimagined1,Yonline1,Ybatch1),axis=0)   
+        # condn_data_total1 = np.concatenate((condn_data_imagined1,condn_data_online1,condn_data_batch1),axis=0)    
+        # Ytotal1 = np.concatenate((Yimagined1,Yonline1,Ybatch1),axis=0) 
+        condn_data_total1 = np.concatenate((condn_data_online1,condn_data_batch1),axis=0)    
+        Ytotal1 = np.concatenate((Yonline1,Ybatch1),axis=0)   
 
         #de-mean                     
         #condn_data_total1 = condn_data_total1 - np.mean(condn_data_total1,axis=0)
@@ -155,7 +159,7 @@ for i in np.arange(num_days)+1: #ROOT DAYS
         
         
         # GETTING THE BOOT STATISTICS AFTER SHUFFLING THE WEIGHTS OF THE AE           
-        boot_val = np.zeros((1000,6))
+        boot_val = np.zeros((100,6))
         for boot in np.arange(boot_val.shape[0]):
             print(boot)
             shuffle_flag=False;shuffle_flag1=True
@@ -168,13 +172,20 @@ for i in np.arange(num_days)+1: #ROOT DAYS
         # HISTOGRAM
         pval=[]
         for k in np.arange(boot_val.shape[1]):
-            plt.figure()
+            fig=plt.figure()
             plt.hist(boot_val[:,k])
             p = 1 - np.sum(dmain[k]>=boot_val[:,k])/boot_val.shape[0]
             plt.axvline(x = dmain[k], color = 'r')
             plt.xlim((0,1))
+            plt.xticks(ticks=[0,.2,.4,.6,.8,1])
+            #plt.yticks(ticks=np.arange(0,251,50))
+            plt.tick_params(labelbottom=False)
+            plt.tick_params(labelleft=False)
             plt.title(str(p))
             pval.append(p)
+            # image_format = 'svg' # e.g .png, .svg, etc.
+            # image_name = 'Layer_'  + str(k+1) + '.svg'
+            # fig.savefig(image_name, format=image_format, dpi=300)
             plt.close()
        
         # SIMILARITY OF THE RECON TO THE AVERAGE MAP....thru its own or another day AE
@@ -284,7 +295,7 @@ print(np.mean([recon_raw,recon_ae_orig,recon_ae_swap],axis=1))
 
 pval=np.array([])
 for i in np.arange(pval_results.shape[0]):
-    pval = np.append(pval,pval_results[i][1])
+    pval = np.append(pval,pval_results[i][1][:-1])
 
 plt.figure()
 plt.hist(pval)
@@ -308,8 +319,8 @@ for i in np.arange(len(pval_results)):
 a= np.sum(prop_res,axis=0)/prop_res.shape[0]
 plt.figure();
 plt.bar(np.arange(len(a)),a);
-
-
+plt.ylim((0,1))
+print(a[:,None])
 
 
 # pval_results = np.array([1,2,3])
@@ -335,6 +346,124 @@ plt.bar(np.arange(len(a)),a);
 
 # plt.stem(D[4,:])
 
+#%% PLOTTING COMBINED STATS FOR B1 AND B2
+
+data =np.load('ManifoldAnalyses_Main_1000Boot.npz',allow_pickle=True)
+pval_results = data.get('pval_results')
+simal_res = data.get('simal_res')
+recon_res = data.get('recon_res')
+p =0.01
+
+pval=np.array([])
+for i in np.arange(pval_results.shape[0]):
+    pval = np.append(pval,pval_results[i][1])
 
 
-      
+pfdr,pfdr_thresh=fdr_threshold(pval,p,'Parametric')
+prop_res=  np.zeros((len(pval_results),6))
+for i in np.arange(len(pval_results)):
+    tmp = pval_results[i][1][:-1]
+    tmp = np.sum(tmp<=pfdr)
+    prop_res[i,tmp] = 1
+a= np.sum(prop_res,axis=0)/prop_res.shape[0]
+plt.figure();
+plt.bar(np.arange(len(a)),a);
+print(a[:,None])
+b1 = a
+
+
+
+data =np.load('ManifoldAnalyses_Main_B2_Days2to5_1000Boot.npz',allow_pickle=True)
+pval_results = data.get('pval_results')
+simal_res = data.get('simal_res')
+recon_res = data.get('recon_res')
+
+
+pval=np.array([])
+for i in np.arange(pval_results.shape[0]):
+    pval = np.append(pval,pval_results[i][1][:-1])
+
+
+pfdr,pfdr_thresh=fdr_threshold(pval,p,'Parametric')
+prop_res=  np.zeros((len(pval_results),6))
+for i in np.arange(len(pval_results)):
+    tmp = pval_results[i][1][:-1]
+    tmp = np.sum(tmp<=pfdr)
+    prop_res[i,tmp] = 1
+a= np.sum(prop_res,axis=0)/prop_res.shape[0]
+plt.figure();
+plt.bar(np.arange(len(a)),a);
+print(a[:,None])
+b2 = a
+
+# plotting
+res = np.vstack((b1[None,:][0],b2[None,:][0]))
+m = np.mean(res,axis=0)
+t = np.arange(6)
+fig=plt.figure();
+plt.bar(t,m,width=0.8,color=(0.5,0.5,0.5));   
+plt.scatter(t+(rnd.randn(len(t))*0.05), res[0,:],color = (0.2,0.2,0.8))
+plt.scatter(t+(rnd.randn(len(t))*0.05), res[1,:],color=(0.2,0.2,0.8))
+plt.xticks(t)
+plt.yticks(np.arange(0,1.01,0.2))
+plt.ylim((0,1))
+plt.show()
+# plt.tick_params(labelbottom=False)
+# plt.tick_params(labelleft=False)
+# image_format = 'svg' # e.g .png, .svg, etc.
+# image_name = 'CKA_res_B1B2.svg'
+# fig.savefig(image_name, format=image_format, dpi=300)
+
+
+#%% PLOTTING COMPARISONS BETWEEN CKD AND IBID FOR B1 IN CKA SIMAL VALUES
+
+
+data =np.load('ManifoldAnalyses_Main_1000Boot.npz',allow_pickle=True)
+pval_results = data.get('pval_results')
+simal_res = data.get('simal_res')
+recon_res = data.get('recon_res')
+
+simal_IBID=np.empty([0,6])
+for i in np.arange(simal_res.shape[0]):
+    #simal_IBID = np.append(simal_IBID,simal_res[i][1])
+    tmp = simal_res[i][1][None,:]
+    simal_IBID = np.concatenate((simal_IBID,tmp),axis=0)
+
+
+
+data =np.load('ManifoldAnalyses_Main_CKD_All_IntDirTowardsTarget45deg_1000boot.npz',allow_pickle=True)
+pval_results = data.get('pval_results')
+simal_res = data.get('simal_res')
+recon_res = data.get('recon_res')
+
+simal_CKD=np.empty([0,6])
+for i in np.arange(simal_res.shape[0]):
+    #simal_IBID = np.append(simal_IBID,simal_res[i][1])
+    tmp = simal_res[i][1][None,:]
+    simal_CKD = np.concatenate((simal_CKD,tmp),axis=0)
+
+
+# plotting final comparisons
+for i in np.arange(simal_CKD.shape[1]-1):
+    plt.figure()
+    plt.title(str(i))
+    tmp = [simal_IBID[:,i],simal_CKD[:,i]]
+    plt.boxplot(tmp)
+    plt.ylim((0,1))
+    print([np.mean(tmp[0]),np.mean(tmp[1])])
+    
+    
+tmp = [simal_IBID.flatten(),simal_CKD.flatten()]   
+plt.figure()
+plt.boxplot(tmp)
+plt.ylim((0,1))
+
+# plot with confidence intervals 
+
+
+
+
+    
+    
+    
+    

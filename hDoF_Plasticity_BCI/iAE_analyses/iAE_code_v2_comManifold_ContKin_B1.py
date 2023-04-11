@@ -34,13 +34,15 @@ import scipy as scipy
 import scipy.stats as stats
 # setting up GPU
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+import pickle
+from statsmodels.stats.multitest import fdrcorrection as fdr
 
 #%% SETTING UP MODEL PARAMS
 
 # model params
 input_size=96
 hidden_size=48
-latent_dims=3
+latent_dims=2
 num_classes = 6
 
 # training params 
@@ -54,13 +56,13 @@ gradient_clipping=10
 
 # file location
 root_path = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker'
-root_imag_filename = '\Biomimetic_CenterOut_condn_data_Imagined_Day'
-root_online_filename = '\Biomimetic_CenterOut_condn_data_Online_Day'
-root_batch_filename = '\Biomimetic_CenterOut_condn_data_Batch_Day'
+root_imag_filename = '\Biomimetic_CenterOut_condn_data_Imagined_Day_45deg'
+root_online_filename = '\Biomimetic_CenterOut_condn_data_Online_Day_45deg'
+root_batch_filename = '\Biomimetic_CenterOut_condn_data_Batch_Day_45deg'
 
 
 # num of days
-num_days=1
+num_days=5
 
 # init variables across days 
 dist_means_overall_imag = np.empty([num_days,0])
@@ -74,7 +76,7 @@ dist_var_overall_batch = np.empty([num_days,0])
 mahab_dist_overall_batch = np.empty([num_days,0])
 
 # iterations to bootstrap
-iterations = 1
+iterations = 10
 
 #%% SETTING UP VARS 
 
@@ -161,10 +163,19 @@ for days in (np.arange(num_days)+1):
     beta_spatial_corr_iter = np.empty([num_classes*3,0])
     hg_spatial_corr_iter = np.empty([num_classes*3,0])
     
-    #### DATA AUGMENTATION ###
-    #condn_data_imagined,Yimagined = data_aug_mlp(condn_data_imagined,Yimagined,3000)
-    condn_data_online,Yonline =   data_aug_mlp_chol_feature_equalSize(condn_data_online,Yonline,condn_data_imagined.shape[0])
-    condn_data_batch,Ybatch =   data_aug_mlp_chol_feature_equalSize(condn_data_batch,Ybatch,condn_data_imagined.shape[0])
+    #### DATA AUGMENTATION ###    
+    len_data = max([condn_data_online.shape[0],condn_data_imagined.shape[0],
+                    condn_data_batch.shape[0]])
+    if condn_data_online.shape[0]<len_data:
+        condn_data_online,Yonline =   data_aug_mlp_chol_feature_equalSize(condn_data_online,
+                                            Yonline,len_data)
+    if condn_data_imagined.shape[0]<len_data:
+        condn_data_imagined,Yimagined =   data_aug_mlp_chol_feature_equalSize(condn_data_imagined,
+                                            Yimagined,len_data)
+    if condn_data_batch.shape[0]<len_data:
+        condn_data_batch,Ybatch =   data_aug_mlp_chol_feature_equalSize(condn_data_batch,
+                                            Ybatch,len_data)
+        
     
     ## plotting options
     plt_close=False
@@ -420,7 +431,7 @@ for days in (np.arange(num_days)+1):
 
 # saving it all 
 # orig filename: whole_dataSamples_stats_results_withBatch_Main_withVariance
-np.savez('ProcessedData_B1_01142023_pt0002', 
+np.savez('ProcessedData_B1_CKD_First3s', 
          silhoutte_imagined_days = silhoutte_imagined_days,
          silhoutte_online_days = silhoutte_online_days,
          silhoutte_batch_days = silhoutte_batch_days,

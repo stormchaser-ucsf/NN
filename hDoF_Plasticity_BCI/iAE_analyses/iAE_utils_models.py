@@ -5,7 +5,6 @@ Created on Thu Oct 13 23:22:57 2022
 @author: nikic
 """
 
-
 import torch as torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -23,10 +22,13 @@ plt.rcParams['figure.dpi'] = 200
 import sklearn as skl
 from sklearn.metrics import silhouette_score as sil
 from sklearn.metrics import silhouette_samples as sil_samples
+from tempfile import TemporaryFile
+from scipy.ndimage import gaussian_filter1d
 import scipy.stats as stats
 from sklearn.decomposition import PCA as PCA
 pca=PCA(n_components=2)
 from statsmodels.stats.multitest import fdrcorrection as fdr
+import statsmodels.api as sm
 
 # setting up GPU
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -96,7 +98,7 @@ def scale_zero_one(indata):
     return(indata)
 
 
-def get_distance_means(z,idx,num_classes):        
+def get_distance_means(z,idx,num_classes=7):        
     dist_means=np.array([])
     for i in np.arange(num_classes):
         idxA = (idx==i).nonzero()[0]
@@ -122,7 +124,7 @@ def get_distance_means_B2(z,idx):
             dist_means = np.append(dist_means,d)
     return dist_means
 
-def get_variances(z,idx,num_classes):
+def get_variances(z,idx,num_classes=7):
     dist_var = np.empty((num_classes,))
     for i in np.arange(len(np.unique(idx))):
         idxA = (idx==i).nonzero()[0]
@@ -173,7 +175,7 @@ def get_mahab_distance(x,y):
     return D
 
 # function to get mahalanobis distance
-def get_mahab_distance_latent(z,idx,num_classes):
+def get_mahab_distance_latent(z,idx,num_classes=7):
     mdist =  np.zeros([num_classes,num_classes])
     for i in np.arange(len(np.unique(idx))):
         idxA = (idx==i).nonzero()[0]
@@ -913,12 +915,14 @@ def plot_latent_acc(model, data, Y,dim):
     z = model.encoder(data)
     recon,decodes = model(data)    
     ylabels = convert_to_ClassNumbers(Y)        
-    ypred_labels = convert_to_ClassNumbers(decodes)     
+    ypred_labels = convert_to_ClassNumbers(decodes)       
     accuracy = (torch.sum(ylabels == ypred_labels).item())/ylabels.shape[0]
     
-    y=ylabels    
+    y=ylabels  
+    ypred = ypred_labels
     z = z.to('cpu').detach().numpy()
     y = y.to('cpu').detach().numpy()        
+    ypred = ypred.to('cpu').detach().numpy()        
     D = sil(z,y)
         
     fig=plt.figure()
@@ -931,7 +935,7 @@ def plot_latent_acc(model, data, Y,dim):
         plt.scatter(z[:, 0], z[:, 1], c=y, cmap='tab10')
         plt.colorbar()
     model.train()    
-    return D,z,y,fig,accuracy
+    return D,z,y,fig,accuracy,ypred
 
 
 # plotting and returning latent activations and give acuracy
@@ -970,7 +974,7 @@ def plot_latent_select(model, data, Y,dim,ch):
     return fig
 
 
-def return_recon(model,data,Y,num_classes):
+def return_recon(model,data,Y,num_classes=7):
     data = torch.from_numpy(data).to(device).float()
     Y=torch.from_numpy(Y).to(device).float()
     Y=convert_to_ClassNumbers(Y).to('cpu').detach().numpy()
@@ -1213,7 +1217,7 @@ def data_aug_mlp_chol_feature_equalSize(indata,labels,data_size):
         new_data[:,np.arange(1,96,3)] = new_beta
         new_data[:,np.arange(2,96,3)] = new_hg
         #add some noise
-        new_data = new_data + 0.002*rnd.randn(new_data.shape[0],new_data.shape[1])
+        new_data = new_data + 0.02*rnd.randn(new_data.shape[0],new_data.shape[1])
         
         # make it unit norm
         for i in np.arange(new_data.shape[0]):
@@ -1351,7 +1355,7 @@ def linear_cka_dist(input_data,model,model1,shuffle_flag,shuffle_flag1):
             w = torch.transpose(layer[k],0,1)
             b = bias[k]
             #shuffle
-            if shuffle_flag == True: 
+            if shuffle_flag == True : 
                 idx = torch.randperm(w.nelement())
                 w = w.reshape(-1)[idx].reshape(w.size())
                 idx = torch.randperm(b.nelement())
@@ -1371,7 +1375,7 @@ def linear_cka_dist(input_data,model,model1,shuffle_flag,shuffle_flag1):
             while k<=n:                        
                 w = torch.transpose(layer1[k],0,1)
                 b = bias1[k]
-                if shuffle_flag1 == True:
+                if shuffle_flag1 == True :
                     idx = torch.randperm(w.nelement())
                     w = w.reshape(-1)[idx].reshape(w.size())
                     idx = torch.randperm(b.nelement())
@@ -1780,6 +1784,42 @@ def fdr_threshold(pval,q,fdrType):
         
         
 
+#bootstrapped test for difference in medians or means etc.
+def bootstrap_difference_test(a,b,test_type):    
+    if test_type == 'median':
+        stat1 = np.median(a)
+        stat2 = np.median(b)
+    if test_type ==  'mean':
+        stat1 = np.mean(a)
+        stat2 = np.mean(b)
+    
+    stat = stat1-stat2
+    
+    # run the bootstrap statistics i.e., sample with replacement
+    if test_type == 'median': 
+        a1 = a-np.median(a) 
+        b1 = b-np.median(b)
+    if test_type == 'mean': 
+        a1 = a-np.mean(a) 
+        b1 = b-np.mean(b)
+    boot_stat = []
+    for i in np.arange(1e4):
+        atemp = rnd.choice(a1,len(a1),replace=True)        
+        btemp = rnd.choice(b1,len(b1),replace=True)        
+        if test_type =='median':
+            boot_stat.append(np.median(atemp) - np.median(btemp))            
+        if test_type =='mean':
+            boot_stat.append(np.mean(atemp) - np.mean(btemp))
+    
+    plt.figure();
+    plt.hist(np.abs(boot_stat))
+    plt.axvline(np.abs(stat),color='r')
+    pvalue = np.sum(np.abs(boot_stat) >= np.abs(stat))/len(boot_stat)
+    plt.title('pvalue is ' + str(pvalue))
+    return pvalue,boot_stat
+
+    
+    
     
 
     

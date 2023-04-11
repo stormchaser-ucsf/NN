@@ -41,11 +41,11 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 input_size=96
 hidden_size=48
 latent_dims=2
-num_classes = 6
+num_classes = 7
 
 # training params 
 num_epochs=150
-batch_size=64
+batch_size=32
 learning_rate = 1e-3
 batch_val=512
 patience=5
@@ -72,7 +72,7 @@ mahab_dist_overall_batch = np.empty([10,0])
 num_days=10
 
 # iterations to bootstrap
-iterations = 1
+iterations = 15
 
 #%% SETTING UP VARS 
 
@@ -121,6 +121,7 @@ learning_rate = 1e-3
 batch_val=512
 patience=5
 gradient_clipping=10
+mean_center=True
 from iAE_utils_models import *
 
 # main loop 
@@ -172,23 +173,34 @@ for days in (np.arange(num_days)+1):
     condn_data_online,Yonline =   data_aug_mlp_chol_feature_equalSize(condn_data_online,Yonline,condn_data_imagined.shape[0])
     condn_data_batch,Ybatch =   data_aug_mlp_chol_feature_equalSize(condn_data_batch,Ybatch,condn_data_imagined.shape[0])
     
+  
+    
     ## plotting options
-    plt_close=False
+    plt_close=True
     
     # inner loop
     for loop in np.arange(iterations):
         
         print(f'Iteration {loop+1}, Day {days}')
         ### DATA SPLIT OF ALL CONDITIONS FOR CROSS-VALIDATION ####
-        # condn_data_imagined_train,condn_data_imagined_test,Yimagined_train,Yimagined_test=training_test_split(condn_data_imagined, Yimagined, 0.8)
-        # condn_data_online_train,condn_data_online_test,Yonline_train,Yonline_test=training_test_split(condn_data_online, Yonline, 0.8)            
-        # condn_data_batch_train,condn_data_batch_test,Ybatch_train,Ybatch_test=training_test_split(condn_data_batch, Ybatch, 0.8)
-        condn_data_imagined_train,condn_data_imagined_test = condn_data_imagined,condn_data_imagined
-        Yimagined_train,Yimagined_test = Yimagined,Yimagined
-        condn_data_online_train,condn_data_online_test = condn_data_online,condn_data_online
-        Yonline_train,Yonline_test = Yonline,Yonline
-        condn_data_batch_train,condn_data_batch_test = condn_data_batch,condn_data_batch
-        Ybatch_train,Ybatch_test = Ybatch,Ybatch
+        condn_data_imagined_train,condn_data_imagined_test,Yimagined_train,Yimagined_test=training_test_split(condn_data_imagined, Yimagined, 0.8)
+        condn_data_online_train,condn_data_online_test,Yonline_train,Yonline_test=training_test_split(condn_data_online, Yonline, 0.8)            
+        condn_data_batch_train,condn_data_batch_test,Ybatch_train,Ybatch_test=training_test_split(condn_data_batch, Ybatch, 0.8)
+        # condn_data_imagined_train,condn_data_imagined_test = condn_data_imagined,condn_data_imagined
+        # Yimagined_train,Yimagined_test = Yimagined,Yimagined
+        # condn_data_online_train,condn_data_online_test = condn_data_online,condn_data_online
+        # Yonline_train,Yonline_test = Yonline,Yonline
+        # condn_data_batch_train,condn_data_batch_test = condn_data_batch,condn_data_batch
+        # Ybatch_train,Ybatch_test = Ybatch,Ybatch
+        
+        # mean centering everything
+        if mean_center == True:
+            condn_data_imagined_train = condn_data_imagined_train - np.mean(condn_data_imagined_train,axis=0)
+            condn_data_imagined_test = condn_data_imagined_test - np.mean(condn_data_imagined_test,axis=0)
+            condn_data_online_train = condn_data_online_train - np.mean(condn_data_online_train,axis=0)
+            condn_data_online_test = condn_data_online_test - np.mean(condn_data_online_test,axis=0)
+            condn_data_batch_train = condn_data_batch_train - np.mean(condn_data_batch_train,axis=0)
+            condn_data_batch_test = condn_data_batch_test - np.mean(condn_data_batch_test,axis=0)
         
         
         #### STACK EVERYTHING TOGETHER ###
@@ -215,7 +227,7 @@ for days in (np.arange(num_days)+1):
         
         # get reconstructed activity as images in the three bands
         delta_recon_imag,beta_recon_imag,hg_recon_imag = return_recon(model,
-                                                    condn_data_imagined_test,Yimagined_test)
+                                                    condn_data_imagined_test,Yimagined_test,num_classes)
         # get the variance of each channel and storing 
         delta_imag_variances = get_recon_channel_variances(delta_recon_imag)
         beta_imag_variances = get_recon_channel_variances(beta_recon_imag)
@@ -231,17 +243,17 @@ for days in (np.arange(num_days)+1):
         if plt_close==True:
             plt.close()
         # mahab distance
-        mahab_distances = get_mahab_distance_latent(z,idx)
+        mahab_distances = get_mahab_distance_latent(z,idx,num_classes)
         mahab_distances = mahab_distances[np.triu_indices(mahab_distances.shape[0])]
         mahab_distances = mahab_distances[mahab_distances>0]
         mahab_distances_imagined_iter = np.append(mahab_distances_imagined_iter,
                                                   mahab_distances[:,None],axis=1)
         # euclidean distance between means
-        dist_means = get_distance_means(z,idx)
+        dist_means = get_distance_means(z,idx,num_classes)
         mean_distances_imagined_iter = np.append(mean_distances_imagined_iter,
                                                   dist_means[:,None],axis=1)
         # variance of the data spread in latent space
-        dist_var = get_variances(z,idx)
+        dist_var = get_variances(z,idx,num_classes)
         var_distances_imagined_iter = np.append(var_distances_imagined_iter,
                                                   dist_var[:,None],axis=1)
         
@@ -426,7 +438,7 @@ for days in (np.arange(num_days)+1):
 
 # saving it all 
 # orig filename: whole_dataSamples_stats_results_withBatch_Main_withVariance
-np.savez('ProcessedData_B1_01142023_pt0002', 
+np.savez('ProcessedData_B1_04082023_TestData_pt02_MeanCenter', 
          silhoutte_imagined_days = silhoutte_imagined_days,
          silhoutte_online_days = silhoutte_online_days,
          silhoutte_batch_days = silhoutte_batch_days,

@@ -63,9 +63,9 @@ num_classes = 6
 
 # file location
 root_path = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker'
-root_imag_filename = '\Biomimetic_CenterOut_condn_data_Imagined_Day'
-root_online_filename = '\Biomimetic_CenterOut_condn_data_Online_Day'
-root_batch_filename = '\Biomimetic_CenterOut_condn_data_Batch_Day'
+root_imag_filename = '\Biomimetic_CenterOut_condn_data_Imagined_Day_First3s'
+root_online_filename = '\Biomimetic_CenterOut_condn_data_Online_Day_First3s'
+root_batch_filename = '\Biomimetic_CenterOut_condn_data_Batch_Day_First3s'
 
 #%% MAIN LOOP TO GET THE DATA
 
@@ -101,10 +101,10 @@ for i in np.arange(num_days)+1: #ROOT DAYS
         
     
     #stack everything together 
-    #condn_data_total = np.concatenate((condn_data_imagined,condn_data_online,condn_data_batch),axis=0)    
-    #Ytotal = np.concatenate((Yimagined,Yonline,Ybatch),axis=0)     
-    condn_data_total = np.concatenate((condn_data_online,condn_data_batch),axis=0)    
-    Ytotal = np.concatenate((Yonline,Ybatch),axis=0)     
+    condn_data_total = np.concatenate((condn_data_imagined,condn_data_online,condn_data_batch),axis=0)    
+    Ytotal = np.concatenate((Yimagined,Yonline,Ybatch),axis=0)     
+    # condn_data_total = np.concatenate((condn_data_online,condn_data_batch),axis=0)    
+    # Ytotal = np.concatenate((Yonline,Ybatch),axis=0)     
     
     # only imagined 
     # condn_data_total = condn_data_imagined
@@ -156,10 +156,10 @@ for i in np.arange(num_days)+1: #ROOT DAYS
                                                 Ybatch1,len_data)
         
         # stack everything together 
-        # condn_data_total1 = np.concatenate((condn_data_imagined1,condn_data_online1,condn_data_batch1),axis=0)    
-        # Ytotal1 = np.concatenate((Yimagined1,Yonline1,Ybatch1),axis=0) 
-        condn_data_total1 = np.concatenate((condn_data_online1,condn_data_batch1),axis=0)    
-        Ytotal1 = np.concatenate((Yonline1,Ybatch1),axis=0)   
+        condn_data_total1 = np.concatenate((condn_data_imagined1,condn_data_online1,condn_data_batch1),axis=0)    
+        Ytotal1 = np.concatenate((Yimagined1,Yonline1,Ybatch1),axis=0)          
+        # condn_data_total1 = np.concatenate((condn_data_online1,condn_data_batch1),axis=0)    
+        # Ytotal1 = np.concatenate((Yonline1,Ybatch1),axis=0)   
         
         # condn_data_total1 = condn_data_imagined1
         # Ytotal1 = Yimagined1
@@ -286,14 +286,14 @@ print(str(time_taken) + 's')
 pval_results = np.array(list(pval_results.items()),dtype=object)
 simal_res = np.array(list(simal_res.items()),dtype=object)
 recon_res = np.array(list(recon_res.items()),dtype=object)
-np.savez('ManifoldAnalyses_Main_CKD_All_IntDirTowardsTarget45deg_1000boot', 
+np.savez('ManifoldAnalyses_Main_CKD_All_First3s_All3Loop_1000boot', 
          pval_results = pval_results,
          simal_res = simal_res,
          recon_res = recon_res)
 
 #%% PLOTTING THE RESULTS 
 
-data =np.load('ManifoldAnalyses_Main_CKD_All_IntDirTowardsTarget45deg_1000boot.npz',allow_pickle=True)
+data =np.load('ManifoldAnalyses_Main_CKD_All_First3s_All3Loop_1000boot.npz',allow_pickle=True)
 pval_results = data.get('pval_results')
 simal_res = data.get('simal_res')
 recon_res = data.get('recon_res')
@@ -315,7 +315,7 @@ print(np.mean([recon_raw,recon_ae_orig,recon_ae_swap],axis=1))
 
 pval=np.array([])
 for i in np.arange(pval_results.shape[0]):
-    pval = np.append(pval,pval_results[i][1])
+    pval = np.append(pval,pval_results[i][1][:-1])
 
 plt.figure()
 plt.hist(pval)
@@ -330,15 +330,26 @@ plt.figure()
 plt.hist(simal)
 
 # plot all the pairwise comparisons... histogram of no. of significant CKA
-pfdr,pfdr_thresh=fdr_threshold(pval,0.01,'Parametric')
+pfdr,pfdr_thresh=fdr_threshold(pval,0.05,'Parametric')
 prop_res=  np.zeros((len(pval_results),6))
 for i in np.arange(len(pval_results)):
     tmp = pval_results[i][1][:-1]
     tmp = np.sum(tmp<=pfdr)
     prop_res[i,tmp] = 1
 a= np.sum(prop_res,axis=0)/prop_res.shape[0]
+t = np.arange(6)
 plt.figure();
-plt.bar(np.arange(len(a)),a)
+plt.bar(t,a,width=0.8,color=(0.5,0.5,0.5));   
+plt.ylim((0,1))
+plt.yticks(np.arange(0,1.01,0.2))
+plt.show()
+print(a[:,None])
+# plt.tick_params(labelbottom=False)
+# plt.tick_params(labelleft=False)
+# image_format = 'svg' # e.g .png, .svg, etc.
+# image_name = 'CKA_res_B1_CKD.svg'
+# fig.savefig(image_name, format=image_format, dpi=300)
+
 
 # pval_results = np.array([1,2,3])
 # simal_res = np.array([12,3])
