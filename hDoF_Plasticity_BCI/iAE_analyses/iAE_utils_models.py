@@ -37,7 +37,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 # get the data 
-def get_data(filename,num_classes):
+def get_data(filename,num_classes=7):
     data_dict = mat73.loadmat(filename)
     data_imagined = data_dict.get('condn_data')
     condn_data_imagined = np.zeros((0,data_imagined[0].shape[1]))
@@ -75,6 +75,16 @@ def get_data_B2(filename):
     return condn_data_imagined, Y
 
 
+# convert to one hot vectors
+def one_hot_convert(indata):
+    n = len(np.unique(indata))
+    Y_mult = np.zeros((indata.shape[0],n))
+    for i in range(indata.shape[0]):
+        tmp = round(indata[i])
+        Y_mult[i,tmp]=1
+    Y = Y_mult
+    return Y
+
 # median bootstrap
 def median_bootstrap(indata,iters):
     out_boot=  np.zeros([iters,indata.shape[1]])  
@@ -83,6 +93,19 @@ def median_bootstrap(indata,iters):
         for i in np.arange(iters):
             idx = rnd.choice(indata.shape[0],indata.shape[0])
             xx_tmp = np.median(xx[idx])
+            out_boot[i,cols] = xx_tmp
+    out_boot = np.sort(out_boot,axis=0)
+    out_boot_std = np.std(out_boot,axis=0)
+    return out_boot, out_boot_std
+
+# median bootstrap
+def mean_bootstrap(indata,iters):
+    out_boot=  np.zeros([iters,indata.shape[1]])  
+    for cols in np.arange(indata.shape[1]):
+        xx = indata[:,cols]
+        for i in np.arange(iters):
+            idx = rnd.choice(indata.shape[0],indata.shape[0])
+            xx_tmp = np.mean(xx[idx])
             out_boot[i,cols] = xx_tmp
     out_boot = np.sort(out_boot,axis=0)
     out_boot_std = np.std(out_boot,axis=0)

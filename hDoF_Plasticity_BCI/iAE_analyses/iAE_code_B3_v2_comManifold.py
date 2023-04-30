@@ -46,13 +46,13 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # model params
 input_size=759
-hidden_size=48
+hidden_size=96
 latent_dims=2
 num_classes = 7
 
 # training params 
 num_epochs=150
-batch_size=64
+batch_size=32
 learning_rate = 1e-3
 batch_val=512
 patience=5
@@ -65,7 +65,7 @@ root_online_filename = '\B3_condn_data_Online_Day'
 root_batch_filename = '\B3_condn_data_Batch_Day'
 
 # num of days
-num_days=2
+num_days=4
 
 # init variables across days 
 dist_means_overall_imag = np.empty([num_days,0])
@@ -182,7 +182,7 @@ for days in (np.arange(num_days)+1):
                                                 Ybatch,condn_data_imagined.shape[0])
     
     ## plotting options
-    plt_close=False
+    plt_close=True
     
     # inner loop
     for loop in np.arange(iterations):
@@ -435,7 +435,7 @@ for days in (np.arange(num_days)+1):
 
 # saving it all 
 # orig filename: whole_dataSamples_stats_results_withBatch_Main_withVariance
-np.savez('ProcessedData_B1_01142023_pt0002', 
+np.savez('ProcessedData_B3__pt02', 
          silhoutte_imagined_days = silhoutte_imagined_days,
          silhoutte_online_days = silhoutte_online_days,
          silhoutte_batch_days = silhoutte_batch_days,

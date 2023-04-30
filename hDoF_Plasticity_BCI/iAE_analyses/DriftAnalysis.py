@@ -319,9 +319,9 @@ root_imag_filename = '\condn_data_Imagined_Day'
 root_online_filename = '\condn_data_Online_Day'
 root_batch_filename = '\condn_data_Batch_Day'
 
-res_acc = np.empty((0,10))
-#res_acc_demean = np.empty((0,10))
-num_iterations = 25
+#res_acc = np.empty((0,10))
+res_acc_demean = np.empty((0,10))
+num_iterations = 40
 
 for iterations in np.arange(num_iterations):
     
@@ -333,11 +333,11 @@ for iterations in np.arange(num_iterations):
         condn_data_imagined,Yimagined = get_data(imagined_file_name,7)  
         condn_data_imagined,Yimagined = data_aug_mlp_chol_feature_equalSize(condn_data_imagined,
                                                         Yimagined,3000)
-        # idx = np.argmax(Yimagined,axis=1)
+        # # idx = np.argmax(Yimagined,axis=1)
         # idx = np.where(idx==1)[0]
         # condn_data_imagined = condn_data_imagined[idx,:]
         # null - remove the mean
-        #condn_data_imagined = condn_data_imagined - np.mean(condn_data_imagined,axis=0)
+        condn_data_imagined = condn_data_imagined - np.mean(condn_data_imagined,axis=0)
         # Yimagined = Yimagined[idx,:]
         tmp_y = days*np.ones(condn_data_imagined.shape[0])
         Ytotal_tmp = np.append(Ytotal_tmp,tmp_y)
@@ -396,8 +396,8 @@ for iterations in np.arange(num_iterations):
     plt.imshow(conf_matrix,aspect='auto',interpolation='none')    
     plt.close()
     
-    res_acc = np.concatenate((res_acc,np.diag(conf_matrix)[None,:]),axis=0)
-    #res_acc_demean = np.concatenate((res_acc_demean,np.diag(conf_matrix)[None,:]),axis=0)
+    #res_acc = np.concatenate((res_acc,np.diag(conf_matrix)[None,:]),axis=0)
+    res_acc_demean = np.concatenate((res_acc_demean,np.diag(conf_matrix)[None,:]),axis=0)
 
 
 
@@ -605,17 +605,35 @@ mahab_distances = mahab_distances[np.triu_indices(mahab_distances.shape[0])]
 mahab_distances = mahab_distances[mahab_distances>0]
 print(np.mean(mahab_distances))
 
-#%% CONTINUATION OF PART C BUT NOW ON ALL THE DATA (MAIN)
+#%% PART D -> BUILD A MANIFOLD JUST FOR THE HAND DATA AND EVAL HELD OUT DAY
 
+import os
+os.chdir('C:/Users/nikic/Documents/GitHub/NN/hDoF_Plasticity_BCI/iAE_analyses')
 from iAE_utils_models import *
-mahab_distances_days = []
-Sil_days = []
-latent_acc_days = []
+# file location
+root_path = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker'
+root_imag_filename = '\condn_data_Imagined_Day'
+root_online_filename = '\condn_data_Online_Day'
+root_batch_filename = '\condn_data_Batch_Day'
+
+# model params
+input_size=96
+hidden_size=48
+latent_dims=3
+num_classes = 3
+
+# training params 
+num_epochs=200
+batch_size=32
+learning_rate = 1e-3
+batch_val=512
+patience=5
+gradient_clipping=10
+
+# build a manifold using only a set number of days
 total_days = 10
-batch_size=64
-patience = 5
-latent_dims = 3
-plt_close=True
+
+plt_close=False
 for days in np.arange(total_days-1)+1:
     print('Processing days thru ' + str(days))
     
@@ -639,6 +657,145 @@ for days in np.arange(total_days-1)+1:
         # only on the imagined data 
         condn_data_total = np.concatenate((condn_data_total,condn_data_imagined),axis=0)
         Ytotal = np.concatenate((Ytotal,Yimagined),axis=0)
+        
+    # get only the hand actions
+    idx = np.argmax(Ytotal,axis=1)
+    a = np.concatenate((np.where(idx==0)[0],np.where(idx==2)[0],np.where(idx==6)[0]))
+    condn_data_total = condn_data_total[a,:]
+    Ytotal=Ytotal[a,:]
+    idx1 = idx[a]
+    idx1[np.where(idx1==2)[0]]=1
+    idx1[np.where(idx1==6)[0]]=2
+    Ytotal = one_hot_convert(idx1)
+    
+    if 'model' in locals():
+        del model       
+    nn_filename = 'iAE_AcrossDays' + str(days) + '.pth'
+    Ytest = np.zeros((2,2))
+    while len(np.unique(np.argmax(Ytest,axis=1)))<num_classes:
+        Xtrain,Xtest,Ytrain,Ytest = training_test_split(condn_data_total,Ytotal,0.8)      
+    model = iAutoencoder(input_size,hidden_size,latent_dims,num_classes).to(device)                              
+    model,acc = training_loop_iAE(model,num_epochs,batch_size,learning_rate,batch_val,
+                          patience,gradient_clipping,nn_filename,
+                          Xtrain,Ytrain,Xtest,Ytest,
+                          input_size,hidden_size,latent_dims,num_classes)
+    
+    D,z,idx,fig_imagined,acc_train,dummy = plot_latent_acc(model,condn_data_total,Ytotal,
+                                       latent_dims) 
+    if plt_close == True:
+        plt.close()
+        
+    # project held out day onto this model
+    mahab_tmp=[]
+    latent_acc_tmp=[]
+    sil_tmp=[]
+    for i in np.arange(len(test_days)):
+            
+        condn_data_heldout=np.empty((0,96))
+        Yheldout = np.empty((0,7))        
+        imagined_file_name = root_path + root_imag_filename +  str(test_days[i]) + '.mat'
+        condn_data_imagined,Yimagined = get_data(imagined_file_name)    
+        online_file_name = root_path + root_online_filename +  str(test_days[i]) + '.mat'
+        condn_data_online,Yonline = get_data(online_file_name)
+        batch_file_name = root_path + root_batch_filename +  str(test_days[i]) + '.mat'
+        condn_data_batch,Ybatch = get_data(batch_file_name)  
+        
+        # project only imagined data 
+        condn_data_heldout = np.concatenate((condn_data_heldout,condn_data_imagined),axis=0)
+        Yheldout = np.concatenate((Yheldout,Yimagined),axis=0)
+        
+        # get only the hand actions
+        idx = np.argmax(Yheldout,axis=1)
+        a = np.concatenate((np.where(idx==0)[0],np.where(idx==2)[0],np.where(idx==6)[0]))
+        condn_data_heldout = condn_data_heldout[a,:]
+        Yheldout=Yheldout[a,:]
+        idx1 = idx[a]
+        idx1[np.where(idx1==2)[0]]=1
+        idx1[np.where(idx1==6)[0]]=2
+        Yheldout = one_hot_convert(idx1)
+        
+        # project only closed loop data 
+        # condn_data_heldout = np.concatenate((condn_data_heldout,condn_data_online,condn_data_batch),axis=0)
+        # Yheldout = np.concatenate((Yheldout, Yonline,Ybatch),axis=0)
+        
+        D,z,idx,fig_test,acc_test,dummy = plot_latent_acc(model,condn_data_heldout,Yheldout,latent_dims) 
+        if plt_close == True:
+            plt.close()     
+        latent_acc_tmp.append(acc_test*100)
+        sil_tmp.append(D)
+        
+        # # for figure plotting
+        # ch =[0,2,6]
+        # fig_ex = plot_latent_select(model,condn_data_heldout,Yheldout,latent_dims,ch)        
+        # fig_ex.axes[0].xaxis.set_ticklabels([])
+        # fig_ex.axes[0].yaxis.set_ticklabels([])
+        # fig_ex.axes[0].zaxis.set_ticklabels([])
+        # fig_ex.axes[0].view_init(elev=24, azim=-130)
+        # plt.show()
+        # image_format = 'svg' # e.g .png, .svg, etc.
+        # image_name = 'Hand_Day10_Days1thru9_AE.svg'
+        # fig_ex.savefig(image_name, format=image_format, dpi=300)
+
+        
+        mahab_distances = get_mahab_distance_latent(z,idx)
+        mahab_distances = mahab_distances[np.triu_indices(mahab_distances.shape[0])]
+        mahab_distances = mahab_distances[mahab_distances>0]
+        print(np.mean(mahab_distances))
+
+#%% CONTINUATION OF PART C BUT NOW ON ALL THE DATA (MAIN)
+
+import os
+os.chdir('C:/Users/nikic/Documents/GitHub/NN/hDoF_Plasticity_BCI/iAE_analyses')
+from iAE_utils_models import *
+# file location
+root_path = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker'
+root_imag_filename = '\condn_data_Imagined_Day'
+root_online_filename = '\condn_data_Online_Day'
+root_batch_filename = '\condn_data_Batch_Day'
+
+input_size=96
+hidden_size=48
+num_classes = 7
+
+
+mahab_distances_days = []
+Sil_days = []
+latent_acc_days = []
+total_days = 10
+batch_size=64
+patience = 5
+latent_dims = 3
+plt_close=False
+for days in np.arange(total_days-1)+1:
+    print('Processing days thru ' + str(days))
+    
+    train_days = np.arange(days)+1
+    test_days = np.arange(days+1,total_days+1)
+        
+    # get training data        
+    condn_data_total=np.empty((0,96))
+    Ytotal = np.empty((0,7))
+    for i in np.arange(len(train_days)):
+        imagined_file_name = root_path + root_imag_filename +  str(train_days[i]) + '.mat'
+        condn_data_imagined,Yimagined = get_data(imagined_file_name)    
+        online_file_name = root_path + root_online_filename +  str(train_days[i]) + '.mat'
+        condn_data_online,Yonline = get_data(online_file_name)
+        batch_file_name = root_path + root_batch_filename +  str(train_days[i]) + '.mat'
+        condn_data_batch,Ybatch = get_data(batch_file_name)  
+        
+        condn_data_online,Yonline =   data_aug_mlp_chol_feature_equalSize(condn_data_online,Yonline,condn_data_imagined.shape[0])
+        condn_data_batch,Ybatch =   data_aug_mlp_chol_feature_equalSize(condn_data_batch,Ybatch,condn_data_imagined.shape[0])
+        
+        # only on the imagined data 
+        condn_data_total = np.concatenate((condn_data_total,condn_data_imagined),axis=0)
+        Ytotal = np.concatenate((Ytotal,Yimagined),axis=0)
+        
+        # get only the hand actions
+        # idx = np.argmax(Ytotal,axis=1)
+        # idx = np.concatenate((np.where(idx==0)[0],np.where(idx==2)[0],np.where(idx==6)[0]))
+        # condn_data_total = condn_data_total[idx,:]
+        # Ytotal = Ytotal[idx,:]
+        # num_classes=3
         
         # on all data 
         # condn_data_total = np.concatenate((condn_data_total,condn_data_imagined,

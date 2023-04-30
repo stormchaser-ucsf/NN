@@ -416,14 +416,14 @@ print(np.mean(tmp,axis=0))
 
 
 #%% plotting mean centroid variances over days  (MAIN)
-N=2
+N=1
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams.update({'font.size': 6})
-X=np.arange(10)+1
-X=np.arange(10)+1
+# X=np.arange(10)+1
+# X=np.arange(10)+1
 # imagined 
 tmp_main = np.squeeze(np.mean(var_imagined_days,axis=1))
 tmp1 = np.mean(tmp_main,axis=0)
@@ -559,11 +559,11 @@ hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams.update({'font.size': 6})
-X=np.arange(10)+1
-X=np.arange(10)+1
+# X=np.arange(10)+1
+# X=np.arange(10)+1
 # imagined 
-tmp_main = np.squeeze(np.median(mahab_distances_imagined_days,axis=1))
-tmp1 = np.median(tmp_main,axis=0)
+tmp_main = np.squeeze(np.mean(mahab_distances_imagined_days,axis=1))
+tmp1 = np.mean(tmp_main,axis=0)
 tmp1b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp1 = np.insert(tmp1,0,tmp1[0],axis=0)
 tmp1b = np.insert(tmp1b,0,tmp1b[0],axis=0)
@@ -573,8 +573,8 @@ tmp1b = tmp1b[1:]
 plt.plot(X,tmp1,color="black",label = 'Imagined')
 plt.fill_between(X, tmp1-tmp1b, tmp1+tmp1b,color="black",alpha=0.2)
 # online
-tmp_main = np.squeeze(np.median(mahab_distances_online_days,1))
-tmp2 = np.median(tmp_main,axis=0)
+tmp_main = np.squeeze(np.mean(mahab_distances_online_days,1))
+tmp2 = np.mean(tmp_main,axis=0)
 tmp2b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp2 = np.insert(tmp2,0,tmp2[0],axis=0)
 tmp2b = np.insert(tmp2b,0,tmp2b[0],axis=0)
@@ -585,8 +585,8 @@ tmp2b = tmp2b[1:]
 plt.plot(X,tmp2,color="blue",label = 'Online')
 plt.fill_between(X, tmp2-tmp2b, tmp2+tmp2b,color="blue",alpha=0.2)
 # batch
-tmp_main = np.squeeze(np.median(mahab_distances_batch_days,1))
-tmp3 = np.median(tmp_main,axis=0)
+tmp_main = np.squeeze(np.mean(mahab_distances_batch_days,1))
+tmp3 = np.mean(tmp_main,axis=0)
 tmp3b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp3 = np.insert(tmp3,0,tmp3[0],axis=0)
 tmp3b = np.insert(tmp3b,0,tmp3b[0],axis=0)
@@ -3105,7 +3105,7 @@ pvalue = bootstrap_difference_test(a,b,'median')
 pvalue = bootstrap_difference_test(a,c,'median')
 pvalue = bootstrap_difference_test(c,b,'median')
 
-#%% PLOTTING THE DECODING ACCURACY OF DISCERNING THE DAY OF RECORDING (B1)
+#%% PLOTTING THE DECODING ACCURACY OF DISCERNING THE DAY OF RECORDING (B1 and B2)
 
 import os
 os.chdir('C:/Users/nikic/Documents/GitHub/NN/hDoF_Plasticity_BCI/iAE_analyses')
@@ -3114,13 +3114,84 @@ data=np.load('RepresentationalDrift_Mean_Across_Days_B1.npz',allow_pickle=True)
 res_acc_B1 = data.get('res_acc_B1')
 res_acc_B1_demean = data.get('res_acc_B1_demean')
 
+# bootstrp the mean
+res_mean_boot = mean_bootstrap(res_acc_B1,1000)[0]
+res_demean_boot = mean_bootstrap(res_acc_B1_demean,1000)[0]
+
+# using scipy
+# tmp_boot = stats.bootstrap((res_acc_B1,), np.mean)
+# res_mean_boot = tmp_boot.confidence_interval
+# tmp_boot1 = stats.bootstrap((res_acc_B1_demean,), np.mean)
+# res_demean_boot = tmp_boot1.confidence_interval
+
 # bootstrap and plot with confidence intervals 
-plt.plot(X,tmp,color="black",label = 'Imagined')
-plt.fill_between(X, tmp-tmp1, tmp+tmp1,color="black",alpha=0.2)
+X = np.arange(res_acc_B1.shape[1])+1
+fig=plt.figure()
+plt.ylim([0,1])
+tmp = np.mean(res_acc_B1,axis=0)
+tmp_low =  res_mean_boot[9,:]#res_mean_boot.low
+tmp_high = res_mean_boot[989,:]#res_mean_boot.high
+plt.plot(X,tmp,color="black")
+plt.fill_between(X, tmp_low, tmp_high,color="black",alpha=0.2)
+tmp = np.mean(res_acc_B1_demean,axis=0)
+tmp_low =  res_demean_boot[9,:]#res_demean_boot.low
+tmp_high = res_demean_boot[989,:]#res_demean_boot.high
+plt.plot(X,tmp,color="blue")
+plt.fill_between(X, tmp_low, tmp_high,color="blue",alpha=0.2)
+plt.hlines(1/len(X),1,len(X),color='r',linestyles='dotted')
+plt.xticks(X)
+plt.yticks(np.arange(0,1.10,0.1))
+plt.tick_params(labelleft=False,labelbottom=False)
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Day_Decoding_Acc_B1.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
 
-    
 
+# t-test against null distribution
+demean = np.mean(res_acc_B1_demean,axis=0)
+t=stats.ttest_1samp(demean,0.1)
+print(t)
 
+# now do it for B2
+data=np.load('RepresentationalDrift_Mean_Across_Days_B2.npz',allow_pickle=True)
+res_acc_B2 = data.get('res_acc_B2')
+res_acc_B2_demean = data.get('res_acc_demean_B2')
 
+# bootstrp the mean
+res_mean_boot = mean_bootstrap(res_acc_B2,1000)[0]
+res_demean_boot = mean_bootstrap(res_acc_B2_demean,1000)[0]
+
+# using scipy
+# tmp_boot = stats.bootstrap((res_acc_B2,), np.mean)
+# res_mean_boot = tmp_boot.confidence_interval
+# tmp_boot1 = stats.bootstrap((res_acc_B2_demean,), np.mean)
+# res_demean_boot = tmp_boot1.confidence_interval
+
+# bootstrap and plot with confidence intervals 
+X = np.arange(res_acc_B2.shape[1])+1
+fig=plt.figure()
+plt.ylim([0,1])
+tmp = np.mean(res_acc_B2,axis=0)
+tmp_low =  res_mean_boot[9,:]#res_mean_boot.low
+tmp_high = res_mean_boot[989,:]#res_mean_boot.high
+plt.plot(X,tmp,color="black")
+plt.fill_between(X, tmp_low, tmp_high,color="black",alpha=0.2)
+tmp = np.mean(res_acc_B2_demean,axis=0)
+tmp_low =  res_demean_boot[9,:]#res_demean_boot.low
+tmp_high = res_demean_boot[989,:]#res_demean_boot.high
+plt.plot(X,tmp,color="blue")
+plt.fill_between(X, tmp_low, tmp_high,color="blue",alpha=0.2)
+plt.hlines(1/len(X),1,len(X),color='r',linestyles='dotted')
+plt.xticks(X)
+plt.yticks(np.arange(0,1.10,0.2))
+plt.tick_params(labelleft=False,labelbottom=False)
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Day_Decoding_Acc_B2.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
+
+# stats
+demean = np.mean(res_acc_B2_demean,axis=0)
+t=stats.ttest_1samp(demean,0.2)
+print(t)
 
 
