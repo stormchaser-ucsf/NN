@@ -56,9 +56,9 @@ gradient_clipping=10
 
 # file location
 root_path = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker'
-root_imag_filename = '\Biomimetic_CenterOut_condn_data_Imagined_Day_45deg'
-root_online_filename = '\Biomimetic_CenterOut_condn_data_Online_Day_45deg'
-root_batch_filename = '\Biomimetic_CenterOut_condn_data_Batch_Day_45deg'
+root_imag_filename = '\Biomimetic_CenterOut_condn_data_Imagined_Day_First3s' #'\Biomimetic_CenterOut_condn_data_Imagined_Day_45deg'
+root_online_filename = '\Biomimetic_CenterOut_condn_data_Online_Day_First3s' #'\Biomimetic_CenterOut_condn_data_Online_Day_45deg'
+root_batch_filename = '\Biomimetic_CenterOut_condn_data_Batch_Day_First3s' #'\Biomimetic_CenterOut_condn_data_Batch_Day_45deg'
 
 
 # num of days
@@ -357,8 +357,8 @@ for days in (np.arange(num_days)+1):
         
         # making plot axes equal for example plot 
         if plt_close == False and latent_dims==3:            
-            az=-149  #play around with these
-            el=27
+            az=13  #play around with these
+            el=-131
             x1 = np.array(fig_imagined.axes[0].get_xlim())[:,None]
             x2 = np.array(fig_online.axes[0].get_xlim())[:,None]
             x3 = np.array(fig_batch.axes[0].get_xlim())[:,None]

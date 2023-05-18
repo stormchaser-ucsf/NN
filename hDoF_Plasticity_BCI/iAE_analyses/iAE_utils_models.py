@@ -29,6 +29,7 @@ from sklearn.decomposition import PCA as PCA
 pca=PCA(n_components=2)
 from statsmodels.stats.multitest import fdrcorrection as fdr
 import statsmodels.api as sm
+import numpy.random as rnd
 
 # setting up GPU
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -1870,7 +1871,29 @@ def bootstrap_difference_test(a,b,test_type):
 # plt.xticks(ticks=[1,2],labels=('Raw','Reconstructed from AE'))
 
 
-    
+# import numpy as np
+# import matplotlib.pyplot as plt
+# from scipy.signal import correlate,correlation_lags
+
+# # Generate a noisy sinewave
+# t = np.arange(1, 101)
+# b = np.abs(np.sin(2 * np.pi * 1 / 100 * t)) + 0.1 * np.random.randn(100)
+# b_conv = np.convolve(b, b, mode='same') + np.random.randn(100)
+
+# # Plot 
+# plt.figure()
+# plt.plot(b_conv)
+
+# # Calculate the autocorrelation
+# r = correlate(b_conv, b_conv, mode='full', method='auto')
+# lags = correlation_lags(b_conv.shape[0],b_conv.shape[0],mode='full')
+
+# # Plot the cross-correlation
+# plt.figure()
+# plt.stem(lags,r)
+# plt.show()
+
+
     
     
     

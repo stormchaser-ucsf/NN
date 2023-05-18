@@ -40,9 +40,10 @@ from statsmodels.stats.anova import AnovaRM
 #whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars
 
 #
+data=np.load('ProcessedData_B1_9DoF.npz')
 #data =np.load('MAIN_MAIN2_B1_NoiseDataAugment_CholIndivFeatEqualSize_pt01Noise_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
 #data=np.load('MAIN_NewB1_NoiseDataAugment_CholIndivFeatEqualSize_pt01Noise_Stats_HeldOut_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
-data=np.load('MAIN_MAIN_NewB2_NoiseDataAugmentCholEqualFeat_pt02_Stats_OnAllData_2D_common_Manifold_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
+#data=np.load('MAIN_MAIN_NewB2_NoiseDataAugmentCholEqualFeat_pt02_Stats_OnAllData_2D_common_Manifold_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
 #data=np.load('ProcessedData_B1_01142023.npz')
 silhoutte_imagined_days = data.get('silhoutte_imagined_days')
 silhoutte_online_days = data.get('silhoutte_online_days')
@@ -147,12 +148,12 @@ fig_imagined.axes[0].set_xticks(ticks=np.arange(-20,31,10))
 fig_imagined.axes[0].set_yticks(ticks=np.arange(-15,21,5))
 fig_batch.axes[0].set_xticks(ticks=np.arange(-20,31,10))
 fig_batch.axes[0].set_yticks(ticks=np.arange(-15,21,5))
-image_format = 'png' # e.g .png, .svg, etc.
-image_name = 'Latent_Day1_OL_B3_ComMan2d.png'
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Latent9DOF_Day1_OL_B1_ComMan2d.svg'
 fig_imagined.savefig(image_name, format=image_format, dpi=300)
-image_name = 'Latent_Day1_CL1_B3_ComMan2d.png'
+image_name = 'Latent9DOF_Day1_CL1_B1_ComMan2d.svg'
 fig_online.savefig(image_name, format=image_format, dpi=300)
-image_name = 'Latent_Day1_CL2_B3_ComMan2d.png'
+image_name = 'Latent9DOF_Day1_CL2_B1_ComMan2d.svg'
 fig_batch.savefig(image_name, format=image_format, dpi=300)
 fig_imagined.suptitle('OL')
 
@@ -559,8 +560,8 @@ hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams.update({'font.size': 6})
-# X=np.arange(10)+1
-# X=np.arange(10)+1
+X=np.arange(10)+1
+X=np.arange(10)+1
 # imagined 
 tmp_main = np.squeeze(np.mean(mahab_distances_imagined_days,axis=1))
 tmp1 = np.mean(tmp_main,axis=0)
