@@ -63,9 +63,9 @@ num_classes = 6
 
 # file location
 root_path = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker'
-root_imag_filename = '\Biomimetic_CenterOut_condn_data_Imagined_Day_First3s'
-root_online_filename = '\Biomimetic_CenterOut_condn_data_Online_Day_First3s'
-root_batch_filename = '\Biomimetic_CenterOut_condn_data_Batch_Day_First3s'
+root_imag_filename = '\Biomimetic_CenterOut_condn_data_Imagined_Day_First2pt5s_new'
+root_online_filename = '\Biomimetic_CenterOut_condn_data_Online_Day_First2pt5s_new'
+root_batch_filename = '\Biomimetic_CenterOut_condn_data_Batch_Day_First2pt5s_new'
 
 #%% MAIN LOOP TO GET THE DATA
 
@@ -286,14 +286,14 @@ print(str(time_taken) + 's')
 pval_results = np.array(list(pval_results.items()),dtype=object)
 simal_res = np.array(list(simal_res.items()),dtype=object)
 recon_res = np.array(list(recon_res.items()),dtype=object)
-np.savez('ManifoldAnalyses_Main_CKD_All_First3s_All3Loop_1000boot', 
+np.savez('ManifoldAnalyses_Main_CKD_All_First2pt6s_New_All3Loop_1000boot', 
          pval_results = pval_results,
          simal_res = simal_res,
          recon_res = recon_res)
 
 #%% PLOTTING THE RESULTS 
 
-data =np.load('ManifoldAnalyses_Main_CKD_All_First3s_All3Loop_1000boot.npz',allow_pickle=True)
+data =np.load('ManifoldAnalyses_Main_CKD_All_First2pt6s_New_All3Loop_1000boot.npz',allow_pickle=True)
 pval_results = data.get('pval_results')
 simal_res = data.get('simal_res')
 recon_res = data.get('recon_res')

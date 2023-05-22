@@ -56,9 +56,9 @@ gradient_clipping=10
 
 # file location
 root_path = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker'
-root_imag_filename = '\Biomimetic_CenterOut_condn_data_Imagined_Day_First3s' #'\Biomimetic_CenterOut_condn_data_Imagined_Day_45deg'
-root_online_filename = '\Biomimetic_CenterOut_condn_data_Online_Day_First3s' #'\Biomimetic_CenterOut_condn_data_Online_Day_45deg'
-root_batch_filename = '\Biomimetic_CenterOut_condn_data_Batch_Day_First3s' #'\Biomimetic_CenterOut_condn_data_Batch_Day_45deg'
+root_imag_filename = '\Biomimetic_CenterOut_condn_data_Imagined_Day_First2pt5s_new' #'\Biomimetic_CenterOut_condn_data_Imagined_Day_45deg'
+root_online_filename = '\Biomimetic_CenterOut_condn_data_Online_Day_First2pt5s_new' #'\Biomimetic_CenterOut_condn_data_Online_Day_45deg'
+root_batch_filename = '\Biomimetic_CenterOut_condn_data_Batch_Day_First2pt5s_new' #'\Biomimetic_CenterOut_condn_data_Batch_Day_45deg'
 
 
 # num of days
@@ -178,7 +178,7 @@ for days in (np.arange(num_days)+1):
         
     
     ## plotting options
-    plt_close=False
+    plt_close=True
     
     # inner loop
     for loop in np.arange(iterations):
@@ -431,7 +431,7 @@ for days in (np.arange(num_days)+1):
 
 # saving it all 
 # orig filename: whole_dataSamples_stats_results_withBatch_Main_withVariance
-np.savez('ProcessedData_B1_CKD_First3s', 
+np.savez('ProcessedData_B1_CKD_First2pt6s_New_New', 
          silhoutte_imagined_days = silhoutte_imagined_days,
          silhoutte_online_days = silhoutte_online_days,
          silhoutte_batch_days = silhoutte_batch_days,

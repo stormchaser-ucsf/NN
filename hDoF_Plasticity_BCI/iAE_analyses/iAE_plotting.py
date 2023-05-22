@@ -149,11 +149,11 @@ fig_imagined.axes[0].set_yticks(ticks=np.arange(-15,21,5))
 fig_batch.axes[0].set_xticks(ticks=np.arange(-20,31,10))
 fig_batch.axes[0].set_yticks(ticks=np.arange(-15,21,5))
 image_format = 'svg' # e.g .png, .svg, etc.
-image_name = 'Latent9DOF_Day1_OL_B1_ComMan2d.svg'
+image_name = 'LatentCKD_Day1_OL_B1_ComMan2d.svg'
 fig_imagined.savefig(image_name, format=image_format, dpi=300)
-image_name = 'Latent9DOF_Day1_CL1_B1_ComMan2d.svg'
+image_name = 'LatentCKD_Day1_CL1_B1_ComMan2d.svg'
 fig_online.savefig(image_name, format=image_format, dpi=300)
-image_name = 'Latent9DOF_Day1_CL2_B1_ComMan2d.svg'
+image_name = 'LatentCKD_Day1_CL2_B1_ComMan2d.svg'
 fig_batch.savefig(image_name, format=image_format, dpi=300)
 fig_imagined.suptitle('OL')
 
@@ -2766,7 +2766,7 @@ fig.savefig(image_name, format=image_format, dpi=300)
 x1 = np.concatenate((corr_coef_delta[:,None],corr_coef_beta[:,None],corr_coef_hg[:,None]))
 x1b = stats.bootstrap([x1,],np.mean)
 
-#%% PLOTTING MANIFOLD DRIFT STATISTICS
+#%% PLOTTING MAHALANOBIS DISTANCES BETWEEN CKD AND IBID - B1 
 
 # load data for stereotyped movements 
 data =np.load('MAIN_MAIN2_B1_NoiseDataAugment_CholIndivFeatEqualSize_pt01Noise_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
@@ -2821,12 +2821,12 @@ plt.legend(loc='upper left')
 plt.xlabel('Days',**hfont)
 plt.ylabel('Mahalanobis Distances',**hfont)
 plt.show()
-tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
+#tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
 tmp = np.concatenate((tmp2[:,None],tmp3[:,None]),axis=1)
 #tmp =(tmp1[:,None])
 mahab_stereo = tmp.flatten()
 
-data =np.load('ProcessedData_B1_CKD_First3s.npz')
+data =np.load('ProcessedData_B1_CKD_First2pt6s_New_New.npz')
 mahab_distances_online_days = data.get('mahab_distances_online_days')
 mahab_distances_imagined_days = data.get('mahab_distances_imagined_days')
 mahab_distances_batch_days = data.get('mahab_distances_batch_days')
@@ -2879,6 +2879,7 @@ plt.ylabel('Mahalanobis Distances',**hfont)
 plt.show()
 #tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
 tmp = np.concatenate((tmp2[:,None],tmp3[:,None]),axis=1)
+tmp = tmp2[:,None]
 #tmp =(tmp1[:,None])
 
 mahab_ckd_3s = tmp.flatten()
@@ -2938,12 +2939,13 @@ plt.show()
 
 #tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
 tmp = np.concatenate((tmp2[:,None],tmp3[:,None]),axis=1)
+tmp = tmp2[:,None]
 #tmp =(tmp1[:,None])
 mahab_ckd_45deg = tmp.flatten()
 
-# mahab_stereo = np.log(mahab_stereo)
-# mahab_ckd_3s = np.log(mahab_ckd_3s)
-# mahab_ckd_45deg = np.log(mahab_ckd_45deg)
+mahab_stereo = np.log(mahab_stereo)
+mahab_ckd_3s = np.log(mahab_ckd_3s)
+mahab_ckd_45deg = np.log(mahab_ckd_45deg)
 fig=plt.figure()
 plt.boxplot([mahab_stereo,mahab_ckd_3s,mahab_ckd_45deg])
 plt.yticks(np.arange(-2,4.1,2))
@@ -2988,7 +2990,7 @@ plt.show()
 print(a[:,None])
 
 
-data =np.load('ManifoldAnalyses_Main_CKD_All_First3s_All3Loop_1000boot.npz',allow_pickle=True)
+data =np.load('ManifoldAnalyses_Main_CKD_All_First2pt6s_New_All3Loop_1000boot.npz',allow_pickle=True)
 pval_results = data.get('pval_results')
 simal_res = data.get('simal_res')
 recon_res = data.get('recon_res')
@@ -3033,7 +3035,7 @@ plt.tick_params(labelbottom=False)
 
 
 # PLOTTING THE SIMILARITIES LAYER BY LAYER FOR BOTH CKD AND IBID
-data =np.load('ManifoldAnalyses_Main_CKD_All_First3s_All3Loop_1000boot.npz',allow_pickle=True)
+data =np.load('ManifoldAnalyses_Main_CKD_All_First2pt6s_New_All3Loop_1000boot.npz',allow_pickle=True)
 simal_res_ckd1 = data.get('simal_res')
 data =np.load('ManifoldAnalyses_Main_CKD_All_IntDirTowardsTarget_All3Loop_1000boot.npz',allow_pickle=True)
 simal_res_ckd2 = data.get('simal_res')
