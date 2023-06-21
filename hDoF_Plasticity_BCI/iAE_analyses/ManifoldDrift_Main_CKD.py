@@ -87,8 +87,9 @@ for i in np.arange(num_days)+1: #ROOT DAYS
     nn_filename = 'iAE_' + str(i) + '.pth'   
     
     # data augment
-    len_data = max([condn_data_online.shape[0],condn_data_imagined.shape[0],
-                    condn_data_batch.shape[0]])
+   # len_data = max([condn_data_online.shape[0],condn_data_imagined.shape[0],
+   #                 condn_data_batch.shape[0]])
+    len_data=1500
     if condn_data_online.shape[0]<len_data:
         condn_data_online,Yonline =   data_aug_mlp_chol_feature_equalSize(condn_data_online,
                                             Yonline,len_data)
@@ -143,8 +144,9 @@ for i in np.arange(num_days)+1: #ROOT DAYS
         nn_filename = 'iAE_' + str(j) + '.pth'   
         
         # data augment
-        len_data = max([condn_data_online1.shape[0],condn_data_imagined1.shape[0],
-                        condn_data_batch1.shape[0]])
+        # len_data = max([condn_data_online.shape[0],condn_data_imagined.shape[0],
+        #                 condn_data_batch.shape[0]])
+        len_data=1500
         if condn_data_online1.shape[0]<len_data:
             condn_data_online1,Yonline1 =   data_aug_mlp_chol_feature_equalSize(condn_data_online1,
                                                 Yonline1,len_data)
@@ -286,14 +288,15 @@ print(str(time_taken) + 's')
 pval_results = np.array(list(pval_results.items()),dtype=object)
 simal_res = np.array(list(simal_res.items()),dtype=object)
 recon_res = np.array(list(recon_res.items()),dtype=object)
-np.savez('ManifoldAnalyses_Main_CKD_All_First2pt6s_New_All3Loop_1000boot', 
+#ManifoldAnalyses_Main_CKD_All_First2pt6s_New_All3Loop_1000boot
+np.savez('ManifoldAnalyses_Main_CKD_All_First2pt6s_New_All3Loop_1000boot_6132023_2kUpsampled', 
          pval_results = pval_results,
          simal_res = simal_res,
          recon_res = recon_res)
 
 #%% PLOTTING THE RESULTS 
 
-data =np.load('ManifoldAnalyses_Main_CKD_All_First2pt6s_New_All3Loop_1000boot.npz',allow_pickle=True)
+data =np.load('ManifoldAnalyses_Main_CKD_All_First2pt6s_New_All3Loop_1000boot_6132023_2kUpsampled.npz',allow_pickle=True)
 pval_results = data.get('pval_results')
 simal_res = data.get('simal_res')
 recon_res = data.get('recon_res')

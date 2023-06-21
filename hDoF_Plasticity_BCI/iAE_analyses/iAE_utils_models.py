@@ -1241,7 +1241,7 @@ def data_aug_mlp_chol_feature_equalSize(indata,labels,data_size):
         new_data[:,np.arange(1,96,3)] = new_beta
         new_data[:,np.arange(2,96,3)] = new_hg
         #add some noise
-        new_data = new_data + 0.00002*rnd.randn(new_data.shape[0],new_data.shape[1])
+        new_data = new_data + 0.02*rnd.randn(new_data.shape[0],new_data.shape[1])
         
         # make it unit norm
         for i in np.arange(new_data.shape[0]):

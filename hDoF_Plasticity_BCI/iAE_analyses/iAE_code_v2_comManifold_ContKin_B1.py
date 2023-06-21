@@ -56,10 +56,12 @@ gradient_clipping=10
 
 # file location
 root_path = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker'
-root_imag_filename = '\Biomimetic_CenterOut_condn_data_Imagined_Day_First2pt5s_new' #'\Biomimetic_CenterOut_condn_data_Imagined_Day_45deg'
-root_online_filename = '\Biomimetic_CenterOut_condn_data_Online_Day_First2pt5s_new' #'\Biomimetic_CenterOut_condn_data_Online_Day_45deg'
-root_batch_filename = '\Biomimetic_CenterOut_condn_data_Batch_Day_First2pt5s_new' #'\Biomimetic_CenterOut_condn_data_Batch_Day_45deg'
-
+#root_imag_filename = '\Biomimetic_CenterOut_condn_data_Imagined_Day_First2pt5s_new' #'\Biomimetic_CenterOut_condn_data_Imagined_Day_45deg'
+#root_online_filename = '\Biomimetic_CenterOut_condn_data_Online_Day_First2pt5s_new' #'\Biomimetic_CenterOut_condn_data_Online_Day_45deg'
+#root_batch_filename = '\Biomimetic_CenterOut_condn_data_Batch_Day_First2pt5s_new' #'\Biomimetic_CenterOut_condn_data_Batch_Day_45deg'
+root_imag_filename = '\Biomimetic_CenterOut_condn_data_Imagined_Day_45deg'
+root_online_filename = '\Biomimetic_CenterOut_condn_data_Online_Day_45deg'
+root_batch_filename = '\Biomimetic_CenterOut_condn_data_Batch_Day_45deg'
 
 # num of days
 num_days=5
@@ -76,7 +78,7 @@ dist_var_overall_batch = np.empty([num_days,0])
 mahab_dist_overall_batch = np.empty([num_days,0])
 
 # iterations to bootstrap
-iterations = 10
+iterations = 5
 
 #%% SETTING UP VARS 
 
@@ -164,8 +166,9 @@ for days in (np.arange(num_days)+1):
     hg_spatial_corr_iter = np.empty([num_classes*3,0])
     
     #### DATA AUGMENTATION ###    
-    len_data = max([condn_data_online.shape[0],condn_data_imagined.shape[0],
-                    condn_data_batch.shape[0]])
+    # len_data = max([condn_data_online.shape[0],condn_data_imagined.shape[0],
+    #                 condn_data_batch.shape[0]])
+    len_data=1500
     if condn_data_online.shape[0]<len_data:
         condn_data_online,Yonline =   data_aug_mlp_chol_feature_equalSize(condn_data_online,
                                             Yonline,len_data)
@@ -431,7 +434,7 @@ for days in (np.arange(num_days)+1):
 
 # saving it all 
 # orig filename: whole_dataSamples_stats_results_withBatch_Main_withVariance
-np.savez('ProcessedData_B1_CKD_First2pt6s_New_New', 
+np.savez('ProcessedData_B1_CKD_First2pt6s_New_New_6132023_2kUpSampled', 
          silhoutte_imagined_days = silhoutte_imagined_days,
          silhoutte_online_days = silhoutte_online_days,
          silhoutte_batch_days = silhoutte_batch_days,
