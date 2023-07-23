@@ -514,8 +514,3 @@ np.savez('ProcessedData_B1_CKD_First2pt6s_New_New_6132023_2kUpSampled',
 #                       latent_dims)        
 # silhoutte_batch_iter = np.append(silhoutte_batch_iter,D)
 
-
-
-
-
-
