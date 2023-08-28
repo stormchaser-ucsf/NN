@@ -1342,8 +1342,14 @@ plt.show()
 
 
 
-query=6
-tmp = np.std(beta_recon_imag[query],axis=0)
+# =============================================================================
+# this code change here relates to trying to see spatial reconstruction after 
+# passing data thru AE even though they come from the same data class
+# It can be changed to just look at the reconstruction from different classes
+# =============================================================================
+
+query=5
+tmp = np.mean(hg_recon_imag[query][:300,:],axis=0)
 tmp = np.reshape(tmp,(4,8))
 xmax1,xmin1 = tmp.max(),tmp.min()
 plt.figure()
@@ -1352,14 +1358,14 @@ plt.colorbar()
 plt.show
 
 
-tmp = np.std(beta_recon_online[query],axis=0)
+tmp = np.mean(hg_recon_online[query][109:,:],axis=0)
 tmp = np.reshape(tmp,(4,8))
 xmax2,xmin2 = tmp.max(),tmp.min()
 plt.figure()
 fig2=plt.imshow(tmp)
 plt.colorbar()
 
-tmp = np.std(beta_recon_batch[query],axis=0)
+tmp = np.mean(hg_recon_batch[query][300:,:],axis=0)
 tmp = np.reshape(tmp,(4,8))
 xmax3,xmin3 = tmp.max(),tmp.min()
 plt.figure()
