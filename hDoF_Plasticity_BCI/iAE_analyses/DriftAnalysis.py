@@ -134,7 +134,7 @@ condn_data_imagined_day2 = condn_data_imagined[a2,:]
 Yimagined_day2 = Yimagined[a2,:]
 Yimagined_day2 = np.roll(Yimagined_day2,1)
 
-days=8
+days=6
 imagined_file_name = root_path + root_imag_filename +  str(days) + '.mat'
 condn_data_imagined,Yimagined = get_data(imagined_file_name,7)
 a2 = np.argmax(Yimagined,axis=1)
@@ -145,9 +145,9 @@ Yimagined_day3 = np.roll(Yimagined_day3,2)
 
 # OPIONAL IMPORTANT
 # remove the mean to see if there is true drift in somatotopy
-condn_data_imagined_day1 = condn_data_imagined_day1 - np.mean(condn_data_imagined_day1,axis=0)
-condn_data_imagined_day2 = condn_data_imagined_day2 - np.mean(condn_data_imagined_day2,axis=0)
-condn_data_imagined_day3 = condn_data_imagined_day3 - np.mean(condn_data_imagined_day3,axis=0)
+# condn_data_imagined_day1 = condn_data_imagined_day1 - np.mean(condn_data_imagined_day1,axis=0)
+# condn_data_imagined_day2 = condn_data_imagined_day2 - np.mean(condn_data_imagined_day2,axis=0)
+# condn_data_imagined_day3 = condn_data_imagined_day3 - np.mean(condn_data_imagined_day3,axis=0)
 
 
 num_classes=3
@@ -217,7 +217,7 @@ corr_coef_flat = [item for sublist in corr_coef for item in sublist]
 
    
 # plotting
-hand_channels = np.array([23 ,31]) 
+hand_channels = np.array([23]) 
 
 tmp = hg_recon_imag[0]
 tmph = tmp[:,hand_channels] # get the hand knob channels 30,31,22,23,15

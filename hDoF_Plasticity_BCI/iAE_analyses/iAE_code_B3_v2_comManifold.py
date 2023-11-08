@@ -46,7 +46,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # model params
 input_size=759
-hidden_size=96
+hidden_size=275
 latent_dims=2
 num_classes = 7
 
@@ -58,6 +58,7 @@ batch_val=512
 patience=5
 gradient_clipping=10
 
+
 # file location
 root_path = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate B3'
 root_imag_filename = '\B3_condn_data_Imagined_Day'
@@ -65,7 +66,7 @@ root_online_filename = '\B3_condn_data_Online_Day'
 root_batch_filename = '\B3_condn_data_Batch_Day'
 
 # num of days
-num_days=4
+num_days=11
 
 # init variables across days 
 dist_means_overall_imag = np.empty([num_days,0])
@@ -79,7 +80,7 @@ dist_var_overall_batch = np.empty([num_days,0])
 mahab_dist_overall_batch = np.empty([num_days,0])
 
 # iterations to bootstrap
-iterations = 1
+iterations = 5
 
 #%% SETTING UP VARS 
 
@@ -119,16 +120,6 @@ hg_spatial_corr_days = np.zeros([iterations,num_classes*3,num_days])
 
 #%% MAIN LOOP 
 
-
-# training params 
-latent_dims=2
-num_epochs=150
-batch_size=32
-learning_rate = 1e-3
-batch_val=512
-patience=5
-gradient_clipping=10
-from iAE_utils_models import *
 
 # main loop 
 for days in (np.arange(num_days)+1):
@@ -435,7 +426,7 @@ for days in (np.arange(num_days)+1):
 
 # saving it all 
 # orig filename: whole_dataSamples_stats_results_withBatch_Main_withVariance
-np.savez('ProcessedData_B3__pt02', 
+np.savez('ProcessedData_B3__pt02_AllDays_2D_Main_v0', 
          silhoutte_imagined_days = silhoutte_imagined_days,
          silhoutte_online_days = silhoutte_online_days,
          silhoutte_batch_days = silhoutte_batch_days,

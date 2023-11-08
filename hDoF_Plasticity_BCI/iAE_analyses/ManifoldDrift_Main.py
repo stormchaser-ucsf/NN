@@ -158,16 +158,29 @@ for i in np.arange(num_days)+1: #ROOT DAYS
         print(dmain)
         
         
-        # GETTING THE BOOT STATISTICS AFTER SHUFFLING THE WEIGHTS OF THE AE           
-        boot_val = np.zeros((100,6))
+        
+        
+        # NEW FOR REVIEWER 4, BOOT STATISTICS AFTER SHUFFLING BETWEEN AE
+        boot_val = np.zeros((1000,6))
         for boot in np.arange(boot_val.shape[0]):
             print(boot)
-            shuffle_flag=False;shuffle_flag1=True
-            d1 = linear_cka_dist(condn_data_total,model,model1,shuffle_flag,shuffle_flag1)
-            shuffle_flag=True;shuffle_flag1=False
-            d2 = linear_cka_dist(condn_data_total1,model,model1,shuffle_flag,shuffle_flag1)
+            d1 = linear_cka_dist_shuffleLayers_Between_AE(condn_data_total,model,model1)
+            d2 = linear_cka_dist_shuffleLayers_Between_AE(condn_data_total1,model,model1)
             d = (d1+d2)/2
-            boot_val[boot,:] = np.diag(d)
+            boot_val[boot,:] = d
+        
+        
+        
+        # GETTING THE BOOT STATISTICS AFTER SHUFFLING THE WEIGHTS OF THE AE           
+        # boot_val = np.zeros((100,6))
+        # for boot in np.arange(boot_val.shape[0]):
+        #     print(boot)
+        #     shuffle_flag=True;shuffle_flag1=True
+        #     d1 = linear_cka_dist(condn_data_total,model,model1,shuffle_flag,shuffle_flag1)
+        #     shuffle_flag=True;shuffle_flag1=True
+        #     d2 = linear_cka_dist(condn_data_total1,model,model1,shuffle_flag,shuffle_flag1)
+        #     d = (d1+d2)/2
+        #     boot_val[boot,:] = np.diag(d)
         
         # HISTOGRAM
         pval=[]
@@ -265,7 +278,7 @@ print(str(time_taken) + 's')
 pval_results = np.array(list(pval_results.items()),dtype=object)
 simal_res = np.array(list(simal_res.items()),dtype=object)
 recon_res = np.array(list(recon_res.items()),dtype=object)
-np.savez('ManifoldAnalyses_Main_1000Boot', 
+np.savez('ManifoldAnalyses_Main_1000Boot_PaperRevision1', 
          pval_results = pval_results,
          simal_res = simal_res,
          recon_res = recon_res)
@@ -273,7 +286,7 @@ np.savez('ManifoldAnalyses_Main_1000Boot',
 #%% PLOTTING THE RESULTS 
 
 from iAE_utils_models import *
-data =np.load('ManifoldAnalyses_Main_1000Boot.npz',allow_pickle=True)
+data =np.load('ManifoldAnalyses_Main_1000Boot_PaperRevision1.npz',allow_pickle=True)
 pval_results = data.get('pval_results')
 simal_res = data.get('simal_res')
 recon_res = data.get('recon_res')
@@ -310,7 +323,7 @@ plt.figure()
 plt.hist(simal)
 
 
-pfdr,pfdr_thresh=fdr_threshold(pval,0.01,'Parametric')
+pfdr,pfdr_thresh=fdr_threshold(pval,0.05,'Parametric')
 prop_res=  np.zeros((len(pval_results),6))
 for i in np.arange(len(pval_results)):
     tmp = pval_results[i][1][:-1]
@@ -320,6 +333,8 @@ a= np.sum(prop_res,axis=0)/prop_res.shape[0]
 plt.figure();
 plt.bar(np.arange(len(a)),a);
 plt.ylim((0,1))
+plt.xlabel('No. of sig. similar layers')
+plt.ylabel('Prop. of across-days pairwise comparisons')
 print(a[:,None])
 
 
@@ -348,11 +363,11 @@ print(a[:,None])
 
 #%% PLOTTING COMBINED STATS FOR B1 AND B2
 
-data =np.load('ManifoldAnalyses_Main_1000Boot.npz',allow_pickle=True)
+data =np.load('ManifoldAnalyses_Main_1000Boot_PaperRevision1.npz',allow_pickle=True)
 pval_results = data.get('pval_results')
 simal_res = data.get('simal_res')
 recon_res = data.get('recon_res')
-p =0.01
+p =0.05
 
 pval=np.array([])
 for i in np.arange(pval_results.shape[0]):
@@ -373,7 +388,7 @@ b1 = a
 
 
 
-data =np.load('ManifoldAnalyses_Main_B2_Days2to5_1000Boot.npz',allow_pickle=True)
+data =np.load('ManifoldAnalyses_Main_B2_Days2to5_1000Boot_Revision1.npz',allow_pickle=True)
 pval_results = data.get('pval_results')
 simal_res = data.get('simal_res')
 recon_res = data.get('recon_res')

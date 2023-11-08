@@ -40,8 +40,8 @@ from statsmodels.stats.anova import AnovaRM
 #whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars
 
 #
-data=np.load('ProcessedData_B1_9DoF.npz')
-#data =np.load('MAIN_MAIN2_B1_NoiseDataAugment_CholIndivFeatEqualSize_pt01Noise_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
+#data=np.load('ProcessedData_B1_9DoF.npz')
+data =np.load('MAIN_MAIN2_B1_NoiseDataAugment_CholIndivFeatEqualSize_pt01Noise_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
 #data=np.load('MAIN_NewB1_NoiseDataAugment_CholIndivFeatEqualSize_pt01Noise_Stats_HeldOut_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
 #data=np.load('MAIN_MAIN_NewB2_NoiseDataAugmentCholEqualFeat_pt02_Stats_OnAllData_2D_common_Manifold_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
 #data=np.load('ProcessedData_B1_01142023.npz')
@@ -158,7 +158,7 @@ fig_batch.savefig(image_name, format=image_format, dpi=300)
 fig_imagined.suptitle('OL')
 
 
-# plotting overall variances over days (MAIN MAIN)
+#%% plotting overall variances over days (MAIN MAIN)
 N=2
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
@@ -229,6 +229,15 @@ fig.savefig(image_name, format=image_format, dpi=300)
 print(np.mean(tmp,axis=0))
 stats.ttest_rel(tmp[:,1],tmp[:,2])
 
+
+# getting the average variance per day
+tmp1 = np.squeeze(np.mean(mahab_distances_online_days,axis=0))
+tmp2 = np.squeeze(np.mean(mahab_distances_imagined_days,axis=0))
+tmp3 = np.squeeze(np.mean(mahab_distances_batch_days,axis=0))
+a=np.ndarray.flatten(tmp1)[:,None]
+b=np.ndarray.flatten(tmp2)[:,None]
+c=np.ndarray.flatten(tmp3)[:,None]
+d=np.concatenate((b,a,c),axis=1)
 
 
 # plotting variances as boxplot 
@@ -423,6 +432,8 @@ hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams.update({'font.size': 6})
+num_days=11
+X=np.arange(num_days)+1
 # X=np.arange(10)+1
 # X=np.arange(10)+1
 # imagined 
@@ -498,7 +509,7 @@ tmp_main = np.squeeze(np.mean(var_batch_days,axis=1))
 tmp3 = np.ndarray.flatten(tmp_main)
 tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
 
-tmp=np.log(tmp)
+tmp=(tmp)
 fig=plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
@@ -554,16 +565,16 @@ plt.show()
 #%% # plotting mean Mahalanobis distance over days  (MAIN MAIN)
 # over days there is a learning effect where Mahab distance grows between the 
 # actions and Batch is always greater than all others. 
-N=2
+N=1
+num_days = mahab_distances_imagined_days.shape[2]
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams.update({'font.size': 6})
-X=np.arange(10)+1
-X=np.arange(10)+1
+X=np.arange(num_days)+1
 # imagined 
-tmp_main = np.squeeze(np.mean(mahab_distances_imagined_days,axis=1))
+tmp_main = np.squeeze(np.median(mahab_distances_imagined_days,axis=1))
 tmp1 = np.mean(tmp_main,axis=0)
 tmp1b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp1 = np.insert(tmp1,0,tmp1[0],axis=0)
@@ -574,7 +585,7 @@ tmp1b = tmp1b[1:]
 plt.plot(X,tmp1,color="black",label = 'Imagined')
 plt.fill_between(X, tmp1-tmp1b, tmp1+tmp1b,color="black",alpha=0.2)
 # online
-tmp_main = np.squeeze(np.mean(mahab_distances_online_days,1))
+tmp_main = np.squeeze(np.median(mahab_distances_online_days,1))
 tmp2 = np.mean(tmp_main,axis=0)
 tmp2b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp2 = np.insert(tmp2,0,tmp2[0],axis=0)
@@ -586,7 +597,7 @@ tmp2b = tmp2b[1:]
 plt.plot(X,tmp2,color="blue",label = 'Online')
 plt.fill_between(X, tmp2-tmp2b, tmp2+tmp2b,color="blue",alpha=0.2)
 # batch
-tmp_main = np.squeeze(np.mean(mahab_distances_batch_days,1))
+tmp_main = np.squeeze(np.median(mahab_distances_batch_days,1))
 tmp3 = np.mean(tmp_main,axis=0)
 tmp3b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp3 = np.insert(tmp3,0,tmp3[0],axis=0)
@@ -601,9 +612,9 @@ plt.legend(loc='upper left')
 plt.xlabel('Days',**hfont)
 plt.ylabel('Mahalanobis Distances',**hfont)
 plt.show()
-image_format = 'svg' # e.g .png, .svg, etc.
-image_name = 'Mean_Mahalanobis_dist_Days_withBatch.svg'
-fig.savefig(image_name, format=image_format, dpi=300)
+# image_format = 'svg' # e.g .png, .svg, etc.
+# image_name = 'Mean_Mahalanobis_dist_Days_withBatch.svg'
+# fig.savefig(image_name, format=image_format, dpi=300)
 
 tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
 # tmp = np.concatenate((np.ndarray.flatten(var_overall_imagined_days)[:,None],
@@ -618,10 +629,24 @@ plt.boxplot(tmp,whis=2,showfliers=False)
 plt.xticks(ticks=[1,2,3],labels=('Imagined','Online','Batch'),**hfont)
 plt.ylabel('Mahalanobis Distances',**hfont)
 plt.show()
-image_format = 'svg' # e.g .png, .svg, etc.
-image_name = 'Mahab_Dist_Boxplot.svg'
-fig.savefig(image_name, format=image_format, dpi=300)
-print(np.mean(tmp,axis=0))
+# image_format = 'svg' # e.g .png, .svg, etc.
+# image_name = 'Mahab_Dist_Boxplot.svg'
+# fig.savefig(image_name, format=image_format, dpi=300)
+# print(np.mean(tmp,axis=0))
+
+# linear regression stats
+x=np.arange(num_days)+1
+plt.figure()
+for i in np.arange(tmp.shape[1]):
+    y = tmp[:,i]
+    slope, intercept, r_value, p_value, std_err = stats.linregress(x,y)
+    print(p_value)    
+    plt.plot(x,y,'.')
+    yhat = x*slope + intercept
+    plt.plot(x,yhat)
+
+plt.show()
+
 
 #%% plotting mean silhoutte index over days  (MAIN)
 N=1
@@ -1868,6 +1893,8 @@ fig.savefig(image_name, format=image_format, dpi=300)
 print(stats.ks_2samp(x[0],x[1]))
 print(stats.ks_2samp(x[0],x[2]))
 print(stats.ks_2samp(x[1],x[2]))
+
+tmp = np.concatenate((x[0][:,None], x[1][:,None], x[2][:,None]),axis=1)
 
 #beta
 var_imag = np.mean(beta_recon_imag_var_days,axis=0)

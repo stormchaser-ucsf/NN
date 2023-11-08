@@ -172,30 +172,47 @@ for i in np.arange(2,5): #only those days with all three sessions i.e., 2,3,4,5
         dmain=np.diag(d)
         print(dmain)
         
-        
-        # GETTING THE BOOT STATISTICS AFTER SHUFFLING THE WEIGHTS OF THE AE           
-        boot_val = np.zeros((100,6))
+        # NEW FOR REVIEWER 4, BOOT STATISTICS AFTER SHUFFLING BETWEEN AE
+        boot_val = np.zeros((1000,6))
         for boot in np.arange(boot_val.shape[0]):
             print(boot)
-            shuffle_flag=False;shuffle_flag1=True
-            d1 = linear_cka_dist(condn_data_total,model,model1,shuffle_flag,shuffle_flag1)
-            shuffle_flag=True;shuffle_flag1=False
-            d2 = linear_cka_dist(condn_data_total1,model,model1,shuffle_flag,shuffle_flag1)
+            d1 = linear_cka_dist_shuffleLayers_Between_AE(condn_data_total,model,model1)
+            d2 = linear_cka_dist_shuffleLayers_Between_AE(condn_data_total1,model,model1)
             d = (d1+d2)/2
-            boot_val[boot,:] = np.diag(d)
+            boot_val[boot,:] = d
         
-        # HISTOGRAM
+        
+        # # GETTING THE BOOT STATISTICS AFTER SHUFFLING THE WEIGHTS OF THE AE           
+        # boot_val = np.zeros((100,6))
+        # for boot in np.arange(boot_val.shape[0]):
+        #     print(boot)
+        #     shuffle_flag=False;shuffle_flag1=True
+        #     d1 = linear_cka_dist(condn_data_total,model,model1,shuffle_flag,shuffle_flag1)
+        #     shuffle_flag=True;shuffle_flag1=False
+        #     d2 = linear_cka_dist(condn_data_total1,model,model1,shuffle_flag,shuffle_flag1)
+        #     d = (d1+d2)/2
+        #     boot_val[boot,:] = np.diag(d)
+        
+        # HISTOGRAM        
         pval=[]
         for k in np.arange(boot_val.shape[1]):
-            plt.figure()
+            fig=plt.figure()
             plt.hist(boot_val[:,k])
             p = 1 - np.sum(dmain[k]>=boot_val[:,k])/boot_val.shape[0]
             plt.axvline(x = dmain[k], color = 'r')
             plt.xlim((0,1))
+            plt.xticks(ticks=[0,.2,.4,.6,.8,1])
+            #plt.yticks(ticks=np.arange(0,251,50))
+            plt.tick_params(labelbottom=False)
+            plt.tick_params(labelleft=False)
             plt.title(str(p))
             pval.append(p)
+            # image_format = 'svg' # e.g .png, .svg, etc.
+            # image_name = 'Layer_'  + str(k+1) + '.svg'
+            # fig.savefig(image_name, format=image_format, dpi=300)
             plt.close()
-       
+            
+            
         # SIMILARITY OF THE RECON TO THE AVERAGE MAP....thru its own or another day AE
         orig, origManifold,swappedManifold = eval_ae_similarity(model,model1,condn_data_total,
                                                                 condn_data_total1,Ytotal,Ytotal1)    
@@ -274,7 +291,7 @@ print(str(time_taken) + 's')
 pval_results = np.array(list(pval_results.items()),dtype=object)
 simal_res = np.array(list(simal_res.items()),dtype=object)
 recon_res = np.array(list(recon_res.items()),dtype=object)
-np.savez('ManifoldAnalyses_Main_B2_Days2to5_1000Boot', 
+np.savez('ManifoldAnalyses_Main_B2_Days2to5_1000Boot_Revision1', 
          pval_results = pval_results,
          simal_res = simal_res,
          recon_res = recon_res)
@@ -282,7 +299,7 @@ np.savez('ManifoldAnalyses_Main_B2_Days2to5_1000Boot',
 #%% PLOTTING THE RESULTS 
 
 from iAE_utils_models import *
-data =np.load('ManifoldAnalyses_Main_B2_Days2to5_1000Boot.npz',allow_pickle=True)
+data =np.load('ManifoldAnalyses_Main_B2_Days2to5_1000Boot_Revision1.npz',allow_pickle=True)
 pval_results = data.get('pval_results')
 simal_res = data.get('simal_res')
 recon_res = data.get('recon_res')
@@ -319,7 +336,7 @@ plt.figure()
 plt.hist(simal)
 
 
-pfdr,pfdr_thresh=fdr_threshold(pval,0.01,'Parametric')
+pfdr,pfdr_thresh=fdr_threshold(pval,0.05,'Parametric')
 prop_res=  np.zeros((len(pval_results),6))
 for i in np.arange(len(pval_results)):
     tmp = pval_results[i][1][:-1]
@@ -329,6 +346,8 @@ a= np.sum(prop_res,axis=0)/prop_res.shape[0]
 plt.figure();
 plt.bar(np.arange(len(a)),a);
 plt.ylim((0,1))
+plt.xlabel('No. of sig. similar layers')
+plt.ylabel('Prop. of across-days pairwise comparisons')
 print(a[:,None])
 
 
