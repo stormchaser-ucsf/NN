@@ -30,6 +30,10 @@ pca=PCA(n_components=2)
 from statsmodels.stats.multitest import fdrcorrection as fdr
 import statsmodels.api as sm
 import numpy.random as rnd
+import scipy as scipy
+import scipy.stats as stats
+import pandas as pd
+
 
 # setting up GPU
 device = 'cuda' if torch.cuda.is_available() else 'cpu'

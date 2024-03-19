@@ -39,9 +39,11 @@ from statsmodels.stats.anova import AnovaRM
 #B2_whole_dataSamples_stats_results_withBatch_Main_withVariance
 #whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars
 
-data=np.load('ProcessedData_B3__pt02_AllDays_2D_Main_v1.npz')
+data=np.load('ProcessedData_B3__pt02_AllDays_2D_Main_v6.npz') #for B3
 #data=np.load('ProcessedData_B1_9DoF.npz')
+# neural variance from this
 #data =np.load('MAIN_MAIN2_B1_NoiseDataAugment_CholIndivFeatEqualSize_pt01Noise_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
+# mahab dist from this
 #data=np.load('MAIN_NewB1_NoiseDataAugment_CholIndivFeatEqualSize_pt01Noise_Stats_HeldOut_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
 #data=np.load('MAIN_MAIN_NewB2_NoiseDataAugmentCholEqualFeat_pt02_Stats_OnAllData_2D_common_Manifold_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
 #data=np.load('ProcessedData_B1_01142023.npz')
@@ -159,7 +161,7 @@ fig_imagined.suptitle('OL')
 
 
 #%% plotting overall variances over days (MAIN MAIN)
-N=2
+N=1
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
@@ -426,18 +428,19 @@ print(np.mean(tmp,axis=0))
 
 
 #%% plotting mean centroid variances over days  (MAIN)
+
 N=1
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams.update({'font.size': 6})
-num_days=11
+num_days=var_imagined_days.shape[2]
 X=np.arange(num_days)+1
 # X=np.arange(10)+1
 # X=np.arange(10)+1
 # imagined 
-tmp_main = np.squeeze(np.mean(var_imagined_days,axis=1))
+tmp_main = np.squeeze(np.median(var_imagined_days,axis=1))
 tmp1 = np.mean(tmp_main,axis=0)
 tmp1b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp1 = np.insert(tmp1,0,tmp1[0],axis=0)
@@ -448,7 +451,7 @@ tmp1b = tmp1b[1:]
 plt.plot(X,tmp1,color="black",label = 'Imagined')
 plt.fill_between(X, tmp1-tmp1b, tmp1+tmp1b,color="black",alpha=0.2)
 # online
-tmp_main = np.squeeze(np.mean(var_online_days,axis=1))
+tmp_main = np.squeeze(np.median(var_online_days,axis=1))
 tmp2 = np.mean(tmp_main,axis=0)
 tmp2b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp2 = np.insert(tmp2,0,tmp2[0],axis=0)
@@ -460,7 +463,7 @@ tmp2b = tmp2b[1:]
 plt.plot(X,tmp2,color="blue",label = 'Online')
 plt.fill_between(X, tmp2-tmp2b, tmp2+tmp2b,color="blue",alpha=0.2)
 # batch
-tmp_main = np.squeeze(np.mean(var_batch_days,axis=1))
+tmp_main = np.squeeze(np.median(var_batch_days,axis=1))
 tmp3 = np.mean(tmp_main,axis=0)
 tmp3b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp3 = np.insert(tmp3,0,tmp3[0],axis=0)
@@ -494,11 +497,16 @@ plt.boxplot((tmp),whis=2,showfliers=False)
 plt.xticks(ticks=[1,2,3],labels=('Imagined','Online','Batch'),**hfont)
 plt.ylabel('Latent variance',**hfont)
 plt.show()
-image_format = 'svg' # e.g .png, .svg, etc.
-image_name = 'Latent Variance.svg'
-fig.savefig(image_name, format=image_format, dpi=300)
+plt.xticks(ticks=[1,2,3],labels='')
+plt.yticks(ticks=[3,4,5,6,7],labels='')
+#image_format = 'svg' # e.g .png, .svg, etc.
+#image_name = 'Latent Variance_B3.svg'
+#fig.savefig(image_name, format=image_format, dpi=300)
 print(np.mean(tmp,axis=0))
 print(stats.ttest_rel(tmp[:,1],tmp[:,2]))
+print(np.median(tmp,axis=0))
+print(stats.wilcoxon(tmp[:,2],tmp[:,1]))
+
 
 # plotting the same but now across days without averaging
 tmp_main = np.squeeze(np.mean(var_imagined_days,axis=1))
@@ -509,7 +517,7 @@ tmp_main = np.squeeze(np.mean(var_batch_days,axis=1))
 tmp3 = np.ndarray.flatten(tmp_main)
 tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
 
-tmp=(tmp)
+tmp=np.log(tmp)
 fig=plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
@@ -522,12 +530,14 @@ plt.show()
 plt.xticks(ticks=[1,2,3],labels='')
 plt.yticks(ticks=[-1,1,3,5],labels='')
 plt.show()
-image_format = 'svg' # e.g .png, .svg, etc.
-image_name = 'New_B1_Latent Variance.svg'
-fig.savefig(image_name, format=image_format, dpi=300)
+#image_format = 'svg' # e.g .png, .svg, etc.
+#image_name = 'New_B1_Latent Variance.svg'
+#fig.savefig(image_name, format=image_format, dpi=300)
 
 print(np.mean(tmp,axis=0))
 print(stats.ttest_rel(tmp[:,1],tmp[:,2]))
+print(np.median(tmp,axis=0))
+print(stats.wilcoxon(tmp[:,1],tmp[:,2]))
 
 #as scatter plots
 tmp1=np.log(tmp1)
@@ -552,9 +562,9 @@ x3=3*np.ones((tmp3.shape[0],1)) + 0.05*rnd.randn(tmp3.shape[0])[:,None]
 plt.scatter(x1, tmp1,s=5)
 plt.scatter(x2, tmp2,s=5)
 plt.scatter(x3, tmp3,s=5)
-plt.hlines(np.mean(tmp1),0.8,1.2,colors='black',linewidth=3)
-plt.hlines(np.mean(tmp2),1.8,2.2,colors='black',linewidth=3)
-plt.hlines(np.mean(tmp3),2.8,3.2,colors='black',linewidth=3)
+plt.hlines(np.median(tmp1),0.8,1.2,colors='black',linewidth=3)
+plt.hlines(np.median(tmp2),1.8,2.2,colors='black',linewidth=3)
+plt.hlines(np.median(tmp3),2.8,3.2,colors='black',linewidth=3)
 plt.xticks([1,2,3])
 plt.ylim((-1,5))
 #plt.yticks([0.23,0.25,0.27])
@@ -565,7 +575,7 @@ plt.show()
 #%% # plotting mean Mahalanobis distance over days  (MAIN MAIN)
 # over days there is a learning effect where Mahab distance grows between the 
 # actions and Batch is always greater than all others. 
-N=1
+N=2
 num_days = mahab_distances_imagined_days.shape[2]
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
@@ -650,13 +660,14 @@ plt.show()
 
 #%% plotting mean silhoutte index over days  (MAIN)
 N=1
+num_days=silhoutte_imagined_days.shape[1]
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams.update({'font.size': 6})
-X=np.arange(10)+1
-X=np.arange(10)+1
+X=np.arange(num_days)+1
+X=np.arange(num_days)+1
 # imagined 
 tmp_main = silhoutte_imagined_days
 tmp1 = np.mean(tmp_main,axis=0)

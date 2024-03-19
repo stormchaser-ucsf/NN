@@ -46,8 +46,8 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # model params
 input_size=759
-hidden_size=48
-latent_dims=2
+hidden_size=96
+latent_dims=3
 num_classes = 7
 
 # training params 
@@ -80,7 +80,7 @@ dist_var_overall_batch = np.empty([num_days,0])
 mahab_dist_overall_batch = np.empty([num_days,0])
 
 # iterations to bootstrap
-iterations = 20
+iterations = 10
 
 #%% SETTING UP VARS 
 
@@ -426,10 +426,12 @@ for days in (np.arange(num_days)+1):
 
 # v0 and v1 in results below give the same as high D data, but these are high size manifolds
 # v3 is lower size manifold, same as B1 and B2. Probably better
+# v5,v6 is D, 759 - 96 - 32 with 5 iterations
+# v6 is best, with mahab_distances_batch_days=mahab_distances_batch_days[:,:2,:] i.e., taking forst 3 iterations
 
 # saving it all 
 # orig filename: whole_dataSamples_stats_results_withBatch_Main_withVariance
-np.savez('ProcessedData_B3__pt02_AllDays_2D_Main_v4', 
+np.savez('ProcessedData_B3__pt02_AllDays_2D_Main_v6', 
          silhoutte_imagined_days = silhoutte_imagined_days,
          silhoutte_online_days = silhoutte_online_days,
          silhoutte_batch_days = silhoutte_batch_days,
