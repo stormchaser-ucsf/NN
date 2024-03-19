@@ -161,7 +161,7 @@ for i in np.arange(num_days)+1: #ROOT DAYS
         
         
         # NEW FOR REVIEWER 4, BOOT STATISTICS AFTER SHUFFLING BETWEEN AE
-        boot_val = np.zeros((1000,6))
+        boot_val = np.zeros((100,6))
         for boot in np.arange(boot_val.shape[0]):
             print(boot)
             d1 = linear_cka_dist_shuffleLayers_Between_AE(condn_data_total,model,model1)
@@ -192,8 +192,8 @@ for i in np.arange(num_days)+1: #ROOT DAYS
             plt.xlim((0,1))
             plt.xticks(ticks=[0,.2,.4,.6,.8,1])
             #plt.yticks(ticks=np.arange(0,251,50))
-            plt.tick_params(labelbottom=False)
-            plt.tick_params(labelleft=False)
+            #plt.tick_params(labelbottom=False)
+            #plt.tick_params(labelleft=False)
             plt.title(str(p))
             pval.append(p)
             # image_format = 'svg' # e.g .png, .svg, etc.
@@ -361,8 +361,9 @@ print(a[:,None])
 
 # plt.stem(D[4,:])
 
-#%% PLOTTING COMBINED STATS FOR B1 AND B2
+#%% PLOTTING COMBINED STATS FOR B1 AND B2 and B3
 
+#B1
 data =np.load('ManifoldAnalyses_Main_1000Boot_PaperRevision1.npz',allow_pickle=True)
 pval_results = data.get('pval_results')
 simal_res = data.get('simal_res')
@@ -387,7 +388,7 @@ print(a[:,None])
 b1 = a
 
 
-
+#B2
 data =np.load('ManifoldAnalyses_Main_B2_Days2to5_1000Boot_Revision1.npz',allow_pickle=True)
 pval_results = data.get('pval_results')
 simal_res = data.get('simal_res')
@@ -411,23 +412,48 @@ plt.bar(np.arange(len(a)),a);
 print(a[:,None])
 b2 = a
 
+#B3
+data = np.load('ManifoldAnalyses_Main_B3.npz',allow_pickle=True)
+pval_results = data.get('pval_results')
+simal_res = data.get('simal_res')
+recon_res = data.get('recon_res')
+
+pval=np.array([])
+for i in np.arange(pval_results.shape[0]):
+    pval = np.append(pval,pval_results[i][1][:-1])
+
+
+pfdr,pfdr_thresh=fdr_threshold(pval,p,'Parametric')
+prop_res=  np.zeros((len(pval_results),6))
+for i in np.arange(len(pval_results)):
+    tmp = pval_results[i][1][:-1]
+    tmp = np.sum(tmp<=pfdr)
+    prop_res[i,tmp] = 1
+a= np.sum(prop_res,axis=0)/prop_res.shape[0]
+plt.figure();
+plt.bar(np.arange(len(a)),a);
+print(a[:,None])
+b3 = a
+
+
 # plotting
-res = np.vstack((b1[None,:][0],b2[None,:][0]))
+res = np.vstack((b1[None,:][0],b2[None,:][0],b3[None,:][0]))
 m = np.mean(res,axis=0)
 t = np.arange(6)
 fig=plt.figure();
 plt.bar(t,m,width=0.8,color=(0.5,0.5,0.5));   
 plt.scatter(t+(rnd.randn(len(t))*0.05), res[0,:],color = (0.2,0.2,0.8))
-plt.scatter(t+(rnd.randn(len(t))*0.05), res[1,:],color=(0.2,0.2,0.8))
+plt.scatter(t+(rnd.randn(len(t))*0.05), res[1,:],color=(0.8,0.2,0.2))
+plt.scatter(t+(rnd.randn(len(t))*0.05), res[2,:],color=(0.8,0.2,0.8))
 plt.xticks(t)
-plt.yticks(np.arange(0,1.01,0.2))
-plt.ylim((0,1))
+plt.yticks(np.arange(0,1.2,0.2))
+plt.ylim((0,1.05))
 plt.show()
-# plt.tick_params(labelbottom=False)
-# plt.tick_params(labelleft=False)
-# image_format = 'svg' # e.g .png, .svg, etc.
-# image_name = 'CKA_res_B1B2.svg'
-# fig.savefig(image_name, format=image_format, dpi=300)
+plt.tick_params(labelbottom=False)
+plt.tick_params(labelleft=False)
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'CKA_res_B1B2B3.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
 
 
 #%% PLOTTING COMPARISONS BETWEEN CKD AND IBID FOR B1 IN CKA SIMAL VALUES

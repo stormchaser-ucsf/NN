@@ -39,9 +39,9 @@ from statsmodels.stats.anova import AnovaRM
 #B2_whole_dataSamples_stats_results_withBatch_Main_withVariance
 #whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars
 
-#
+data=np.load('ProcessedData_B3__pt02_AllDays_2D_Main_v1.npz')
 #data=np.load('ProcessedData_B1_9DoF.npz')
-data =np.load('MAIN_MAIN2_B1_NoiseDataAugment_CholIndivFeatEqualSize_pt01Noise_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
+#data =np.load('MAIN_MAIN2_B1_NoiseDataAugment_CholIndivFeatEqualSize_pt01Noise_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
 #data=np.load('MAIN_NewB1_NoiseDataAugment_CholIndivFeatEqualSize_pt01Noise_Stats_HeldOut_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
 #data=np.load('MAIN_MAIN_NewB2_NoiseDataAugmentCholEqualFeat_pt02_Stats_OnAllData_2D_common_Manifold_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
 #data=np.load('ProcessedData_B1_01142023.npz')
@@ -165,8 +165,8 @@ hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams.update({'font.size': 6})
-X=np.arange(10)+1
-X=np.arange(10)+1
+X=np.arange(11)+1
+X=np.arange(11)+1
 # imagined 
 tmp1 = np.median(var_overall_imagined_days,axis=0)
 tmp_boot, tmp_boot_std = median_bootstrap(var_overall_imagined_days,1000)
@@ -475,9 +475,9 @@ plt.legend()
 plt.xlabel('Days',**hfont)
 plt.ylabel('Overall Latent Variance',**hfont)
 plt.show()
-image_format = 'svg' # e.g .png, .svg, etc.
-image_name = 'Overall_Variance_Latent_Days.svg'
-fig.savefig(image_name, format=image_format, dpi=300)
+# image_format = 'svg' # e.g .png, .svg, etc.
+# image_name = 'Overall_Variance_Latent_Days.svg'
+# fig.savefig(image_name, format=image_format, dpi=300)
 
 
 tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
@@ -3141,7 +3141,7 @@ pvalue = bootstrap_difference_test(a,b,'median')
 pvalue = bootstrap_difference_test(a,c,'median')
 pvalue = bootstrap_difference_test(c,b,'median')
 
-#%% PLOTTING THE DECODING ACCURACY OF DISCERNING THE DAY OF RECORDING (B1 and B2)
+#%% PLOTTING THE DECODING ACCURACY OF DISCERNING THE DAY OF RECORDING (B1, B2, B3)
 
 import os
 os.chdir('C:/Users/nikic/Documents/GitHub/NN/hDoF_Plasticity_BCI/iAE_analyses')
@@ -3228,6 +3228,55 @@ fig.savefig(image_name, format=image_format, dpi=300)
 # stats
 demean = np.mean(res_acc_B2_demean,axis=0)
 t=stats.ttest_1samp(demean,0.2)
+print(t)
+
+#### do it for B3
+
+import os
+os.chdir('C:/Users/nikic/Documents/GitHub/NN/hDoF_Plasticity_BCI/iAE_analyses')
+from iAE_utils_models import *
+
+data=np.load('RepresentationalDrift_Mean_Across_Days_B3.npz',allow_pickle=True)
+res_acc_B3 = data.get('res_acc_B3')
+res_acc_B3_demean = data.get('res_acc_B3_demean')
+
+# bootstrp the mean
+res_mean_boot = mean_bootstrap(res_acc_B3,1000)[0]
+res_demean_boot = mean_bootstrap(res_acc_B3_demean,1000)[0]
+
+# using scipy
+# tmp_boot = stats.bootstrap((res_acc_B3,), np.mean)
+# res_mean_boot = tmp_boot.confidence_interval
+# tmp_boot1 = stats.bootstrap((res_acc_B3_demean,), np.mean)
+# res_demean_boot = tmp_boot1.confidence_interval
+
+# bootstrap and plot with confidence intervals 
+X = np.arange(res_acc_B3.shape[1])+1
+fig=plt.figure()
+plt.ylim([0,1])
+tmp = np.mean(res_acc_B3,axis=0)
+tmp_low =  res_mean_boot[9,:]#res_mean_boot.low
+tmp_high = res_mean_boot[989,:]#res_mean_boot.high
+plt.plot(X,tmp,color="black")
+plt.fill_between(X, tmp_low, tmp_high,color="black",alpha=0.2)
+tmp = np.mean(res_acc_B3_demean,axis=0)
+tmp_low =  res_demean_boot[9,:]#res_demean_boot.low
+tmp_high = res_demean_boot[989,:]#res_demean_boot.high
+plt.plot(X,tmp,color="blue")
+plt.fill_between(X, tmp_low, tmp_high,color="blue",alpha=0.2)
+plt.hlines(1/len(X),1,len(X),color='r',linestyles='dotted')
+plt.xticks(X)
+plt.yticks(np.arange(0,1.10,0.2))
+plt.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
+plt.tick_params(labelleft=False,labelbottom=False)
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Day_Decoding_Acc_B3.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
+
+# stats
+demean = np.mean(res_acc_B3_demean,axis=0)
+t=stats.ttest_1samp(demean,(1/11))
 print(t)
 
 

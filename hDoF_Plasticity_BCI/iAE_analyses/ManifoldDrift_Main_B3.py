@@ -75,10 +75,13 @@ root_batch_filename = '\B3_condn_data_Batch_Day'
 
 #%% MAIN LOOP TO GET THE DATA
 
+
+
+
 pval_results={}
 simal_res={}
 recon_res={}
-num_days=2
+num_days=11
 import time
 t0 = time.time()
 for i in np.arange(num_days)+1: #ROOT DAYS
@@ -128,7 +131,7 @@ for i in np.arange(num_days)+1: #ROOT DAYS
     #                                    condn_data_online.shape[0],latent_dims)        
 
 
-    for j in np.arange(i+1,11): #COMPARISON TO OTHER DAYS, LAYER BY LAYER
+    for j in np.arange(i+1,num_days+1): #COMPARISON TO OTHER DAYS, LAYER BY LAYER
         # load the data
         print('Processing Day ' + str(j) + ' data')
         imagined_file_name = root_path + root_imag_filename +  str(j) + '.mat'
@@ -172,7 +175,16 @@ for i in np.arange(num_days)+1: #ROOT DAYS
                               Xtrain,Ytrain,Xtest,Ytest,
                               input_size,hidden_size,latent_dims,num_classes)   
         
-        # SIMILARITY BETWEEN THE LAYERS OF THE AUTOENCODERS PAIRWISE
+        # SIMILARITY BETWEEN LAYERS OF AE WITH DIFFERENT DATASETS
+        # shuffle_flag=True;shuffle_flag1=True
+        # d = linear_cka_dist_2_Datasets(condn_data_total,condn_data_total1,
+        #                                model,model1,shuffle_flag,shuffle_flag1)
+        # dmain=np.diag(d)
+        # print(dmain)
+        
+        
+        
+        # SIMILARITY BETWEEN THE LAYERS OF THE AUTOENCODERS PAIRWISE WITH SAME DATASET
         shuffle_flag=False;shuffle_flag1=False
         d1 = linear_cka_dist(condn_data_total,model,model1,shuffle_flag,shuffle_flag1)
         d2 = linear_cka_dist(condn_data_total1,model,model1,shuffle_flag,shuffle_flag1)
@@ -182,28 +194,46 @@ for i in np.arange(num_days)+1: #ROOT DAYS
         dmain=np.diag(d)
         print(dmain)
         
-        
-        # GETTING THE BOOT STATISTICS AFTER SHUFFLING THE WEIGHTS OF THE AE           
-        boot_val = np.zeros((100,6))
+        # NEW FOR REVIEWER 4, BOOT STATISTICS AFTER SHUFFLING BETWEEN AE
+        boot_val = np.zeros((1000,6))
         for boot in np.arange(boot_val.shape[0]):
             print(boot)
-            shuffle_flag=False;shuffle_flag1=True
-            d1 = linear_cka_dist(condn_data_total,model,model1,shuffle_flag,shuffle_flag1)
-            shuffle_flag=True;shuffle_flag1=False
-            d2 = linear_cka_dist(condn_data_total1,model,model1,shuffle_flag,shuffle_flag1)
+            d1 = linear_cka_dist_shuffleLayers_Between_AE(condn_data_total,model,model1)
+            d2 = linear_cka_dist_shuffleLayers_Between_AE(condn_data_total1,model,model1)
             d = (d1+d2)/2
-            boot_val[boot,:] = np.diag(d)
+            boot_val[boot,:] = d
+            
+            
+        
+        
+        # GETTING THE BOOT STATISTICS AFTER SHUFFLING THE WEIGHTS OF THE AE           
+        # boot_val = np.zeros((100,6))
+        # for boot in np.arange(boot_val.shape[0]):
+        #     print(boot)
+        #     shuffle_flag=False;shuffle_flag1=True
+        #     d1 = linear_cka_dist(condn_data_total,model,model1,shuffle_flag,shuffle_flag1)
+        #     shuffle_flag=True;shuffle_flag1=False
+        #     d2 = linear_cka_dist(condn_data_total1,model,model1,shuffle_flag,shuffle_flag1)
+        #     d = (d1+d2)/2
+        #     boot_val[boot,:] = np.diag(d)
         
         # HISTOGRAM
         pval=[]
         for k in np.arange(boot_val.shape[1]):
-            plt.figure()
+            fig=plt.figure()
             plt.hist(boot_val[:,k])
             p = 1 - np.sum(dmain[k]>=boot_val[:,k])/boot_val.shape[0]
             plt.axvline(x = dmain[k], color = 'r')
             plt.xlim((0,1))
+            plt.xticks(ticks=[0,.2,.4,.6,.8,1])
+            #plt.yticks(ticks=np.arange(0,251,50))
+            #plt.tick_params(labelbottom=False)
+            #plt.tick_params(labelleft=False)
             plt.title(str(p))
             pval.append(p)
+            # image_format = 'svg' # e.g .png, .svg, etc.
+            # image_name = 'Layer_'  + str(k+1) + '.svg'
+            # fig.savefig(image_name, format=image_format, dpi=300)
             plt.close()
        
         # SIMILARITY OF THE RECON TO THE AVERAGE MAP....thru its own or another day AE
@@ -277,17 +307,18 @@ print(str(time_taken) + 's')
 pval_results = np.array(list(pval_results.items()),dtype=object)
 simal_res = np.array(list(simal_res.items()),dtype=object)
 recon_res = np.array(list(recon_res.items()),dtype=object)
-np.savez('ManifoldAnalyses_Main', 
+np.savez('ManifoldAnalyses_Main_B3', 
          pval_results = pval_results,
          simal_res = simal_res,
          recon_res = recon_res)
 
 #%% PLOTTING THE RESULTS 
 
-data =np.load('ManifoldAnalyses_Main.npz',allow_pickle=True)
+data =np.load('ManifoldAnalyses_Main_B3.npz',allow_pickle=True)
 pval_results = data.get('pval_results')
 simal_res = data.get('simal_res')
 recon_res = data.get('recon_res')
+
 
 recon_raw=np.array([])
 recon_ae_orig=np.array([])
@@ -300,28 +331,41 @@ for i in np.arange(recon_res.shape[0]):
 
 plt.figure()
 plt.boxplot([recon_raw,recon_ae_orig,recon_ae_swap])
-stats.ttest_rel(recon_ae_swap,recon_raw)
+print(stats.ttest_rel(recon_ae_swap,recon_raw))
+print(np.mean([recon_raw,recon_ae_orig,recon_ae_swap],axis=1))
 
-# pval_results = np.array([1,2,3])
-# simal_res = np.array([12,3])
-# np.savez('ManifoldAnalyses_Main_test', 
-#          pval_results = pval_results,
-#          simal_res = simal_res)
 
-# data =np.load('ManifoldAnalyses_Main_test.npz')
-# pval_results = data.get('pval_results')
-# simal_res = data.get('simal_res')
+pval=np.array([])
+for i in np.arange(pval_results.shape[0]):
+    pval = np.append(pval,pval_results[i][1][:-1])
 
-# D = np.zeros((10,10))
-# for i in np.arange(10):    
-#     for j in np.arange(i+1,10):
-#         tmp = simal_res[i,j]
-#         D[i,j] = np.mean(tmp)
-#         D[j,i] = np.mean(tmp)
+plt.figure()
+plt.hist(pval)
+pfdr_out,pfdr = fdr(pval,alpha=0.05)
+print(pfdr_out)
+print(sum(pfdr_out==True)/len(pfdr_out))
 
-# plt.figure()
-# plt.imshow(D,aspect='auto',cmap='viridis',vmin=0.5,vmax=0.8)
-# plt.colorbar()        
+simal=np.array([])
+for i in np.arange(simal_res.shape[0]):
+    simal = np.append(simal,simal_res[i][1][1])
+plt.figure()
+plt.hist(simal)
+
+
+pfdr,pfdr_thresh=fdr_threshold(pval,0.05,'Parametric')
+prop_res=  np.zeros((len(pval_results),6))
+for i in np.arange(len(pval_results)):
+    tmp = pval_results[i][1][:-1]
+    tmp = np.sum(tmp<=pfdr)
+    prop_res[i,tmp] = 1
+a= np.sum(prop_res,axis=0)/prop_res.shape[0]
+plt.figure();
+plt.bar(np.arange(len(a)),a);
+plt.ylim((0,1))
+plt.xlabel('No. of sig. similar layers')
+plt.ylabel('Prop. of across-days pairwise comparisons')
+print(a[:,None])
+
 
 # plt.stem(D[4,:])
 

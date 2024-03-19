@@ -1332,7 +1332,7 @@ def get_raw_channnel_variances(indata,labels):
     
     
 
-### CENTERED LINEAR KERNAL ALIGNMENT TO COMPARE TWO FIXED LAYERED AUTOENCODERS
+### CENTERED LINEAR KERNAL ALIGNMENT TO COMPARE TWO FIXED LAYERED AUTOENCODERS with same dataset
 def linear_cka_dist(input_data,model,model1,shuffle_flag,shuffle_flag1):
     # prelims 
     model.eval()
@@ -1464,6 +1464,200 @@ def linear_cka_dist(input_data,model,model1,shuffle_flag,shuffle_flag1):
             D[m,n] = d
             
     return(D)
+
+
+### CENTERED LINEAR KERNAL ALIGNMENT TO COMPARE TWO FIXED LAYERED AUTOENCODERS with same dataset
+def linear_cka_dist_2_Datasets(input_data,input_data1,model,model1,shuffle_flag,shuffle_flag1):
+    # prelims 
+    model.eval()
+    model1.eval()
+    elu=nn.ELU()
+    input_data = torch.from_numpy(input_data).float().to(device)
+    input_data1 = torch.from_numpy(input_data1).float().to(device)
+    # getting the layers of first manifold
+    layer = []
+    layer.append(model.encoder.linear1.state_dict()['weight'])
+    layer.append(model.encoder.linear2.state_dict()['weight'])
+    layer.append(model.encoder.linear3.state_dict()['weight'])
+    layer.append(model.decoder.linear1.state_dict()['weight'])
+    layer.append(model.decoder.linear2.state_dict()['weight'])
+    layer.append(model.decoder.linear3.state_dict()['weight'])
+    bias = []
+    bias.append(model.encoder.linear1.state_dict()['bias'])
+    bias.append(model.encoder.linear2.state_dict()['bias'])
+    bias.append(model.encoder.linear3.state_dict()['bias'])
+    bias.append(model.decoder.linear1.state_dict()['bias'])
+    bias.append(model.decoder.linear2.state_dict()['bias'])
+    bias.append(model.decoder.linear3.state_dict()['bias'])
+    # getting the layers of second manifold
+    layer1 = []
+    layer1.append(model1.encoder.linear1.state_dict()['weight'])
+    layer1.append(model1.encoder.linear2.state_dict()['weight'])
+    layer1.append(model1.encoder.linear3.state_dict()['weight'])
+    layer1.append(model1.decoder.linear1.state_dict()['weight'])
+    layer1.append(model1.decoder.linear2.state_dict()['weight'])
+    layer1.append(model1.decoder.linear3.state_dict()['weight'])
+    bias1 = []
+    bias1.append(model1.encoder.linear1.state_dict()['bias'])
+    bias1.append(model1.encoder.linear2.state_dict()['bias'])
+    bias1.append(model1.encoder.linear3.state_dict()['bias'])
+    bias1.append(model1.decoder.linear1.state_dict()['bias'])
+    bias1.append(model1.decoder.linear2.state_dict()['bias'])
+    bias1.append(model1.decoder.linear3.state_dict()['bias'])     
+    
+    # running the pairwise comparisons layer by layer
+    # shuffle the weights between the two layers NEW METHOD
+    D = np.zeros((6))
+    for m in np.arange(len(layer)):
+         out = input_data
+         out1 = input_data
+         k=0
+         while k<=m:                        
+             w = torch.transpose(layer[k],0,1)
+             b = bias[k]
+             
+             w1 = torch.transpose(layer1[k],0,1)
+             b1 = bias1[k]
+             
+             w_total = torch.concat([w,w1],dim=0)
+             b_total = torch.concat([b,b1],dim=0)
+             idx = torch.randperm(w_total.nelement())
+             w_total = w_total.reshape(-1)[idx].reshape(w_total.size())
+             idx = torch.randperm(b_total.nelement())
+             b_total = b_total[idx]
+             
+             s=round(w_total.size()[0]/2)
+             w = w_total[:s,:]
+             w1 = w_total[s:,:]
+             s=round(b_total.size()[0]/2)
+             b = b_total[:s]
+             b1 = b_total[s:]
+             
+             out = torch.matmul(out, w1) + b1 #shuffle and swap weights
+             out1 = torch.matmul(out1, w) + b #shuffle and swap weights   
+             out_compute=out;
+             out1_compute=out1
+             
+             if  k==5 or k==2:
+                 out1=out1
+                 out=out
+             else:
+                 out1 = elu(out1)
+                 out = elu(out)
+             k=k+1
+                        
+         ### now get the CKA between out and out1
+         out = out_compute
+         out1 = out1_compute
+         X = out.to('cpu').detach().numpy()
+         Y = out1.to('cpu').detach().numpy()
+         X = X - np.mean(X,axis=0)
+         Y = Y - np.mean(Y,axis=0)    
+         ###cka using Hinton paper
+         a=lin.norm((X.T@X),'fro')
+         b=lin.norm((Y.T@Y),'fro')
+         c=(lin.norm((Y.T @ X),'fro'))**2
+         d = c/(a*b)
+         #print(d)
+         
+         D[m] = d
+             
+    return(D)       
+    
+    # # running the pairwise comparisons  OLD METHOD
+    # D = np.zeros((6,6))
+    # for m in np.arange(len(layer)):
+    #     out = input_data
+    #     k=0
+    #     while k<=m:                        
+    #         w = torch.transpose(layer[k],0,1)
+    #         b = bias[k]
+    #         #shuffle
+    #         if shuffle_flag == True : 
+    #             idx = torch.randperm(w.nelement())
+    #             w = w.reshape(-1)[idx].reshape(w.size())
+    #             idx = torch.randperm(b.nelement())
+    #             b = b[idx]
+    #         # compute
+    #         out = torch.matmul(out, w) + b
+    #         out_compute=out
+    #         if  k==5 or k==2:
+    #             out=out
+    #         else:
+    #             out = elu(out)
+    #         k=k+1
+        
+    #     for n in np.arange(len(layer1)):        
+    #         out1 = input_data1
+    #         k=0
+    #         while k<=n:                        
+    #             w = torch.transpose(layer1[k],0,1)
+    #             b = bias1[k]
+    #             if shuffle_flag1 == True :
+    #                 idx = torch.randperm(w.nelement())
+    #                 w = w.reshape(-1)[idx].reshape(w.size())
+    #                 idx = torch.randperm(b.nelement())
+    #                 b = b[idx]
+    #             # compute                        
+    #             out1 = torch.matmul(out1, w) + b
+    #             out1_compute=out1
+    #             if  k==5 or k==2:
+    #                 out1=out1
+    #             else:
+    #                 out1 = elu(out1)
+    #             k=k+1
+            
+    #         ### now get the CKA between out and out1
+    #         out = out_compute
+    #         out1 = out1_compute
+    #         X = out.to('cpu').detach().numpy()
+    #         Y = out1.to('cpu').detach().numpy()
+    #         X = X - np.mean(X,axis=0)
+    #         Y = Y - np.mean(Y,axis=0)    
+    #         ###cka using Hinton paper
+    #         a=lin.norm((X.T@X),'fro')
+    #         b=lin.norm((Y.T@Y),'fro')
+    #         c=(lin.norm((Y.T @ X),'fro'))**2
+    #         d = c/(a*b)
+    #         #print(d)
+    #         ####cka using Williams paper
+    #         # a = (X@X.T)
+    #         # a = np.trace(a.T@a)
+    #         # b = Y@Y.T
+    #         # b = np.trace(b.T@b)
+    #         # c = np.trace((X@X.T) @ (Y@Y.T))
+    #         # d= c/(np.sqrt(a*b))
+    #         #print(d)
+            
+    #         # PCA PLOTTING NOT NEEDED
+    #         # x=pca.fit_transform(X)
+    #         # y=convert_to_ClassNumbers(torch.from_numpy(Yonline).to(device).float())
+    #         # y = y.to('cpu').detach().numpy()       
+    #         # fig,(ax1,ax2)=plt.subplots(1,2)            
+    #         # ax1.scatter(x[:, 0], x[:, 1], c=y, cmap='tab10')            
+    #         # plt.title(str(m))
+    #         # x=pca.fit_transform(Y)
+    #         # y=convert_to_ClassNumbers(torch.from_numpy(Yonline).to(device).float())
+    #         # y = y.to('cpu').detach().numpy()                               
+    #         # ax2.scatter(x[:, 0], x[:, 1], c=y, cmap='tab10')
+    #         # plt.show()
+    #         # plt.title(str(n))
+    
+            
+    #         ### orthogonal procrustus 1
+    #         #R, sca = op(X, Y)
+    #         #d = (lin.norm(X@R - Y))/(lin.norm(Y))
+    #         ### orthogonal procrustus 2
+    #         # X = X/lin.norm(X,'fro')
+    #         # Y = Y/lin.norm(Y,'fro')
+    #         # a=lin.norm(X,'fro')**2
+    #         # b=lin.norm(Y,'fro')**2
+    #         # c=lin.norm(X.T@Y,'nuc')
+    #         # d = a+b-2*c
+            
+    #         D[m,n] = d
+            
+    # return(D)
 
 
 
