@@ -63,7 +63,7 @@ gradient_clipping=10
 
 # model params
 input_size=759
-hidden_size=48
+hidden_size=48 # works for lower hidden layer sizes 
 latent_dims=2
 num_classes = 7
 

@@ -967,7 +967,7 @@ latent_acc_days = []
 total_days = 10
 batch_size=64
 patience = 5
-latent_dims = 3
+latent_dims = 2
 plt_close=False
 for days in np.arange(total_days-1)+1:
     print('Processing days thru ' + str(days))
@@ -1034,7 +1034,7 @@ for days in np.arange(total_days-1)+1:
                           Xtrain,Ytrain,Xtest,Ytest,
                           input_size,hidden_size,latent_dims,num_classes)
 
-    D,z,idx,fig_imagined,acc_train = plot_latent_acc(model,condn_data_total,Ytotal,
+    D,z,idx,fig_imagined,acc_train,ypred = plot_latent_acc(model,condn_data_total,Ytotal,
                                        latent_dims) 
     if plt_close == True:
         plt.close()
@@ -1075,7 +1075,7 @@ for days in np.arange(total_days-1)+1:
         # condn_data_heldout = np.concatenate((condn_data_heldout,condn_data_online,condn_data_batch),axis=0)
         # Yheldout = np.concatenate((Yheldout, Yonline,Ybatch),axis=0)
         
-        D,z,idx,fig_test,acc_test = plot_latent_acc(model,condn_data_heldout,Yheldout,latent_dims) 
+        D,z,idx,fig_test,acc_test,ypred = plot_latent_acc(model,condn_data_heldout,Yheldout,latent_dims) 
         if plt_close == True:
             plt.close()     
         latent_acc_tmp.append(acc_test*100)
