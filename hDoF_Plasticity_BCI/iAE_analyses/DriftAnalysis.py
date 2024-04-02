@@ -61,6 +61,353 @@ root_imag_filename = '\condn_data_Imagined_Day'
 root_online_filename = '\condn_data_Online_Day'
 root_batch_filename = '\condn_data_Batch_Day'
 
+#%% PART 0 -> USING PCA TO PROJECT DATA FROM B1, THREE CONDITIONS, TWO DAYS
+# GOAL IS TO SEE IF THERE IS CONSTRAINED DRIFT REPRESENTING THE DECISION BOUNDARY
+
+plt.close('all')
+days=2
+imagined_file_name = root_path + root_imag_filename +  str(days) + '.mat'
+condn_data_imagined,Yimagined = get_data(imagined_file_name)
+a = np.argmax(Yimagined,axis=1)
+a = np.concatenate(( np.where(a==4)[0],np.where(a==6)[0])).ravel()
+condn_data_imagined_day1 = condn_data_imagined[a,:]
+Yimagined_day1 = Yimagined[a,:]
+Yimagined_day1 = np.argmax(Yimagined_day1,axis=1)
+
+days = 5
+imagined_file_name = root_path + root_imag_filename +  str(days) + '.mat'
+condn_data_imagined,Yimagined = get_data(imagined_file_name)
+a = np.argmax(Yimagined,axis=1)
+a = np.concatenate(( np.where(a==4)[0],np.where(a==6)[0])).ravel()
+condn_data_imagined_day2 = condn_data_imagined[a,:]
+Yimagined_day2 = Yimagined[a,:]
+Yimagined_day2 = np.argmax(Yimagined_day2,axis=1)
+
+days = 6
+imagined_file_name = root_path + root_imag_filename +  str(days) + '.mat'
+condn_data_imagined,Yimagined = get_data(imagined_file_name)
+a = np.argmax(Yimagined,axis=1)
+a = np.concatenate(( np.where(a==4)[0],np.where(a==6)[0])).ravel()
+condn_data_imagined_day3 = condn_data_imagined[a,:]
+Yimagined_day3 = Yimagined[a,:]
+Yimagined_day3 = np.argmax(Yimagined_day3,axis=1)
+
+
+
+condn_data_total = np.concatenate((condn_data_imagined_day1, 
+                                   condn_data_imagined_day2,
+                                   condn_data_imagined_day3),axis=0)
+condn_data_total = condn_data_total - np.mean(condn_data_total,axis=0)
+Ytotal = np.concatenate((Yimagined_day1, 
+                                   Yimagined_day2,
+                                   Yimagined_day3),axis=0)
+
+# run PCA
+pca = skl.decomposition.PCA(n_components=2, svd_solver='full')
+pca.fit(condn_data_total)
+out = pca.transform(condn_data_total)
+
+l = np.append([0],np.cumsum([Yimagined_day1.shape[0],Yimagined_day2.shape[0],
+                            Yimagined_day3.shape[0]]).ravel())
+
+# now do the plotting
+plt.figure();
+col=['blue','red','magenta']
+from sklearn.svm import SVC
+for i in np.arange(len(l)-1):
+    idx = np.arange(l[i],l[i+1])
+    tmp = out[idx,:]
+    ytmp = Ytotal[idx]    
+    
+    aa = np.unique(ytmp)
+    idx1 = np.where(ytmp==aa[0])[0]
+    idx2 = np.where(ytmp==aa[1])[0]
+    plt.plot(tmp[idx1,0],tmp[idx1,1],'.',color=col[i],alpha=0.1)
+    plt.plot(tmp[idx2,0],tmp[idx2,1],'+',color=col[i],alpha=0.1)
+    
+    # also plot the decison boundary by training a SVM classifier
+    x=tmp
+    y=ytmp
+    idx = np.unique(y)
+    class_out=[0,1]
+    for ii in np.arange(len(idx)):
+        y[np.where(y==idx[ii])[0]]=class_out[ii]
+    
+    
+    svm_model = SVC(kernel='linear')
+    svm_model.fit(x,y)
+    
+    # get training parameters and plot the decision line
+    w=svm_model.coef_[0]
+    b = svm_model.intercept_[0]
+    xx = np.linspace(min(x[:,0]),max(x[:,0]))
+    yy = -(w[0] / w[1]) * xx - b / w[1]
+    plt.plot(xx, yy, c=col[i])
+
+# plotting overall decision boundary
+x = out
+y = Ytotal
+idx = np.unique(y)
+class_out=[0,1]
+for ii in np.arange(len(idx)):
+    y[np.where(y==idx[ii])[0]]=class_out[ii]
+    
+svm_model = SVC(kernel='linear')
+svm_model.fit(x,y)
+w=svm_model.coef_[0]
+b = svm_model.intercept_[0]
+xx = np.linspace(min(x[:,0]),max(x[:,0]))
+yy = -(w[0] / w[1]) * xx - b / w[1]
+plt.plot(xx, yy, c='k')
+plt.ylim([min(x[:,1]),max(x[:,1])])
+plt.xlim([min(x[:,0]),max(x[:,0])])
+
+# now plot the online data 
+days=2
+imagined_file_name = root_path + root_online_filename +  str(days) + '.mat'
+condn_data_imagined,Yimagined = get_data(imagined_file_name)
+a = np.argmax(Yimagined,axis=1)
+a = np.concatenate(( np.where(a==4)[0],np.where(a==6)[0])).ravel()
+condn_data_imagined_day1 = condn_data_imagined[a,:]
+Yimagined_day1 = Yimagined[a,:]
+Yimagined_day1 = np.argmax(Yimagined_day1,axis=1)
+
+days = 6
+imagined_file_name = root_path + root_online_filename +  str(days) + '.mat'
+condn_data_imagined,Yimagined = get_data(imagined_file_name)
+a = np.argmax(Yimagined,axis=1)
+a = np.concatenate(( np.where(a==4)[0],np.where(a==6)[0])).ravel()
+condn_data_imagined_day2 = condn_data_imagined[a,:]
+Yimagined_day2 = Yimagined[a,:]
+Yimagined_day2 = np.argmax(Yimagined_day2,axis=1)
+
+days = 9
+imagined_file_name = root_path + root_online_filename +  str(days) + '.mat'
+condn_data_imagined,Yimagined = get_data(imagined_file_name)
+a = np.argmax(Yimagined,axis=1)
+a = np.concatenate(( np.where(a==4)[0],np.where(a==6)[0])).ravel()
+condn_data_imagined_day3 = condn_data_imagined[a,:]
+Yimagined_day3 = Yimagined[a,:]
+Yimagined_day3 = np.argmax(Yimagined_day3,axis=1)
+
+
+
+condn_data_total = np.concatenate((condn_data_imagined_day1, 
+                                   condn_data_imagined_day2,
+                                   condn_data_imagined_day3),axis=0)
+condn_data_total = condn_data_total - np.mean(condn_data_total,axis=0)
+Ytotal = np.concatenate((Yimagined_day1, 
+                                   Yimagined_day2,
+                                   Yimagined_day3),axis=0)
+
+
+out = pca.transform(condn_data_total)
+
+l = np.append([0],np.cumsum([Yimagined_day1.shape[0],Yimagined_day2.shape[0],
+                            Yimagined_day3.shape[0]]).ravel())
+
+# now do the plotting
+for i in np.arange(len(l)-1):
+    idx = np.arange(l[i],l[i+1])
+    tmp = out[idx,:]
+    ytmp = Ytotal[idx]    
+    
+    aa = np.unique(ytmp)
+    idx1 = np.where(ytmp==aa[0])[0]
+    idx2 = np.where(ytmp==aa[1])[0]
+    plt.plot(tmp[idx1,0],tmp[idx1,1],'.',color=col[i],alpha=1)
+    plt.plot(tmp[idx2,0],tmp[idx2,1],'+',color=col[i],alpha=1)
+
+#%% PART 00 -> USING PCA TO PROJECT DATA FROM B1, THREE CONDITIONS, TWO DAYS
+# USING BOTH IMAGINED AS WELL AS ONLINE DAT
+
+plt.close('all')
+day_len=[]
+
+days=2
+imagined_file_name = root_path + root_imag_filename +  str(days) + '.mat'
+condn_data_imagined,Yimagined = get_data(imagined_file_name)
+a = np.argmax(Yimagined,axis=1)
+a = np.concatenate(( np.where(a==4)[0],np.where(a==6)[0])).ravel()
+condn_data_imagined_day1 = condn_data_imagined[a,:]
+Yimagined_day1 = Yimagined[a,:]
+Yimagined_day1 = np.argmax(Yimagined_day1,axis=1)
+day_len.append(condn_data_imagined_day1.shape[0])
+
+days = 6
+imagined_file_name = root_path + root_imag_filename +  str(days) + '.mat'
+condn_data_imagined,Yimagined = get_data(imagined_file_name)
+a = np.argmax(Yimagined,axis=1)
+a = np.concatenate(( np.where(a==4)[0],np.where(a==6)[0])).ravel()
+condn_data_imagined_day2 = condn_data_imagined[a,:]
+Yimagined_day2 = Yimagined[a,:]
+Yimagined_day2 = np.argmax(Yimagined_day2,axis=1)
+day_len.append(condn_data_imagined_day2.shape[0])
+
+days = 9
+imagined_file_name = root_path + root_imag_filename +  str(days) + '.mat'
+condn_data_imagined,Yimagined = get_data(imagined_file_name)
+a = np.argmax(Yimagined,axis=1)
+a = np.concatenate(( np.where(a==4)[0],np.where(a==6)[0])).ravel()
+condn_data_imagined_day3 = condn_data_imagined[a,:]
+Yimagined_day3 = Yimagined[a,:]
+Yimagined_day3 = np.argmax(Yimagined_day3,axis=1)
+day_len.append(condn_data_imagined_day3.shape[0])
+
+
+condn_data_total = np.concatenate((condn_data_imagined_day1, 
+                                   condn_data_imagined_day2,
+                                   condn_data_imagined_day3,
+                                   ),axis=0)
+#condn_data_total = condn_data_total - np.mean(condn_data_total,axis=0)
+Ytotal = np.concatenate((Yimagined_day1, 
+                                   Yimagined_day2,
+                                   Yimagined_day3,
+                                   ),axis=0)
+
+
+day_len_online=[]
+days=2
+imagined_file_name = root_path + root_online_filename +  str(days) + '.mat'
+condn_data_imagined,Yimagined = get_data(imagined_file_name)
+a = np.argmax(Yimagined,axis=1)
+a = np.concatenate(( np.where(a==4)[0],np.where(a==6)[0])).ravel()
+condn_data_imagined_day1 = condn_data_imagined[a,:]
+Yimagined_day1 = Yimagined[a,:]
+Yimagined_day1 = np.argmax(Yimagined_day1,axis=1)
+day_len_online.append(condn_data_imagined_day1.shape[0])
+
+days = 6
+imagined_file_name = root_path + root_online_filename +  str(days) + '.mat'
+condn_data_imagined,Yimagined = get_data(imagined_file_name)
+a = np.argmax(Yimagined,axis=1)
+a = np.concatenate(( np.where(a==4)[0],np.where(a==6)[0])).ravel()
+condn_data_imagined_day2 = condn_data_imagined[a,:]
+Yimagined_day2 = Yimagined[a,:]
+Yimagined_day2 = np.argmax(Yimagined_day2,axis=1)
+day_len_online.append(condn_data_imagined_day2.shape[0])
+
+days = 9
+imagined_file_name = root_path + root_online_filename +  str(days) + '.mat'
+condn_data_imagined,Yimagined = get_data(imagined_file_name)
+a = np.argmax(Yimagined,axis=1)
+a = np.concatenate(( np.where(a==4)[0],np.where(a==6)[0])).ravel()
+condn_data_imagined_day3 = condn_data_imagined[a,:]
+Yimagined_day3 = Yimagined[a,:]
+Yimagined_day3 = np.argmax(Yimagined_day3,axis=1)
+day_len_online.append(condn_data_imagined_day3.shape[0])
+
+
+condn_data_total = np.concatenate((condn_data_total,condn_data_imagined_day1, 
+                                   condn_data_imagined_day2,
+                                   condn_data_imagined_day3,
+                                   ),axis=0)
+condn_data_total = condn_data_total - np.mean(condn_data_total,axis=0)
+Ytotal = np.concatenate((Ytotal,Yimagined_day1, 
+                                   Yimagined_day2,
+                                   Yimagined_day3,
+                                   ),axis=0)
+
+day_len_total = np.concatenate((day_len, day_len_online)) # imagined + online for 2 days
+l = np.cumsum(day_len_total)
+l = np.concatenate(([0],l))
+
+# run PCA
+pca = skl.decomposition.PCA(n_components=2, svd_solver='full')
+pca.fit(condn_data_total)
+out = pca.transform(condn_data_total)
+
+# now do the plotting
+plt.figure();
+col=['blue','red','magenta','blue','red','magenta']
+from sklearn.svm import SVC
+for i in np.arange(len(l)-1):
+    idx = np.arange(l[i],l[i+1])
+    tmp = out[idx,:]
+    ytmp = Ytotal[idx]    
+    
+    aa = np.unique(ytmp)
+    idx1 = np.where(ytmp==aa[0])[0]
+    idx2 = np.where(ytmp==aa[1])[0]
+    if i<3:
+        alp = 0.1 
+    else:
+        alp = 1
+        
+    plt.plot(tmp[idx1,0],tmp[idx1,1],'.',color=col[i],alpha=alp)
+    plt.plot(tmp[idx2,0],tmp[idx2,1],'+',color=col[i],alpha=alp)
+    
+    # also plot the decison boundary by training a SVM classifier
+    if i<=1:
+        x=tmp
+        y=ytmp
+        idx = np.unique(y)
+        class_out=[0,1]
+        for ii in np.arange(len(idx)):
+            y[np.where(y==idx[ii])[0]]=class_out[ii]
+        
+        
+        #svm_model = SVC(kernel='linear')
+        svm_model = SVC(kernel='rbf')
+        svm_model.fit(x,y)
+        
+        # get training parameters and plot the decision line for linear case
+        # w=svm_model.coef_[0]
+        # b = svm_model.intercept_[0]
+        # xx = np.linspace(min(x[:,0]),max(x[:,0]))
+        # yy = -(w[0] / w[1]) * xx - b / w[1]
+        # plt.plot(xx, yy, c=col[i])
+        
+        # plot non-linear decision boundary 
+        # h=0.1 # step size in mesh
+        # x_min, x_max = x[:, 0].min() - 1, x[:, 0].max() + 1
+        # y_min, y_max = x[:, 1].min() - 1, x[:, 1].max() + 1
+        # xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
+        #              np.arange(y_min, y_max, h))
+        # Z = svm_model.predict(np.c_[xx.ravel(), yy.ravel()])
+        # Z = Z.reshape(xx.shape)
+        # plt.contourf(xx, yy, Z, cmap=plt.cm.coolwarm, alpha=0.1)
+
+
+# plotting overall decision boundary
+#idx= np.concatenate((np.arange(0,400), np.arange(1000,1214)))
+#idx= np.concatenate((np.arange(400,1000), np.arange(1214,1360)))
+#idx= np.concatenate((np.arange(400,1600), np.arange(1814,2051)))
+idx= np.concatenate((np.arange(0,1000), np.arange(1600,1960)))
+
+x = out[idx,:]
+y = Ytotal[idx]
+#x=out
+#y=Ytotal
+idx = np.unique(y)
+class_out=[0,1]
+for ii in np.arange(len(idx)):
+    y[np.where(y==idx[ii])[0]]=class_out[ii]
+    
+# svm_model = SVC(kernel='linear')
+# svm_model.fit(x,y)
+# w=svm_model.coef_[0]
+# b = svm_model.intercept_[0]
+# xx = np.linspace(min(x[:,0]),max(x[:,0]))
+# yy = -(w[0] / w[1]) * xx - b / w[1]
+# plt.plot(xx, yy, c='k')
+# plt.ylim([min(x[:,1]),max(x[:,1])])
+# plt.xlim([min(x[:,0]),max(x[:,0])])
+
+svm_model = SVC(kernel='rbf')
+svm_model.fit(x,y)
+h=0.1 # step size in mesh
+x_min, x_max = x[:, 0].min() - 1, x[:, 0].max() + 1
+y_min, y_max = x[:, 1].min() - 1, x[:, 1].max() + 1
+xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
+                     np.arange(y_min, y_max, h))
+Z = svm_model.predict(np.c_[xx.ravel(), yy.ravel()])
+Z = Z.reshape(xx.shape)
+plt.contourf(xx, yy, Z, cmap=plt.cm.cubehelix, alpha=0.5)
+plt.title('Built from Blue and Red alone')
+plt.show()
+
+
 #%%
 #### PART 1 # get imagined data days 1-2 for lips, rt thumb and left leg
 days=1

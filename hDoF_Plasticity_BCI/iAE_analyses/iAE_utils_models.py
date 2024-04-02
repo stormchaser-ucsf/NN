@@ -85,7 +85,8 @@ def one_hot_convert(indata):
     n = len(np.unique(indata))
     Y_mult = np.zeros((indata.shape[0],n))
     for i in range(indata.shape[0]):
-        tmp = round(indata[i])
+        #tmp = np.round(indata[i])
+        tmp = round(indata[i][0])
         Y_mult[i,tmp]=1
     Y = Y_mult
     return Y
@@ -473,6 +474,26 @@ class mlp_classifier_1layer(nn.Module):
     def forward(self,x):
         x=self.linear1(x)
         return x     
+    
+class mlp_classifier_2Layer(nn.Module):
+    def __init__(self,input_size,num_nodes,num_classes):
+        super(mlp_classifier_2Layer,self).__init__()
+        self.linear1 = nn.Linear(input_size,num_nodes)
+        self.linear2 = nn.Linear(num_nodes,num_nodes)
+        self.linear3 = nn.Linear(num_nodes,num_classes)
+        self.gelu=nn.GELU()
+        self.dropout = nn.Dropout(p=0.3)
+        
+    def forward(self,x):
+        x = self.linear1(x)        
+        x = self.gelu(x) 
+        x = self.dropout(x) # apply the dropout after the activation
+        x = self.linear2(x)                
+        x = self.gelu(x) 
+        x = self.dropout(x) # apply the dropout after the activation
+        x = self.linear3(x)
+        return x
+        
 
     
 # create a autoencoder for b3 with a classifier layer for separation in latent space
@@ -894,7 +915,7 @@ def training_loop_mlp(model,num_epochs,batch_size,learning_rate,batch_val,
           print('Best val loss and val acc  are')
           print(goat_loss,goat_acc)
           break
-    model_goat = mlp_classifier_1layer(input_size,num_nodes,num_classes)  
+    model_goat = mlp_classifier_2Layer(input_size,num_nodes,num_classes)  
     #model_goat = iAutoencoder_B3(input_size,hidden_size,latent_dims,num_classes)
     model_goat.load_state_dict(torch.load(filename))
     model_goat=model_goat.to(device)
