@@ -63,9 +63,21 @@ num_classes = 6
 
 # file location
 root_path = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker'
-root_imag_filename = '\Biomimetic_CenterOut_condn_data_Imagined_Day_First2pt5s_new'
-root_online_filename = '\Biomimetic_CenterOut_condn_data_Online_Day_First2pt5s_new'
-root_batch_filename = '\Biomimetic_CenterOut_condn_data_Batch_Day_First2pt5s_new'
+#root_path='F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker\Biomemetic first 2pt5s'
+root_imag_filename = '\Biomimetic_CenterOut_condn_data_Batch_Day_First2pt5s'
+root_online_filename = '\Biomimetic_CenterOut_condn_data_Online_Day_First2pt5s'
+root_batch_filename = '\Biomimetic_CenterOut_condn_data_Batch_Day_First2pt5s'
+
+
+
+# root_imag_filename = '\Biomimetic_CenterOut_condn_data_Imagined_Day_First2pt5s_new'
+# root_online_filename = '\Biomimetic_CenterOut_condn_data_Online_Day_First2pt5s_new'
+# root_batch_filename = '\Biomimetic_CenterOut_condn_data_Batch_Day_First2pt5s_new'
+
+# root_imag_filename = '\Biomimetic_CenterOut_condn_data_Imagined_Day_45deg'
+# root_online_filename = '\Biomimetic_CenterOut_condn_data_Online_Day_45deg'
+# root_batch_filename = '\Biomimetic_CenterOut_condn_data_Batch_Day_45deg'
+
 
 #%% MAIN LOOP TO GET THE DATA
 
@@ -89,7 +101,7 @@ for i in np.arange(num_days)+1: #ROOT DAYS
     # data augment
    # len_data = max([condn_data_online.shape[0],condn_data_imagined.shape[0],
    #                 condn_data_batch.shape[0]])
-    len_data=1500
+    len_data=2500
     if condn_data_online.shape[0]<len_data:
         condn_data_online,Yonline =   data_aug_mlp_chol_feature_equalSize(condn_data_online,
                                             Yonline,len_data)
@@ -146,7 +158,7 @@ for i in np.arange(num_days)+1: #ROOT DAYS
         # data augment
         # len_data = max([condn_data_online.shape[0],condn_data_imagined.shape[0],
         #                 condn_data_batch.shape[0]])
-        len_data=1500
+        len_data=2500
         if condn_data_online1.shape[0]<len_data:
             condn_data_online1,Yonline1 =   data_aug_mlp_chol_feature_equalSize(condn_data_online1,
                                                 Yonline1,len_data)
@@ -193,17 +205,26 @@ for i in np.arange(num_days)+1: #ROOT DAYS
         dmain=np.diag(d)
         print(dmain)
         
-        
-        # GETTING THE BOOT STATISTICS AFTER SHUFFLING THE WEIGHTS OF THE AE           
+        # NEW FOR REVIEWER 4, BOOT STATISTICS AFTER SHUFFLING BETWEEN AE
         boot_val = np.zeros((1000,6))
         for boot in np.arange(boot_val.shape[0]):
-            print(boot)
-            shuffle_flag=False;shuffle_flag1=True
-            d1 = linear_cka_dist(condn_data_total,model,model1,shuffle_flag,shuffle_flag1)
-            shuffle_flag=True;shuffle_flag1=False
-            d2 = linear_cka_dist(condn_data_total1,model,model1,shuffle_flag,shuffle_flag1)
+            #print(boot)
+            d1 = linear_cka_dist_shuffleLayers_Between_AE(condn_data_total,model,model1)
+            d2 = linear_cka_dist_shuffleLayers_Between_AE(condn_data_total1,model,model1)
             d = (d1+d2)/2
-            boot_val[boot,:] = np.diag(d)
+            boot_val[boot,:] = d
+        
+        
+        # # GETTING THE BOOT STATISTICS AFTER SHUFFLING THE WEIGHTS OF THE AE           
+        # boot_val = np.zeros((1000,6))
+        # for boot in np.arange(boot_val.shape[0]):
+        #     print(boot)
+        #     shuffle_flag=False;shuffle_flag1=True
+        #     d1 = linear_cka_dist(condn_data_total,model,model1,shuffle_flag,shuffle_flag1)
+        #     shuffle_flag=True;shuffle_flag1=False
+        #     d2 = linear_cka_dist(condn_data_total1,model,model1,shuffle_flag,shuffle_flag1)
+        #     d = (d1+d2)/2
+        #     boot_val[boot,:] = np.diag(d)
         
         # HISTOGRAM
         pval=[]
@@ -289,14 +310,15 @@ pval_results = np.array(list(pval_results.items()),dtype=object)
 simal_res = np.array(list(simal_res.items()),dtype=object)
 recon_res = np.array(list(recon_res.items()),dtype=object)
 #ManifoldAnalyses_Main_CKD_All_First2pt6s_New_All3Loop_1000boot
-np.savez('ManifoldAnalyses_Main_CKD_All_First2pt6s_New_All3Loop_1000boot_6132023_2kUpsampled', 
+#ManifoldAnalyses_Main_CKD_All_First2pt6s_New_All3Loop_1000boot_6132023_2kUpsampled_Rev4
+np.savez('ManifoldAnalyses_Main_CKD_All_IntDirTowardsTarget45deg_Rev4_V2', 
          pval_results = pval_results,
          simal_res = simal_res,
          recon_res = recon_res)
 
 #%% PLOTTING THE RESULTS 
 
-data =np.load('ManifoldAnalyses_Main_CKD_All_First2pt6s_New_All3Loop_1000boot_6132023_2kUpsampled.npz',allow_pickle=True)
+data =np.load('ManifoldAnalyses_Main_CKD_All_First2pt6s_New_All3Loop_1000boot_6132023_2kUpsampled_Rev4.npz',allow_pickle=True)
 pval_results = data.get('pval_results')
 simal_res = data.get('simal_res')
 recon_res = data.get('recon_res')
@@ -336,7 +358,7 @@ plt.hist(simal)
 pfdr,pfdr_thresh=fdr_threshold(pval,0.05,'Parametric')
 prop_res=  np.zeros((len(pval_results),6))
 for i in np.arange(len(pval_results)):
-    tmp = pval_results[i][1][:-1]
+    tmp = np.array(pval_results[i][1][:-1])
     tmp = np.sum(tmp<=pfdr)
     prop_res[i,tmp] = 1
 a= np.sum(prop_res,axis=0)/prop_res.shape[0]

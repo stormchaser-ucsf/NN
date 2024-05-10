@@ -46,8 +46,8 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # model params
 input_size=759
-hidden_size=96
-latent_dims=3
+hidden_size=48 #96 originally 
+latent_dims=2 #3 originally 
 num_classes = 7
 
 # training params 
@@ -80,7 +80,7 @@ dist_var_overall_batch = np.empty([num_days,0])
 mahab_dist_overall_batch = np.empty([num_days,0])
 
 # iterations to bootstrap
-iterations = 10
+iterations = 5
 
 #%% SETTING UP VARS 
 
@@ -104,15 +104,15 @@ var_overall_imagined_days = np.zeros((iterations,num_days))
 var_overall_batch_days = np.zeros((iterations,num_days))
 var_overall_online_days = np.zeros((iterations,num_days))
 # init vars for channel variance stuff
-delta_recon_imag_var_days = np.zeros([iterations,224,num_days])
-beta_recon_imag_var_days = np.zeros([iterations,224,num_days])
-hg_recon_imag_var_days = np.zeros([iterations,224,num_days])
-delta_recon_online_var_days = np.zeros([iterations,224,num_days])
-beta_recon_online_var_days = np.zeros([iterations,224,num_days])
-hg_recon_online_var_days = np.zeros([iterations,224,num_days])
-delta_recon_batch_var_days = np.zeros([iterations,224,num_days])
-beta_recon_batch_var_days = np.zeros([iterations,224,num_days])
-hg_recon_batch_var_days = np.zeros([iterations,224,num_days])
+delta_recon_imag_var_days = np.zeros([iterations,1771,num_days])
+beta_recon_imag_var_days = np.zeros([iterations,1771,num_days])
+hg_recon_imag_var_days = np.zeros([iterations,1771,num_days])
+delta_recon_online_var_days = np.zeros([iterations,1771,num_days])
+beta_recon_online_var_days = np.zeros([iterations,1771,num_days])
+hg_recon_online_var_days = np.zeros([iterations,1771,num_days])
+delta_recon_batch_var_days = np.zeros([iterations,1771,num_days])
+beta_recon_batch_var_days = np.zeros([iterations,1771,num_days])
+hg_recon_batch_var_days = np.zeros([iterations,1771,num_days])
 # init vars for storing day to day spatial corr coeff
 delta_spatial_corr_days = np.zeros([iterations,num_classes*3,num_days])
 beta_spatial_corr_days = np.zeros([iterations,num_classes*3,num_days])
@@ -214,7 +214,7 @@ for days in (np.arange(num_days)+1):
         accuracy_imagined_iter = np.append(accuracy_imagined_iter,acc)      
         
         # get reconstructed activity as images in the three bands
-        delta_recon_imag,beta_recon_imag,hg_recon_imag = return_recon(model,
+        delta_recon_imag,beta_recon_imag,hg_recon_imag = return_recon_B3(model,
                                                     condn_data_imagined_test,Yimagined_test)
         # get the variance of each channel and storing 
         delta_imag_variances = get_recon_channel_variances(delta_recon_imag)
@@ -257,7 +257,7 @@ for days in (np.arange(num_days)+1):
         accuracy_online_iter = np.append(accuracy_online_iter,acc)      
         
         # get reconstructed activity as images in the three bands
-        delta_recon_online,beta_recon_online,hg_recon_online = return_recon(model,
+        delta_recon_online,beta_recon_online,hg_recon_online = return_recon_B3(model,
                                                     condn_data_online_test,Yonline_test)
         # get the variance of each channel and storing 
         delta_online_variances = get_recon_channel_variances(delta_recon_online)
@@ -299,7 +299,7 @@ for days in (np.arange(num_days)+1):
         accuracy_batch_iter = np.append(accuracy_batch_iter,acc)    
         
         # get reconstructed activity as images in the three bands
-        delta_recon_batch,beta_recon_batch,hg_recon_batch = return_recon(model,
+        delta_recon_batch,beta_recon_batch,hg_recon_batch = return_recon_B3(model,
                                                     condn_data_batch_test,Ybatch_test)
         # get the variance of each channel and storing 
         delta_batch_variances = get_recon_channel_variances(delta_recon_batch)
@@ -428,10 +428,15 @@ for days in (np.arange(num_days)+1):
 # v3 is lower size manifold, same as B1 and B2. Probably better
 # v5,v6 is D, 759 - 96 - 32 with 5 iterations
 # v6 is best, with mahab_distances_batch_days=mahab_distances_batch_days[:,:2,:] i.e., taking forst 3 iterations
+# also for V6, when computing mahab distances, N=1 for smoothing
+
+#v7 has all the channel variances and the recon r2 stuff
+# v8 is with hidden size of 48 and 2
+
 
 # saving it all 
 # orig filename: whole_dataSamples_stats_results_withBatch_Main_withVariance
-np.savez('ProcessedData_B3__pt02_AllDays_2D_Main_v6', 
+np.savez('ProcessedData_B3__pt02_AllDays_2D_Main_v8', 
          silhoutte_imagined_days = silhoutte_imagined_days,
          silhoutte_online_days = silhoutte_online_days,
          silhoutte_batch_days = silhoutte_batch_days,

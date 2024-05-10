@@ -487,7 +487,7 @@ condn_data_imagined_day2 = condn_data_imagined[a2,:]
 Yimagined_day2 = Yimagined[a2,:]
 Yimagined_day2 = np.roll(Yimagined_day2,1)
 
-days=6
+days=8
 imagined_file_name = root_path + root_imag_filename +  str(days) + '.mat'
 condn_data_imagined,Yimagined = get_data(imagined_file_name,7)
 a2 = np.argmax(Yimagined,axis=1)
@@ -644,6 +644,10 @@ image_format = 'svg'
 image_name = 'Drift_Hand_Knob_Days.svg'
 #fig.savefig(image_name, format=image_format, dpi=300)
 
+bootstrap_difference_test(hand_knob_act1, hand_knob_act2, 'mean')
+bootstrap_difference_test(hand_knob_act1, hand_knob_act3, 'mean')
+bootstrap_difference_test(hand_knob_act3, hand_knob_act2, 'mean')
+
 #%% NEXT, LOOKING AT CHANNEL DISTRIBUTIONS ACROSS DAYS TO ANALYZE DRIFT
 
 hg_ch23=[];hg_ch_med=[]
@@ -753,7 +757,7 @@ for iterations in np.arange(num_iterations):
         # idx = np.where(idx==1)[0]
         # condn_data_imagined = condn_data_imagined[idx,:]
         # null - remove the mean
-        #condn_data_imagined = condn_data_imagined - np.mean(condn_data_imagined,axis=0)
+        condn_data_imagined = condn_data_imagined - np.mean(condn_data_imagined,axis=0)
         # Yimagined = Yimagined[idx,:]
         tmp_y = days*np.ones(condn_data_imagined.shape[0])
         Ytotal_tmp = np.append(Ytotal_tmp,tmp_y)

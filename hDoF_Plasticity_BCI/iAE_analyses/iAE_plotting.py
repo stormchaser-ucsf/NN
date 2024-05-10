@@ -39,12 +39,23 @@ from statsmodels.stats.anova import AnovaRM
 #B2_whole_dataSamples_stats_results_withBatch_Main_withVariance
 #whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars
 
+
+#data=np.load('B2_whole_dataSamples_stats_results_withBatch_Main_withVariance.npz')
+
+
+#data=np.load('MAIN_NewB1_NoiseDataAugment_0.2_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
+
+# B3
 data=np.load('ProcessedData_B3__pt02_AllDays_2D_Main_v6.npz') #for B3
+#data=np.load('ProcessedData_B3__pt02_AllDays_2D_Main_v8.npz')
+
+
 #data=np.load('ProcessedData_B1_9DoF.npz')
 # neural variance from this
 #data =np.load('MAIN_MAIN2_B1_NoiseDataAugment_CholIndivFeatEqualSize_pt01Noise_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
 # mahab dist from this
 #data=np.load('MAIN_NewB1_NoiseDataAugment_CholIndivFeatEqualSize_pt01Noise_Stats_HeldOut_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
+#B2
 #data=np.load('MAIN_MAIN_NewB2_NoiseDataAugmentCholEqualFeat_pt02_Stats_OnAllData_2D_common_Manifold_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
 #data=np.load('ProcessedData_B1_01142023.npz')
 silhoutte_imagined_days = data.get('silhoutte_imagined_days')
@@ -167,8 +178,9 @@ hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams.update({'font.size': 6})
-X=np.arange(11)+1
-X=np.arange(11)+1
+num_days = var_overall_imagined_days.shape[1]
+X=np.arange(num_days)+1
+X=np.arange(num_days)+1
 # imagined 
 tmp1 = np.median(var_overall_imagined_days,axis=0)
 tmp_boot, tmp_boot_std = median_bootstrap(var_overall_imagined_days,1000)
@@ -210,7 +222,7 @@ plt.ylabel('Overall Latent Variance',**hfont)
 plt.show()
 image_format = 'svg' # e.g .png, .svg, etc.
 image_name = 'Overall_Variance_Latent_Days.svg'
-fig.savefig(image_name, format=image_format, dpi=300)
+#fig.savefig(image_name, format=image_format, dpi=300)
 
 tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
 # tmp = np.concatenate((np.ndarray.flatten(var_overall_imagined_days)[:,None],
@@ -429,7 +441,7 @@ print(np.mean(tmp,axis=0))
 
 #%% plotting mean centroid variances over days  (MAIN)
 
-N=1
+N=2
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
@@ -575,7 +587,7 @@ plt.show()
 #%% # plotting mean Mahalanobis distance over days  (MAIN MAIN)
 # over days there is a learning effect where Mahab distance grows between the 
 # actions and Batch is always greater than all others. 
-N=2
+N=1
 num_days = mahab_distances_imagined_days.shape[2]
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
@@ -584,7 +596,7 @@ plt.rcParams['figure.dpi'] = 300
 plt.rcParams.update({'font.size': 6})
 X=np.arange(num_days)+1
 # imagined 
-tmp_main = np.squeeze(np.median(mahab_distances_imagined_days,axis=1))
+tmp_main = np.squeeze(np.mean(mahab_distances_imagined_days,axis=1))
 tmp1 = np.mean(tmp_main,axis=0)
 tmp1b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp1 = np.insert(tmp1,0,tmp1[0],axis=0)
@@ -595,7 +607,7 @@ tmp1b = tmp1b[1:]
 plt.plot(X,tmp1,color="black",label = 'Imagined')
 plt.fill_between(X, tmp1-tmp1b, tmp1+tmp1b,color="black",alpha=0.2)
 # online
-tmp_main = np.squeeze(np.median(mahab_distances_online_days,1))
+tmp_main = np.squeeze(np.mean(mahab_distances_online_days,1))
 tmp2 = np.mean(tmp_main,axis=0)
 tmp2b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp2 = np.insert(tmp2,0,tmp2[0],axis=0)
@@ -607,7 +619,7 @@ tmp2b = tmp2b[1:]
 plt.plot(X,tmp2,color="blue",label = 'Online')
 plt.fill_between(X, tmp2-tmp2b, tmp2+tmp2b,color="blue",alpha=0.2)
 # batch
-tmp_main = np.squeeze(np.median(mahab_distances_batch_days,1))
+tmp_main = np.squeeze(np.mean(mahab_distances_batch_days,1))
 tmp3 = np.mean(tmp_main,axis=0)
 tmp3b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp3 = np.insert(tmp3,0,tmp3[0],axis=0)
@@ -1416,7 +1428,7 @@ fig1.set_clim(xmin.min(),xmax.max())
 fig2.set_clim(xmin.min(),xmax.max())
 fig3.set_clim(xmin.min(),xmax.max())
 
-### plotting spatial correlations and recon activity map
+#%% plotting spatial correlations and recon activity map
 # high gamma
 actions =['Rt Thumb','Left Leg','Lt Thumb','Head','Lips','Tongue','Both Middle Finger']
 corr_coef_hg = np.array([])
@@ -1810,7 +1822,7 @@ fig.savefig(image_name, format=image_format, dpi=300)
 
 
 
-# plotting all spatial correlations together as boxplot over all days and simulations
+#%% plotting all spatial correlations together as boxplot over all days and simulations
 corr_coef_delta = np.mean(delta_spatial_corr_days[:,:,:],axis=0).flatten()
 corr_coef_beta = np.mean(beta_spatial_corr_days[:,:,:],axis=0).flatten()
 corr_coef_hg = np.mean(hg_spatial_corr_days[:,:,:],axis=0).flatten()
@@ -1823,12 +1835,12 @@ plt.rcParams.update({'font.size': 6})
 plt.boxplot(x,showfliers=False)
 plt.xticks(ticks=[1,2,3],labels=('Delta','Beta','hG'),**hfont)
 plt.ylabel('Norm. Spatial Correlation',**hfont)
-plt.ylim((0.8,1.01))
+plt.ylim((0.92,1.01))
 plt.tick_params(labelleft=False,labelbottom=False)
 plt.show()
 plt.ylabel('')
 image_format = 'svg' # e.g .png, .svg, etc.
-image_name = 'Norm. Spatial_Correlation_B1_New.svg'
+image_name = 'Norm. Spatial_Correlation_B3_New.svg'
 fig.savefig(image_name, format=image_format, dpi=300)
 
 
@@ -1867,13 +1879,135 @@ x1b = stats.bootstrap([x1,],np.mean)
 # fig2.set_clim(xmin.min(),xmax.max())
 
 
+
+#%% B1 AND B3 plotting channel variances after averaging over iterations and days (MAIN MAIN NEW)
+
+
+import os
+os.chdir('C:/Users/nikic/Documents/GitHub/NN/hDoF_Plasticity_BCI/iAE_analyses')
+from iAE_utils_models import *
+
+# load B1
+data =np.load('MAIN_MAIN2_B1_NoiseDataAugment_CholIndivFeatEqualSize_pt01Noise_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
+# channel variance stuff
+delta_recon_imag_var_days=data.get('delta_recon_imag_var_days')
+beta_recon_imag_var_days=data.get('beta_recon_imag_var_days')
+hg_recon_imag_var_days=data.get('hg_recon_imag_var_days')
+delta_recon_online_var_days=data.get('delta_recon_online_var_days')
+beta_recon_online_var_days=data.get('beta_recon_online_var_days')
+hg_recon_online_var_days=data.get('hg_recon_online_var_days')
+delta_recon_batch_var_days=data.get('delta_recon_batch_var_days')
+beta_recon_batch_var_days=data.get('beta_recon_batch_var_days')
+hg_recon_batch_var_days=data.get('hg_recon_batch_var_days')
+
+# load B3
+data = np.load('ProcessedData_B3__pt02_AllDays_2D_Main_v7.npz')
+delta_recon_imag_var_days_b3=data.get('delta_recon_imag_var_days')
+beta_recon_imag_var_days_b3=data.get('beta_recon_imag_var_days')
+hg_recon_imag_var_days_b3=data.get('hg_recon_imag_var_days')
+delta_recon_online_var_days_b3=data.get('delta_recon_online_var_days')
+beta_recon_online_var_days_b3=data.get('beta_recon_online_var_days')
+hg_recon_online_var_days_b3=data.get('hg_recon_online_var_days')
+delta_recon_batch_var_days_b3=data.get('delta_recon_batch_var_days')
+beta_recon_batch_var_days_b3=data.get('beta_recon_batch_var_days')
+hg_recon_batch_var_days_b3=data.get('hg_recon_batch_var_days')
+
+
+# delta
+var_imag = np.mean(beta_recon_imag_var_days,axis=0)
+var_online = np.mean(beta_recon_online_var_days,axis=0)
+var_batch = np.mean(beta_recon_batch_var_days,axis=0)
+
+var_imag_b3 = np.mean(beta_recon_imag_var_days_b3,axis=0)
+var_online_b3 = np.mean(beta_recon_online_var_days_b3,axis=0)
+var_batch_b3 = np.mean(beta_recon_batch_var_days_b3,axis=0)
+
+tmp=[]
+# CL1 to OL
+a1 = 100*((var_online - var_imag)/var_imag)
+a1 = np.median(a1,axis=0)
+a3 = 100*((var_online_b3 - var_imag_b3)/var_imag_b3)
+a3 = np.median(a3,axis=0)
+a1 = np.concatenate((a3, a1))
+tmp.append(a1)
+# CL2 to OL
+a1 = 100*((var_batch - var_imag)/var_imag)
+a1 = np.median(a1,axis=0)
+a3 = 100*((var_batch_b3 - var_imag_b3)/var_imag_b3)
+a3 = np.median(a3,axis=0)
+a1 = np.concatenate((a3, a1))
+tmp.append(a1)
+# CL2 to CL1
+a1 = 100*((var_batch - var_online)/var_online)
+a1 = np.median(a1,axis=0)
+a3 = 100*((var_batch_b3 - var_online_b3)/var_online_b3)
+a3 = np.median(a3,axis=0)
+a1 = np.concatenate((a3, a1))
+tmp.append(a1)
+
+# plotting and stats
+plt.figure()
+plt.boxplot(tmp)
+plt.hlines(0,0.85,3.15)
+plt.show()
+print(stats.wilcoxon(tmp[0].flatten()))
+print(stats.wilcoxon(tmp[1].flatten()))
+print(stats.wilcoxon(tmp[2].flatten()))
+
+hg = np.concatenate((tmp[0][:,None],tmp[1][:,None],tmp[2][:,None]),axis=1)
+
 #%% plotting channel variances after the averaging over iterations and days (MAIN MAIN)
 # high gamma
-var_imag = np.mean(hg_recon_imag_var_days,axis=0)
-var_online = np.mean(hg_recon_online_var_days,axis=0)
-var_batch = np.mean(hg_recon_batch_var_days,axis=0)
+var_imag = np.mean(delta_recon_imag_var_days,axis=0)
+var_online = np.mean(delta_recon_online_var_days,axis=0)
+var_batch = np.mean(delta_recon_batch_var_days,axis=0)
+
+a1=np.mean(var_imag,axis=1).flatten()
+a2=np.mean(var_online,axis=1).flatten()
+
+
+# a1=var_batch.flatten()
+# a2=var_online.flatten()
+
+print(stats.ks_2samp(var_batch.flatten(),var_online.flatten()))
+
+tmp = []
+var_batch1 = var_batch - var_imag
+#var_batch1 = np.mean(var_batch1,axis=0)
+tmp.append(var_batch1.flatten())
+
+var_batch1 = var_online - var_imag
+#var_batch1 = np.mean(var_batch1,axis=0)
+tmp.append(var_batch1.flatten())
+
+plt.figure()
+plt.boxplot(tmp)
+plt.hlines(0,0.85,2.15)
+plt.show()
+print(stats.wilcoxon(tmp[0].flatten()))
+print(stats.wilcoxon(tmp[1].flatten()))
+
+
+
+plt.figure();
+plt.hist(var_imag.flatten(), cumulative=True,histtype='step', alpha=0.8, color='k')
+plt.hist(var_online.flatten(), cumulative=True, histtype='step', alpha=0.8, color='b')
+plt.show()
+
+
+var_batch1 = var_batch - var_online
+plt.figure;
+plt.hist(var_batch1.flatten(), normed=True, cumulative=True, label='CDF',
+             histtype='step', alpha=0.8, color='k')
+#plt.figure();plt.hist(var_batch1.flatten())
+
+
+
+# plt cdf
+
+
 #x= [var_imag.flatten()  , var_online.flatten(), var_batch.flatten()]
-x= [np.mean(var_imag,axis=1),np.mean(var_online,axis=1),np.mean(var_batch,axis=1)]
+x= [np.mean(var_imag,axis=0),np.mean(var_online,axis=0),np.mean(var_batch,axis=0)]
 fig=plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
@@ -1900,10 +2034,28 @@ plt.tick_params(labelleft=False,labelbottom=False)
 plt.show()
 image_format = 'svg' # e.g .png, .svg, etc.
 image_name = 'hG_Variance_Overall_AcrossChannels.svg'
-fig.savefig(image_name, format=image_format, dpi=300)
+#fig.savefig(image_name, format=image_format, dpi=300)
 print(stats.ks_2samp(x[0],x[1]))
 print(stats.ks_2samp(x[0],x[2]))
 print(stats.ks_2samp(x[1],x[2]))
+
+
+print(stats.mannwhitneyu(x[0],x[1]))
+print(stats.mannwhitneyu(x[0],x[2]))
+print(stats.mannwhitneyu(x[1],x[2]))
+
+
+
+print(stats.wilcoxon(x[0],x[1]))
+print(stats.wilcoxon(x[0],x[2]))
+print(stats.wilcoxon(x[1],x[2]))
+print(stats.wilcoxon(x[2]-x[0]))
+
+plt.figure();
+plt.boxplot(x[1]-x[0])
+plt.hlines(0,0.85,1.15)
+plt.show()
+
 
 tmp = np.concatenate((x[0][:,None], x[1][:,None], x[2][:,None]),axis=1)
 
@@ -1939,17 +2091,27 @@ plt.tick_params(labelleft=False,labelbottom=False)
 plt.show()
 image_format = 'svg' # e.g .png, .svg, etc.
 image_name = 'beta_Variance_Overall_Acrosschannels_New.svg'
-fig.savefig(image_name, format=image_format, dpi=300)
+#fig.savefig(image_name, format=image_format, dpi=300)
 print(stats.ks_2samp(x[0],x[1]))
 print(stats.ks_2samp(x[0],x[2]))
 print(stats.ks_2samp(x[1],x[2]))
+
+
+print(stats.mannwhitneyu(x[0],x[1]))
+print(stats.mannwhitneyu(x[0],x[2]))
+print(stats.mannwhitneyu(x[1],x[2]))
+
+
+print(mean(x[0]))  
+print(mean(x[1]))
+print(mean(x[2]))
 
 #delta
 var_imag = np.mean(delta_recon_imag_var_days,axis=0)
 var_online = np.mean(delta_recon_online_var_days,axis=0)
 var_batch = np.mean(delta_recon_batch_var_days,axis=0)
 #x= [var_imag.flatten()  , var_online.flatten(), var_batch.flatten()]
-x= [np.mean(var_imag,axis=1),np.mean(var_online,axis=1),np.mean(var_batch,axis=1)]
+x= [np.mean(var_imag,axis=0),np.mean(var_online,axis=0),np.mean(var_batch,axis=0)]
 fig=plt.figure()
 hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
@@ -1976,10 +2138,28 @@ plt.tick_params(labelleft=False,labelbottom=False)
 plt.show()
 image_format = 'svg' # e.g .png, .svg, etc.
 image_name = 'delta_Variance_Overall_AcrossChannels_New.svg'
-fig.savefig(image_name, format=image_format, dpi=300)
+#fig.savefig(image_name, format=image_format, dpi=300)
 print(stats.ks_2samp(x[0],x[1]))
 print(stats.ks_2samp(x[0],x[2]))
 print(stats.ks_2samp(x[1],x[2]))
+
+
+
+print(stats.mannwhitneyu(x[0],x[1]))
+print(stats.mannwhitneyu(x[0],x[2]))
+print(stats.mannwhitneyu(x[1],x[2]))
+
+
+print(stats.wilcoxon(x[0],x[1]))
+print(stats.wilcoxon(x[0],x[2]))
+print(stats.wilcoxon(x[1],x[2]))
+print(stats.wilcoxon(x[2]-x[0]))
+
+plt.figure();
+plt.boxplot(x[2]-x[0])
+plt.hlines(0,0.85,1.15)
+plt.show()
+
 
 #%%########### PLOTTING FOR B2 #####################
 # OVERALL VARIANCE IN LATENT SPACE 
@@ -2105,6 +2285,8 @@ X=np.arange(num_days)+1
 tmp_main = np.squeeze(np.mean(mahab_distances_imagined_days,1))
 tmp1 = np.mean(tmp_main,axis=0)
 tmp1b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
+tmp1_0 = tmp1[0]
+tmp1_6 = tmp1[-1]
 tmp1 = tmp1[1:5] # only taking days with batch
 tmp1b = tmp1b[1:5] # only taking days with batch
 tmp1 = np.insert(tmp1,-1,tmp1[-1],axis=0)
@@ -2119,6 +2301,8 @@ plt.fill_between(X[1:5], tmp1-tmp1b, tmp1+tmp1b,color="black",alpha=0.2)
 tmp_main = np.squeeze(np.mean(mahab_distances_online_days,1))
 tmp2 = np.mean(tmp_main,axis=0)
 tmp2b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
+tmp2_0 = tmp2[0]
+tmp2_6 = tmp2[-1]
 tmp2 = tmp2[1:5] # only taking days with batch
 tmp2b = tmp2b[1:5] # only taking days with batch
 tmp2 = np.insert(tmp2,-1,tmp2[-1],axis=0)
@@ -2133,6 +2317,8 @@ plt.fill_between(X[1:5], tmp2-tmp2b, tmp2+tmp2b,color="blue",alpha=0.2)
 tmp_main = np.squeeze(np.mean(mahab_distances_batch_days,1))
 tmp3 = np.mean(tmp_main,axis=0)
 tmp3b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
+tmp3_0 = tmp3[0]
+tmp3_6 = tmp3[-1]
 tmp3 = tmp3[1:5] #get only  days when data available
 tmp3b = tmp3b[1:5] #get only days when data available
 tmp3 = np.insert(tmp3,-1,tmp3[-1],axis=0)
@@ -2154,6 +2340,16 @@ fig.savefig(image_name, format=image_format, dpi=300)
 
 #tmp3 = np.append(tmp3,(np.median(tmp3),np.median(tmp3)))
 tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
+
+tmp1 = np.insert(tmp1,0,tmp1_0)
+tmp1 = np.insert(tmp1,-1,tmp1_6)
+tmp2 = np.insert(tmp2,0,tmp2_0)
+tmp2 = np.insert(tmp2,-1,tmp2_6)
+tmp3 = np.insert(tmp3,0,0.0)
+tmp3 = np.insert(tmp3,len(tmp3),0.0)
+
+tmp_overall = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
+
 # tmp = np.concatenate((np.ndarray.flatten(var_overall_imagined_days)[:,None],
 #                       np.ndarray.flatten(var_overall_online_days)[:,None],
 #                       np.ndarray.flatten(var_overall_batch_days)[:,None]),axis=1)
@@ -2248,7 +2444,7 @@ print(np.mean(tmp,axis=0))
 
 
 # plotting mean centroid variances over days  (MAIN)
-N=2
+N=1
 num_days=6
 fig = plt.figure()
 hfont = {'fontname':'Arial'}
@@ -2258,8 +2454,8 @@ plt.rcParams.update({'font.size': 6})
 X=np.arange(num_days)+1
 X=np.arange(num_days)+1
 # imagined 
-tmp_main = np.squeeze(np.median(var_imagined_days,axis=1))
-tmp1 = np.median(tmp_main,axis=0)
+tmp_main = np.squeeze(np.mean(var_imagined_days,axis=1))
+tmp1 = np.mean(tmp_main,axis=0)
 tmp1b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp1 = np.insert(tmp1,0,tmp1[0],axis=0)
 tmp1b = np.insert(tmp1b,0,tmp1b[0],axis=0)
@@ -2269,8 +2465,8 @@ tmp1b = tmp1b[1:]
 plt.plot(X,tmp1,color="black",label = 'Imagined')
 plt.fill_between(X, tmp1-tmp1b, tmp1+tmp1b,color="black",alpha=0.2)
 # online
-tmp_main = np.squeeze(np.median(var_online_days,axis=1))
-tmp2 = np.median(tmp_main,axis=0)
+tmp_main = np.squeeze(np.mean(var_online_days,axis=1))
+tmp2 = np.mean(tmp_main,axis=0)
 tmp2b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp2 = np.insert(tmp2,0,tmp2[0],axis=0)
 tmp2b = np.insert(tmp2b,0,tmp2b[0],axis=0)
@@ -2281,8 +2477,8 @@ tmp2b = tmp2b[1:]
 plt.plot(X,tmp2,color="blue",label = 'Online')
 plt.fill_between(X, tmp2-tmp2b, tmp2+tmp2b,color="blue",alpha=0.2)
 # batch
-tmp_main = np.squeeze(np.median(var_batch_days,axis=1))
-tmp3 = np.median(tmp_main,axis=0)
+tmp_main = np.squeeze(np.mean(var_batch_days,axis=1))
+tmp3 = np.mean(tmp_main,axis=0)
 tmp3b = np.std(tmp_main,axis=0)/sqrt(tmp_main.shape[0])
 tmp3 = tmp3[1:5] #get only  days when data available
 tmp3b = tmp3b[1:5] #get only days when data available
@@ -2300,8 +2496,8 @@ plt.ylabel('Overall Latent Variance',**hfont)
 plt.xlim((2,5))
 plt.show()
 image_format = 'svg' # e.g .png, .svg, etc.
-image_name = 'Overall_Variance_Latent_Days.svg'
-fig.savefig(image_name, format=image_format, dpi=300)
+#image_name = 'Overall_Variance_Latent_Days.svg'
+#fig.savefig(image_name, format=image_format, dpi=300)
 
 
 tmp = np.concatenate((tmp1[1:5][:,None],tmp2[1:5][:,None],tmp3[:,None]),axis=1)
@@ -2320,8 +2516,13 @@ plt.ylabel('',**hfont)
 plt.show()
 image_format = 'svg' # e.g .png, .svg, etc.
 image_name = 'B2_Variance_Latent_Centroids.svg'
-fig.savefig(image_name, format=image_format, dpi=300)
+#fig.savefig(image_name, format=image_format, dpi=300)
 print(np.mean(tmp,axis=0))
+
+# getting all the data at once 
+tmp3 =  np.insert(tmp3,0,0)
+tmp3 =  np.insert(tmp3,len(tmp3),0)
+tmp_overall = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
 
 
 # plotting the same but now across days without averaging
@@ -2353,7 +2554,7 @@ plt.ylabel('',**hfont)
 plt.show()
 image_format = 'svg' # e.g .png, .svg, etc.
 image_name = 'New_B2_Variance_Latent_Centroids.svg'
-fig.savefig(image_name, format=image_format, dpi=300)
+#fig.savefig(image_name, format=image_format, dpi=300)
 
 print(np.mean(tmp,axis=0))
 print(stats.ttest_rel(tmp[:,0],tmp[:,1]))
@@ -2923,7 +3124,7 @@ plt.ylabel('Mahalanobis Distances',**hfont)
 plt.show()
 #tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
 tmp = np.concatenate((tmp2[:,None],tmp3[:,None]),axis=1)
-tmp = tmp2[:,None]
+#tmp = tmp2[:,None]
 #tmp =(tmp1[:,None])
 
 mahab_ckd_3s = tmp.flatten()
@@ -2983,7 +3184,7 @@ plt.show()
 
 #tmp = np.concatenate((tmp1[:,None],tmp2[:,None],tmp3[:,None]),axis=1)
 tmp = np.concatenate((tmp2[:,None],tmp3[:,None]),axis=1)
-tmp = tmp2[:,None]
+#tmp = tmp2[:,None]
 #tmp =(tmp1[:,None])
 mahab_ckd_45deg = tmp.flatten()
 
@@ -2996,9 +3197,15 @@ plt.yticks(np.arange(-2,4.1,2))
 plt.xticks([1,2,3])
 plt.tick_params(labelbottom=False)
 plt.tick_params(labelleft=False)
-# image_format = 'svg' # e.g .png, .svg, etc.
-# image_name = 'CKA_IBID_Mahab_ClosedLoop.svg'
-# fig.savefig(image_name, format=image_format, dpi=300)
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'CKA_IBID_Mahab_ClosedLoop_New.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
+
+# mann whitney U test 
+print(stats.mannwhitneyu(mahab_stereo,mahab_ckd_3s))
+print(stats.mannwhitneyu(mahab_stereo,mahab_ckd_45deg))
+print(stats.mannwhitneyu(mahab_ckd_3s,mahab_ckd_45deg))
+
 
 # t-test between mahab stereo and ckd
 print(stats.ttest_ind(mahab_stereo,mahab_ckd_3s))
@@ -3008,7 +3215,9 @@ print(stats.ttest_rel(mahab_ckd_3s,mahab_ckd_45deg))
 #%% DRIFT PLOTTING CONTINUED
 # plotting the number of sig layers in pairwise comparisons
 
-data =np.load('ManifoldAnalyses_Main_CKD_All_IntDirTowardsTarget_All3Loop_1000boot.npz',allow_pickle=True)
+
+data=np.load('ManifoldAnalyses_Main_CKD_All_IntDirTowardsTarget45deg_Rev4.npz',allow_pickle=True)
+#data =np.load('ManifoldAnalyses_Main_CKD_All_IntDirTowardsTarget_All3Loop_1000boot.npz',allow_pickle=True)
 pval_results = data.get('pval_results')
 simal_res = data.get('simal_res')
 recon_res = data.get('recon_res')
@@ -3021,7 +3230,7 @@ for i in np.arange(pval_results.shape[0]):
 pfdr,pfdr_thresh=fdr_threshold(pval,0.05,'Parametric')
 prop_res=  np.zeros((len(pval_results),6))
 for i in np.arange(len(pval_results)):
-    tmp = pval_results[i][1][:-1]
+    tmp = np.array(pval_results[i][1][:-1])
     tmp = np.sum(tmp<=pfdr)
     prop_res[i,tmp] = 1
 a= np.sum(prop_res,axis=0)/prop_res.shape[0]
@@ -3034,7 +3243,9 @@ plt.show()
 print(a[:,None])
 
 
-data =np.load('ManifoldAnalyses_Main_CKD_All_First2pt6s_New_All3Loop_1000boot.npz',allow_pickle=True)
+##ManifoldAnalyses_Main_CKD_All_IntDirTowardsTarget45deg_Rev4_V2
+data=np.load('ManifoldAnalyses_Main_CKD_All_First2pt6s_New_All3Loop_1000boot_6132023_2kUpsampled_Rev4_v2.npz',allow_pickle=True)
+#data =np.load('ManifoldAnalyses_Main_CKD_All_First2pt6s_New_All3Loop_1000boot.npz',allow_pickle=True)
 pval_results = data.get('pval_results')
 simal_res = data.get('simal_res')
 recon_res = data.get('recon_res')
@@ -3047,7 +3258,7 @@ for i in np.arange(pval_results.shape[0]):
 pfdr,pfdr_thresh=fdr_threshold(pval,0.05,'Parametric')
 prop_res=  np.zeros((len(pval_results),6))
 for i in np.arange(len(pval_results)):
-    tmp = pval_results[i][1][:-1]
+    tmp = np.array(pval_results[i][1][:-1])
     tmp = np.sum(tmp<=pfdr)
     prop_res[i,tmp] = 1
 b= np.sum(prop_res,axis=0)/prop_res.shape[0]
@@ -3064,24 +3275,26 @@ m = np.mean(res,axis=0)
 t = np.arange(6)
 fig=plt.figure();
 plt.bar(t,m,width=0.8,color=(0.5,0.5,0.5));   
-plt.scatter(t+(rnd.randn(len(t))*0.05), res[0,:],color = (0.2,0.2,0.8))
+plt.scatter(t+(rnd.randn(len(t))*0.05), res[0,:],color = (0.8,0.2,0.2))
 plt.scatter(t+(rnd.randn(len(t))*0.05), res[1,:],color=(0.2,0.2,0.8))
 plt.xticks(t)
 plt.yticks(np.arange(0,1.01,0.2))
-plt.ylim((0,1))
+plt.ylim((0,1.05))
 plt.show()
 plt.tick_params(labelleft=False)
 plt.tick_params(labelbottom=False)
-# image_format = 'svg' # e.g .png, .svg, etc.
-# image_name = 'CKA_res_CKD_B1.svg'
-# fig.savefig(image_name, format=image_format, dpi=300)
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'CKA_res_CKD_B1_New.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
 
 
 
 # PLOTTING THE SIMILARITIES LAYER BY LAYER FOR BOTH CKD AND IBID
-data =np.load('ManifoldAnalyses_Main_CKD_All_First2pt6s_New_All3Loop_1000boot.npz',allow_pickle=True)
+data=np.load('ManifoldAnalyses_Main_CKD_All_First2pt6s_New_All3Loop_1000boot_6132023_2kUpsampled_Rev4_v2.npz',allow_pickle=True)
+#data =np.load('ManifoldAnalyses_Main_CKD_All_First2pt6s_New_All3Loop_1000boot.npz',allow_pickle=True)
 simal_res_ckd1 = data.get('simal_res')
-data =np.load('ManifoldAnalyses_Main_CKD_All_IntDirTowardsTarget_All3Loop_1000boot.npz',allow_pickle=True)
+data=np.load('ManifoldAnalyses_Main_CKD_All_IntDirTowardsTarget45deg_Rev4.npz',allow_pickle=True)
+#data =np.load('ManifoldAnalyses_Main_CKD_All_IntDirTowardsTarget_All3Loop_1000boot.npz',allow_pickle=True)
 simal_res_ckd2 = data.get('simal_res')
 data=np.load('ManifoldAnalyses_Main_1000Boot.npz',allow_pickle=True)
 simal_res = data.get('simal_res')
@@ -3105,8 +3318,12 @@ for i in np.arange(simal_res.shape[0]):
     simal_ibid = np.concatenate((simal_ibid,tmp),axis=0)
 
 plt.figure();
-plt.boxplot([simal_CKD1.flatten(),simal_CKD2.flatten(),simal_ibid.flatten()])
-
+plt.boxplot([simal_ibid.flatten(),simal_CKD1.flatten(),simal_CKD2.flatten()],showfliers=False,
+            showmeans=False)
+plt.xticks(ticks=[1,2,3])
+plt.yticks(ticks=np.arange(0,1,0.2))
+plt.tick_params(labelleft=False)
+plt.tick_params(labelbottom=False)
 
 # plot median with error bars 
 m1 = np.median(simal_CKD1.flatten())
@@ -3127,14 +3344,14 @@ plt.errorbar([1,2,3],[m3,m1,m2],yerr=yerr,elinewidth=2,capthick=2,capsize=4,colo
              ls='none');
 plt.xticks(ticks=[1,2,3])
 plt.yticks(ticks=np.arange(0,1.01,0.1))
-plt.ylim((0.1,0.7))
+plt.ylim((0.0,0.7))
 plt.plot([1,2,3],[m3,m1,m2],'o',markersize=7,markerfacecolor='k',markeredgecolor='k')
 plt.tick_params(labelleft=False)
 plt.tick_params(labelbottom=False)
 plt.show()
-# image_format = 'svg' # e.g .png, .svg, etc.
-# image_name = 'Median_CKA_res_CKD_IBID.svg'
-# fig.savefig(image_name, format=image_format, dpi=300)
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Median_CKA_res_CKD_IBID_new.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
 
 
 # plot boxplots layer by layer
@@ -3151,6 +3368,12 @@ c=simal_ibid.flatten()
 pvalue = bootstrap_difference_test(a,b,'median')
 pvalue = bootstrap_difference_test(a,c,'median')
 pvalue = bootstrap_difference_test(c,b,'median')
+
+
+# mann whitney U test 
+print(stats.mannwhitneyu(a,b))
+print(stats.mannwhitneyu(a,c))
+print(stats.mannwhitneyu(b,c))
 
 #%% PLOTTING THE DECODING ACCURACY OF DISCERNING THE DAY OF RECORDING (B1, B2, B3)
 
@@ -3198,6 +3421,32 @@ fig.savefig(image_name, format=image_format, dpi=300)
 demean = np.mean(res_acc_B1_demean,axis=0)
 t=stats.ttest_1samp(demean,0.1)
 print(t)
+
+pval=[]
+for i in np.arange(res_acc_B1_demean.shape[1]):
+    #t=stats.ttest_1samp(res_acc_B1_demean[:,i],0.1)
+    t=stats.wilcoxon(res_acc_B1_demean[:,i]-0.1)
+    print(t)
+    pval.append(t.pvalue)
+    
+pfdr,pfdr_thresh=fdr_threshold(np.array(pval),0.05,'Parametric')
+
+# bootstrapping the decoding accuracy across folds
+xx = np.mean(res_acc_B1,axis=1)
+res_mean_boot = mean_bootstrap(xx[:,None],1000)[0]
+print(res_mean_boot[24],res_mean_boot[974])
+
+# sign rank on the distrubtion of decoding accruacies across folds 
+# avergage the diagonal of each confusion matrix to get the distribution across folds 
+#xx = res_acc_B1_demean.flatten()
+xx = np.mean(res_acc_B1_demean,axis=1)
+print(np.median(xx)*100)
+res_demean_boot_median = median_bootstrap(xx[:,None],1000)[0]
+print(res_demean_boot_median[24]*100)
+print(res_demean_boot_median[974]*100)
+t=stats.wilcoxon(xx - (1/10))
+print(t)
+
 
 # now do it for B2
 data=np.load('RepresentationalDrift_Mean_Across_Days_B2.npz',allow_pickle=True)
@@ -3286,6 +3535,25 @@ image_name = 'Day_Decoding_Acc_B3.svg'
 fig.savefig(image_name, format=image_format, dpi=300)
 
 # stats
+# bootstrapping the decoding accuracy across folds
+xx = np.mean(res_acc_B3,axis=1)
+res_mean_boot = mean_bootstrap(xx[:,None],1000)[0]
+print(res_mean_boot[24],np.mean(xx),res_mean_boot[974])
+
+# sign rank on the distrubtion of decoding accruacies across folds 
+# avergage the diagonal of each confusion matrix to get the distribution across folds 
+#xx = res_acc_B3_demean.flatten()
+xx = np.mean(res_acc_B3_demean,axis=1)
+print(np.median(xx)*100)
+res_demean_boot_median = median_bootstrap(xx[:,None],1000)[0]
+print(res_demean_boot_median[24]*100)
+print(res_demean_boot_median[974]*100)
+t=stats.wilcoxon(xx - (1/11))
+print(t)
+
+
+
+
 demean = np.mean(res_acc_B3_demean,axis=0)
 t=stats.ttest_1samp(demean,(1/11))
 print(t)

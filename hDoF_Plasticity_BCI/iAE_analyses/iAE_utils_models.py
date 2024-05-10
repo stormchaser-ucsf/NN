@@ -1086,6 +1086,40 @@ def return_recon_B2(model,data,Y):
     
     model.train()
     return delta_recon,beta_recon,hg_recon
+
+def return_recon_B3(model,data,Y,num_classes=7):
+    data = torch.from_numpy(data).to(device).float()
+    Y=torch.from_numpy(Y).to(device).float()
+    Y=convert_to_ClassNumbers(Y).to('cpu').detach().numpy()
+    model.eval()
+    hg_recon = []
+    beta_recon=[]
+    delta_recon=[]
+    for query in np.arange(num_classes):
+        idx = np.where(Y==query)[0]
+        data_tmp = data[idx,:]        
+        
+        with torch.no_grad():
+            recon_data,class_outputs = model(data_tmp)        
+                
+        recon_data = recon_data.to('cpu').detach().numpy()    
+        # first 253 are delta, next 253 are beta and last 253 are hG
+        
+        # delta
+        idx = np.arange(0,253)
+        delta_recon_tmp = recon_data[:,idx]        
+        delta_recon.append(delta_recon_tmp)
+        # beta
+        idx  = np.arange(253,253*2)
+        beta_recon_tmp = recon_data[:,idx]  
+        beta_recon.append(beta_recon_tmp)
+        # hG
+        idx=np.arange(253*2,253*3)
+        hg_recon_tmp = recon_data[:,idx]  
+        hg_recon.append(hg_recon_tmp)        
+    
+    model.train()
+    return delta_recon,beta_recon,hg_recon
     
 def get_recon_channel_variances(recon_data):
     l = len(recon_data)
@@ -1231,51 +1265,53 @@ def data_aug_mlp_chol_feature_equalSize(indata,labels,data_size):
         idx_len_aug = round(N-len(idx))
         tmp_data = indata[idx,:]
         
-        # doing hg
-        hg = tmp_data[:,np.arange(2,96,3)]
-        C = np.cov(hg,rowvar=False)
-        if lin.matrix_rank(C)<32:
-            C = np.cov(hg,rowvar=False) +  1e-12*np.eye(hg.shape[1])
-        C12 = lin.cholesky(C)
-        m = np.mean(hg,axis=0)
-        X = rnd.randn(idx_len_aug,hg.shape[1])
-        new_hg = X @ C12 + m
-        
-        # doing delta
-        delta = tmp_data[:,np.arange(0,96,3)]
-        C = np.cov(delta,rowvar=False)
-        if lin.matrix_rank(C)<32:
-            C = np.cov(delta,rowvar=False) +  1e-12*np.eye(delta.shape[1])
-        C12 = lin.cholesky(C)
-        m = np.mean(delta,axis=0)
-        X = rnd.randn(idx_len_aug,delta.shape[1])
-        new_delta = X @ C12 + m
-        
-        # doing beta
-        beta = tmp_data[:,np.arange(1,96,3)]
-        C = np.cov(beta,rowvar=False)
-        if lin.matrix_rank(C)<32:
-            C = np.cov(beta,rowvar=False) +  1e-12*np.eye(beta.shape[1])
-        C12 = lin.cholesky(C)
-        m = np.mean(beta,axis=0)
-        X = rnd.randn(idx_len_aug,beta.shape[1])
-        new_beta = X @ C12 + m
-        
-        new_data = np.zeros([idx_len_aug,96]) 
-        new_data[:,np.arange(0,96,3)] = new_delta
-        new_data[:,np.arange(1,96,3)] = new_beta
-        new_data[:,np.arange(2,96,3)] = new_hg
-        #add some noise
-        new_data = new_data + 0.02*rnd.randn(new_data.shape[0],new_data.shape[1])
-        
-        # make it unit norm
-        for i in np.arange(new_data.shape[0]):
-            new_data[i,:] = new_data[i,:]/lin.norm(new_data[i,:])
-        
-        condn_data_aug = np.concatenate((condn_data_aug,new_data),axis=0)    
-        tmp_labels = np.zeros([idx_len_aug,num_labels])
-        tmp_labels[:,query]=1        
-        labels_aug = np.concatenate((labels_aug,tmp_labels))
+        if idx_len_aug > 0:
+            
+            # doing hg
+            hg = tmp_data[:,np.arange(2,96,3)]
+            C = np.cov(hg,rowvar=False)
+            if lin.matrix_rank(C)<32:
+                C = np.cov(hg,rowvar=False) +  1e-12*np.eye(hg.shape[1])
+            C12 = lin.cholesky(C)
+            m = np.mean(hg,axis=0)
+            X = rnd.randn(idx_len_aug,hg.shape[1])
+            new_hg = X @ C12 + m
+            
+            # doing delta
+            delta = tmp_data[:,np.arange(0,96,3)]
+            C = np.cov(delta,rowvar=False)
+            if lin.matrix_rank(C)<32:
+                C = np.cov(delta,rowvar=False) +  1e-12*np.eye(delta.shape[1])
+            C12 = lin.cholesky(C)
+            m = np.mean(delta,axis=0)
+            X = rnd.randn(idx_len_aug,delta.shape[1])
+            new_delta = X @ C12 + m
+            
+            # doing beta
+            beta = tmp_data[:,np.arange(1,96,3)]
+            C = np.cov(beta,rowvar=False)
+            if lin.matrix_rank(C)<32:
+                C = np.cov(beta,rowvar=False) +  1e-12*np.eye(beta.shape[1])
+            C12 = lin.cholesky(C)
+            m = np.mean(beta,axis=0)
+            X = rnd.randn(idx_len_aug,beta.shape[1])
+            new_beta = X @ C12 + m
+            
+            new_data = np.zeros([idx_len_aug,96]) 
+            new_data[:,np.arange(0,96,3)] = new_delta
+            new_data[:,np.arange(1,96,3)] = new_beta
+            new_data[:,np.arange(2,96,3)] = new_hg
+            #add some noise
+            new_data = new_data + 0.02*rnd.randn(new_data.shape[0],new_data.shape[1])
+            
+            # make it unit norm
+            for i in np.arange(new_data.shape[0]):
+                new_data[i,:] = new_data[i,:]/lin.norm(new_data[i,:])
+            
+            condn_data_aug = np.concatenate((condn_data_aug,new_data),axis=0)    
+            tmp_labels = np.zeros([idx_len_aug,num_labels])
+            tmp_labels[:,query]=1        
+            labels_aug = np.concatenate((labels_aug,tmp_labels))
        
     outdata = np.concatenate((indata,condn_data_aug),axis=0)
     outdata_labels = np.concatenate((labels,labels_aug),axis=0)

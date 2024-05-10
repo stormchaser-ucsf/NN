@@ -63,8 +63,8 @@ gradient_clipping=10
 
 # model params
 input_size=759
-hidden_size=48 # works for lower hidden layer sizes 
-latent_dims=2
+hidden_size=96 # works for lower hidden layer sizes 
+latent_dims=3
 num_classes = 7
 
 # file location
@@ -195,7 +195,7 @@ for i in np.arange(num_days)+1: #ROOT DAYS
         print(dmain)
         
         # NEW FOR REVIEWER 4, BOOT STATISTICS AFTER SHUFFLING BETWEEN AE
-        boot_val = np.zeros((1000,6))
+        boot_val = np.zeros((500,6))
         for boot in np.arange(boot_val.shape[0]):
             print(boot)
             d1 = linear_cka_dist_shuffleLayers_Between_AE(condn_data_total,model,model1)
