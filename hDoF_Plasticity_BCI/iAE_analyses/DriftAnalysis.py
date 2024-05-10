@@ -1295,7 +1295,7 @@ for days in np.arange(total_days-1)+1:
         mahab_distances = mahab_distances[mahab_distances>0]
         print(np.mean(mahab_distances))
 
-#%% CONTINUATION OF PART C BUT NOW ON ALL THE DATA (MAIN)
+#%% CONTINUATION OF PART C BUT NOW ON ALL THE DATA (MAIN, B1)
 # SHOWING THAT CAPTURING DRIFT ACROSS DAYS AIDS IN GENERALIZABILITY TO A NEW DAY
 
 import os
@@ -1307,19 +1307,30 @@ root_imag_filename = '\condn_data_Imagined_Day'
 root_online_filename = '\condn_data_Online_Day'
 root_batch_filename = '\condn_data_Batch_Day'
 
+# model params
 input_size=96
 hidden_size=48
+latent_dims=2
 num_classes = 7
+
+# training params 
+num_epochs=150
+batch_size=32
+learning_rate = 1e-3
+batch_val=512
+patience=5
+gradient_clipping=10
+
 
 
 mahab_distances_days = []
 Sil_days = []
 latent_acc_days = []
 total_days = 10
-batch_size=64
+batch_size=32
 patience = 5
 latent_dims = 2
-plt_close=False
+plt_close=True
 for days in np.arange(total_days-1)+1:
     print('Processing days thru ' + str(days))
     
@@ -1476,12 +1487,6 @@ for i in np.arange(len(latent_acc_days)):
 plt.plot(acc_plot)   
 
 
-acc_plot=[]
-for i in np.arange(len(latent_acc_days)):
-    tmp = latent_acc_days[i]
-    acc_plot.append(mean(tmp))
-
-plt.plot(acc_plot)
 
 # mahab plot on all 
 mahab_plot=[]
@@ -1496,23 +1501,30 @@ for i in np.arange(len(mahab_distances_days)):
     mahab_plot.append(median(tmp))
     I = days[i]*np.ones(len(tmp)) + 0.00*rnd.randn(len(tmp))
     plt.scatter(I,tmp,c='k',alpha=0.5,edgecolors='none')
+    plt.plot(days[i],mahab_plot[i],'.',c='m',marker='v',markersize=10)
     
 # do curve fitting and plot regression line
 x=days
 y=np.array(mahab_plot)
 p = np.polyfit(x,y,1)
-#p = [0.3686,6.3109] #from Robust regression below
 xx = np.concatenate((np.ones((len(x),1)),x[:,None]),axis=1)
+#rlm = sm.RLM(y,xx).fit()
+#p = np.flip(rlm.params)
+#p = [0.2843,2.0957] #from Robust regression below
+#xx = np.concatenate((np.ones((len(x),1)),x[:,None]),axis=1)
 yhat = xx @ np.flip(p)[:,None]
 plt.plot(days,yhat,c='k')
 plt.xticks(ticks=np.arange(9)+1)
-fig.axes[0].xaxis.set_ticklabels([])
-fig.axes[0].yaxis.set_ticklabels([])
+plt.show()
+
 plt.ylim([0,8])
 plt.show()
-image_format = 'svg' # e.g .png, .svg, etc.
-image_name = 'Day1thru10_Days1thru9_AE_New.svg'
-fig.savefig(image_name, format=image_format, dpi=300)
+
+fig.axes[0].xaxis.set_ticklabels([])
+fig.axes[0].yaxis.set_ticklabels([])
+#image_format = 'svg' # e.g .png, .svg, etc.
+#image_name = 'Day1thru10_Days1thru9_AE_New.svg'
+#fig.savefig(image_name, format=image_format, dpi=300)
 
 # get the pval for the regression
 lm = sm.OLS(y,xx).fit()
@@ -1520,6 +1532,12 @@ print(lm.summary())
 
 rlm = sm.RLM(y,xx).fit()
 print(rlm.summary())
+
+
+np.savez('DriftAnalyses_B1_AE_AcrossDays_Projection_v3', 
+         mahab_distances_days = mahab_distances_days, dtype=object,
+         latent_acc_days = latent_acc_days,
+         Sil_days = Sil_days)
 
 
 # mahab plot on day 9 
@@ -1543,6 +1561,10 @@ for i in np.arange(len(mahab_distances_days)):
     data = np.append(data,a,axis=0)
 
 
+#v3 seems the best 
+data=np.load('DriftAnalyses_B1_AE_AcrossDays_Projection.npz',allow_pickle=True) 
+
+mahab_distances_days = data.get('mahab_distances_days')
 
 
 #%% CONTINUATION OF PART C BUT NOW ON ALL THE DATA  for B2 (MAIN)
@@ -1858,7 +1880,7 @@ num_classes = 7
 
 # training params 
 num_epochs=200
-batch_size=32
+batch_size=64
 learning_rate = 1e-3
 batch_val=512
 patience=5
@@ -2035,6 +2057,65 @@ for i in np.arange(len(latent_acc_days)):
     acc_plot.append(mean(tmp))
 
 plt.plot(acc_plot)   
+
+
+# mahab plot on all 
+mahab_plot=[]
+fig=plt.figure()
+hfont = {'fontname':'Arial'}
+plt.rc('font',family='Arial')
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams.update({'font.size': 6})
+days=np.arange(1,total_days)
+for i in np.arange(len(mahab_distances_days)):
+    tmp = mahab_distances_days[i]
+    mahab_plot.append(median(tmp))
+    I = days[i]*np.ones(len(tmp)) + 0.00*rnd.randn(len(tmp))
+    plt.scatter(I,tmp,c='k',alpha=0.5,edgecolors='none')
+    plt.plot(days[i],mahab_plot[i],'.',c='m',marker='v',markersize=10)
+    
+# do curve fitting and plot regression line
+x=days
+y=np.array(mahab_plot)
+p = np.polyfit(x,y,1)
+xx = np.concatenate((np.ones((len(x),1)),x[:,None]),axis=1)
+rlm = sm.RLM(y,xx).fit()
+p = np.flip(rlm.params)
+#p = [0.2843,2.0957] #from Robust regression below
+#xx = np.concatenate((np.ones((len(x),1)),x[:,None]),axis=1)
+yhat = xx @ np.flip(p)[:,None]
+plt.plot(days,yhat,c='k')
+plt.xticks(ticks=np.arange(9)+1)
+plt.show()
+
+#plt.ylim([0,8])
+plt.show()
+
+fig.axes[0].xaxis.set_ticklabels([])
+fig.axes[0].yaxis.set_ticklabels([])
+#image_format = 'svg' # e.g .png, .svg, etc.
+#image_name = 'Day1thru10_Days1thru9_AE_New.svg'
+#fig.savefig(image_name, format=image_format, dpi=300)
+
+# get the pval for the regression
+lm = sm.OLS(y,xx).fit()
+print(lm.summary())
+
+rlm = sm.RLM(y,xx).fit()
+print(rlm.summary())
+
+
+np.savez('DriftAnalyses_B3_AE_AcrossDays_Projection', 
+         mahab_distances_days = mahab_distances_days, dtype=object,
+         latent_acc_days = latent_acc_days,
+         Sil_days = Sil_days)
+
+
+
+
+
+
+
 
 
 # mahab plot on all 
