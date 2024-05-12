@@ -1500,7 +1500,7 @@ for i in np.arange(len(mahab_distances_days)):
     tmp = mahab_distances_days[i]
     mahab_plot.append(median(tmp))
     I = days[i]*np.ones(len(tmp)) + 0.00*rnd.randn(len(tmp))
-    plt.scatter(I,tmp,c='k',alpha=0.5,edgecolors='none')
+    plt.scatter(I,tmp,c='k',alpha=0.25,edgecolors='none')
     plt.plot(days[i],mahab_plot[i],'.',c='m',marker='v',markersize=10)
     
 # do curve fitting and plot regression line
@@ -1508,23 +1508,23 @@ x=days
 y=np.array(mahab_plot)
 p = np.polyfit(x,y,1)
 xx = np.concatenate((np.ones((len(x),1)),x[:,None]),axis=1)
-#rlm = sm.RLM(y,xx).fit()
-#p = np.flip(rlm.params)
+rlm = sm.RLM(y,xx).fit()
+p = np.flip(rlm.params)
 #p = [0.2843,2.0957] #from Robust regression below
 #xx = np.concatenate((np.ones((len(x),1)),x[:,None]),axis=1)
 yhat = xx @ np.flip(p)[:,None]
-plt.plot(days,yhat,c='k')
+plt.plot(days,yhat,c='m')
 plt.xticks(ticks=np.arange(9)+1)
 plt.show()
 
-plt.ylim([0,8])
+plt.ylim([0,6])
 plt.show()
 
 fig.axes[0].xaxis.set_ticklabels([])
 fig.axes[0].yaxis.set_ticklabels([])
-#image_format = 'svg' # e.g .png, .svg, etc.
-#image_name = 'Day1thru10_Days1thru9_AE_New.svg'
-#fig.savefig(image_name, format=image_format, dpi=300)
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Day1thru10_Days1thru9_AE_New_B1.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
 
 # get the pval for the regression
 lm = sm.OLS(y,xx).fit()
@@ -1562,7 +1562,7 @@ for i in np.arange(len(mahab_distances_days)):
 
 
 #v3 seems the best 
-data=np.load('DriftAnalyses_B1_AE_AcrossDays_Projection.npz',allow_pickle=True) 
+data=np.load('DriftAnalyses_B1_AE_AcrossDays_Projection_v3.npz',allow_pickle=True) 
 
 mahab_distances_days = data.get('mahab_distances_days')
 
@@ -2066,13 +2066,14 @@ hfont = {'fontname':'Arial'}
 plt.rc('font',family='Arial')
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams.update({'font.size': 6})
-days=np.arange(1,total_days)
+days=np.arange(1,11)
 for i in np.arange(len(mahab_distances_days)):
     tmp = mahab_distances_days[i]
     mahab_plot.append(median(tmp))
     I = days[i]*np.ones(len(tmp)) + 0.00*rnd.randn(len(tmp))
-    plt.scatter(I,tmp,c='k',alpha=0.5,edgecolors='none')
-    plt.plot(days[i],mahab_plot[i],'.',c='m',marker='v',markersize=10)
+    plt.plot(days[i],mahab_plot[i],'.',c='m',marker='v',markersize=5)
+    plt.scatter(I,tmp,c='k',alpha=0.25,edgecolors='none')
+    
     
 # do curve fitting and plot regression line
 x=days
@@ -2084,18 +2085,20 @@ p = np.flip(rlm.params)
 #p = [0.2843,2.0957] #from Robust regression below
 #xx = np.concatenate((np.ones((len(x),1)),x[:,None]),axis=1)
 yhat = xx @ np.flip(p)[:,None]
-plt.plot(days,yhat,c='k')
-plt.xticks(ticks=np.arange(9)+1)
+plt.plot(days,yhat,c='m')
+plt.xticks(ticks=np.arange(len(days))+1)
+plt.yticks(ticks=np.arange(0,17,2))
+
 plt.show()
 
-#plt.ylim([0,8])
+plt.ylim([0,16])
 plt.show()
 
 fig.axes[0].xaxis.set_ticklabels([])
 fig.axes[0].yaxis.set_ticklabels([])
-#image_format = 'svg' # e.g .png, .svg, etc.
-#image_name = 'Day1thru10_Days1thru9_AE_New.svg'
-#fig.savefig(image_name, format=image_format, dpi=300)
+image_format = 'svg' # e.g .png, .svg, etc.
+image_name = 'Day1thru10_Days1thru9_AE_B3_New.svg'
+fig.savefig(image_name, format=image_format, dpi=300)
 
 # get the pval for the regression
 lm = sm.OLS(y,xx).fit()
@@ -2112,6 +2115,9 @@ np.savez('DriftAnalyses_B3_AE_AcrossDays_Projection',
 
 
 
+data=np.load('DriftAnalyses_B3_AE_AcrossDays_Projection.npz',allow_pickle=True) 
+
+mahab_distances_days = data.get('mahab_distances_days')
 
 
 
