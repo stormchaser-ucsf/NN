@@ -391,6 +391,11 @@ plt.bar(np.arange(len(a)),a);
 print(a[:,None])
 b1 = a
 
+s=[];
+for i in np.arange(len(a)):
+    s.append(a[i]*i)
+print(np.sum(s))
+    
 
 #B2
 data =np.load('ManifoldAnalyses_Main_B2_Days2to5_1000Boot_Revision1.npz',allow_pickle=True)
@@ -438,6 +443,11 @@ plt.figure();
 plt.bar(np.arange(len(a)),a);
 print(a[:,None])
 b3 = a
+
+s=[];
+for i in np.arange(len(a)):
+    s.append(a[i]*i)
+print(np.sum(s))
 
 
 # plotting b1, b2, b3

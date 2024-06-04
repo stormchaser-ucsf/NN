@@ -46,11 +46,11 @@ from statsmodels.stats.anova import AnovaRM
 #data=np.load('MAIN_NewB1_NoiseDataAugment_0.2_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
 
 # B3
-data=np.load('ProcessedData_B3__pt02_AllDays_2D_Main_v6.npz') #for B3
+#data=np.load('ProcessedData_B3__pt02_AllDays_2D_Main_v6.npz') #for B3
 #data=np.load('ProcessedData_B3__pt02_AllDays_2D_Main_v8.npz')
 
 
-#data=np.load('ProcessedData_B1_9DoF.npz')
+data=np.load('ProcessedData_B1_9DoF.npz')
 # neural variance from this
 #data =np.load('MAIN_MAIN2_B1_NoiseDataAugment_CholIndivFeatEqualSize_pt01Noise_2D_common_Manifold_whole_dataSamples_stats_results_withBatch_Main_withVariance_AndChVars_AndSpatCorr.npz')
 # mahab dist from this
@@ -3351,7 +3351,7 @@ plt.tick_params(labelbottom=False)
 plt.show()
 image_format = 'svg' # e.g .png, .svg, etc.
 image_name = 'Median_CKA_res_CKD_IBID_new.svg'
-fig.savefig(image_name, format=image_format, dpi=300)
+#fig.savefig(image_name, format=image_format, dpi=300)
 
 
 # plot boxplots layer by layer
@@ -3362,9 +3362,9 @@ for i in np.arange(simal_CKD1.shape[1]):
 
 
 
-a=simal_CKD1.flatten()
-b=simal_CKD2.flatten()
-c=simal_ibid.flatten()
+a=simal_CKD1.flatten() #first 2.5s
+b=simal_CKD2.flatten() #45 deg tolerance
+c=simal_ibid.flatten() #discrete representations
 pvalue = bootstrap_difference_test(a,b,'median')
 pvalue = bootstrap_difference_test(a,c,'median')
 pvalue = bootstrap_difference_test(c,b,'median')

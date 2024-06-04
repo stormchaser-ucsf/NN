@@ -79,7 +79,7 @@ dist_var_overall_batch = np.empty([num_days,0])
 mahab_dist_overall_batch = np.empty([num_days,0])
 
 # iterations to bootstrap
-iterations = 20
+iterations = 5
 
 #%% SETTING UP VARS 
 
@@ -209,7 +209,7 @@ hg_spatial_corr_iter = np.empty([num_classes*3,0])
   
 
 ## plotting options
-plt_close=False
+plt_close=True
 days=1
 # inner loop
 for loop in np.arange(iterations):
@@ -472,7 +472,7 @@ hg_spatial_corr_days[:,:,days-1] = hg_spatial_corr_iter.T
 
 # saving it all 
 # orig filename: whole_dataSamples_stats_results_withBatch_Main_withVariance
-np.savez('ProcessedData_B1_9DoF', 
+np.savez('ProcessedData_B1_9DoF_v2', 
          silhoutte_imagined_days = silhoutte_imagined_days,
          silhoutte_online_days = silhoutte_online_days,
          silhoutte_batch_days = silhoutte_batch_days,
@@ -514,9 +514,15 @@ fig1=plt.figure()
 plt.boxplot((tmp_imagined,tmp_online,tmp_batch))    
 plt.xticks(ticks=[1,2,3],labels='')
 plt.yticks(ticks=np.arange(0,200,25),labels='')
-image_format = 'svg' # e.g .png, .svg, etc.
-image_name = '9DoF_Variance.svg'
-fig1.savefig(image_name, format=image_format, dpi=300)
+#image_format = 'svg' # e.g .png, .svg, etc.
+#image_name = '9DoF_Variance.svg'
+#fig1.savefig(image_name, format=image_format, dpi=300)
+
+# wilcoxon sign rank test
+
+print(stats.wilcoxon(tmp_imagined,tmp_online))
+print(stats.wilcoxon(tmp_imagined,tmp_batch))
+print(stats.wilcoxon(tmp_online,tmp_batch))
 
 
 print(stats.ttest_rel(tmp_imagined,tmp_online))
@@ -531,9 +537,14 @@ fig2=plt.figure()
 plt.boxplot((tmp_imagined,tmp_online,tmp_batch))    
 plt.xticks(ticks=[1,2,3],labels='')
 plt.yticks(ticks=np.arange(0,60,10),labels='')
-image_format = 'svg' # e.g .png, .svg, etc.
-image_name = '9DoF_MahabDist.svg'
-fig2.savefig(image_name, format=image_format, dpi=300)
+#image_format = 'svg' # e.g .png, .svg, etc.
+#image_name = '9DoF_MahabDist.svg'
+#fig2.savefig(image_name, format=image_format, dpi=300)
+
+
+print(stats.wilcoxon(tmp_imagined,tmp_online))
+print(stats.wilcoxon(tmp_imagined,tmp_batch))
+print(stats.wilcoxon(tmp_online,tmp_batch))
 
 
 print(stats.ttest_rel(tmp_imagined,tmp_online))

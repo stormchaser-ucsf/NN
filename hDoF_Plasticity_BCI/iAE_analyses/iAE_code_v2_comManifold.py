@@ -41,7 +41,8 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 input_size=96
 hidden_size=48
 latent_dims=2
-num_classes = 7
+#num_classes = 7
+num_classes = 9 # for b1 9dof control 
 
 # training params 
 num_epochs=150
@@ -52,13 +53,19 @@ patience=5
 gradient_clipping=10
 
 # file location
+# root_path = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker'
+# root_imag_filename = '\condn_data_Imagined_Day'
+# root_online_filename = '\condn_data_Online_Day'
+# root_batch_filename = '\condn_data_Batch_Day'
+
 root_path = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker'
-root_imag_filename = '\condn_data_Imagined_Day'
-root_online_filename = '\condn_data_Online_Day'
-root_batch_filename = '\condn_data_Batch_Day'
+root_imag_filename = '\condn_data_9DOF_Imagined_Day'
+root_online_filename = '\condn_data_9DOF_Online_Day'
+root_batch_filename = '\condn_data_9DOF_Batch_Day'
 
 # num of days
-num_days=10
+#num_days=10
+num_days=2
 
 # init variables across days 
 dist_means_overall_imag = np.empty([num_days,0])
@@ -121,7 +128,7 @@ learning_rate = 1e-3
 batch_val=512
 patience=5
 gradient_clipping=10
-mean_center=True
+mean_center=False
 from iAE_utils_models import *
 
 # main loop 
@@ -439,7 +446,7 @@ for days in (np.arange(num_days)+1):
 
 # saving it all 
 # orig filename: whole_dataSamples_stats_results_withBatch_Main_withVariance
-np.savez('ProcessedData_B1_04082023_TestData_pt02_MeanCenter', 
+np.savez('ProcessedData_B1_9DoF_New', 
          silhoutte_imagined_days = silhoutte_imagined_days,
          silhoutte_online_days = silhoutte_online_days,
          silhoutte_batch_days = silhoutte_batch_days,
