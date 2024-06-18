@@ -3559,3 +3559,15 @@ t=stats.ttest_1samp(demean,(1/11))
 print(t)
 
 
+#%% EXAMPLE OF RUNNING GENERALIZED MIXED EFFECT MODEL IN PYTHON
+
+import statsmodels.api as sm
+from statsmodels.formula.api import glm
+
+data = sm.datasets.get_rdataset('dietox', package='geepack')
+
+model = glm('Weight ~ Time + (1+Time|Pig)', data=data)
+
+
+
+
