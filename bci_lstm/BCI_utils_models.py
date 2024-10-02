@@ -724,7 +724,7 @@ class rnn_gru(nn.Module):
         self.mlp_input = round(hidden_size/2)
         self.linear0 = nn.Linear(self.mlp_input,fc_nodes)
         self.linear1 = nn.Linear(fc_nodes,num_classes)
-        self.linear1 = nn.Linear(self.mlp_input,num_classes)
+        #self.linear1 = nn.Linear(self.mlp_input,num_classes)
         self.dropout = nn.Dropout(dropout_val)
         self.gelu = nn.GELU()
     
