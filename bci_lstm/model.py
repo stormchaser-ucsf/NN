@@ -19,10 +19,10 @@ import matplotlib.pyplot as plt
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # load the data from matlab
-file_name = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker\decimated_lstm_data_below25Hz.mat'
+file_name = 'F:\DATA\ecog data\ECoG BCI\GangulyServer\Multistate clicker\decimated_lstm_data_below25Hz_new2023.mat'
 data_dict = mat73.loadmat(file_name)
-condn_data_new = data_dict.get('condn_data_new')
-Y = data_dict.get('Y')
+condn_data_new = data_dict.get('condn_data_new') # time X channels X trials
+Y = data_dict.get('Y') # indicator variable 
 
 
 # artifact correction, geting rid of large artifacts
@@ -290,8 +290,8 @@ class rnn_gru(nn.Module):
         self.num_layers = num_layers
         self.input_size = input_size       
         
-        self.conv1 = nn.Conv1d(in_channels=input_size, out_channels=input_size, 
-                               kernel_size=2,stride=2)
+        #self.conv1 = nn.Conv1d(in_channels=input_size, out_channels=input_size, 
+        #                       kernel_size=2,stride=2)
         
         self.rnn1=nn.LSTM(input_size=input_size,hidden_size=hidden_size,
                           num_layers=num_layers,batch_first=True,bidirectional=True)

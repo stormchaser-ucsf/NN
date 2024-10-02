@@ -39,6 +39,29 @@ import pandas as pd
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 #### UTILS SECTION
+# get the data to train the lst 
+def get_data_lstm(filename,num_classes=7):
+    
+    # load the file
+    data_dict = mat73.loadmat(filename)
+    
+    # get the training data
+    XTrain_tmp = data_dict.get('XTrain')
+    YTrain = data_dict.get('YTrain')
+    XTrain = np.zeros((100,506,len(XTrain_tmp)))
+    for i in np.arange(len(XTrain_tmp)):
+        tmp = XTrain_tmp[i][0]
+        XTrain[:,:,i] = np.transpose(tmp)
+        
+    # get the validation data 
+    XTest_tmp = data_dict.get('XTest')
+    YTest = data_dict.get('YTest')
+    XTest = np.zeros((100,506,len(XTest_tmp)))
+    for i in np.arange(len(XTest_tmp)):
+        tmp = XTest_tmp[i][0]
+        XTest[:,:,i] = np.transpose(tmp)
+        
+    return XTrain,YTrain,XTest,YTest
 
 
 # get the data 
@@ -665,6 +688,44 @@ class Autoencoder(nn.Module):
         z=self.decoder(z)
         #y=self.recon_classifier(z)
         return z  
+    
+# LSTM Model
+class rnn_gru(nn.Module):
+    def __init__(self,num_classes,input_size,hidden_size,num_layers,
+                 dropout_val,fc_nodes):
+        super(rnn_gru,self).__init__()
+        self.num_classes = num_classes
+        self.num_layers = num_layers
+        self.input_size = input_size       
+        
+        #self.conv1 = nn.Conv1d(in_channels=input_size, out_channels=input_size, 
+        #                       kernel_size=2,stride=2)
+        
+        self.rnn1=nn.GRU(input_size=input_size,hidden_size=hidden_size,
+                          num_layers=num_layers,batch_first=True,bidirectional=True)
+        self.rnn2=nn.GRU(input_size=round(hidden_size*2),   hidden_size=round(hidden_size/2),
+                          num_layers=num_layers,batch_first=True, bidirectional=False)
+        
+        self.mlp_input = round(hidden_size/2)
+        self.linear0 = nn.Linear(self.mlp_input,fc_nodes)
+        self.linear1 = nn.Linear(fc_nodes,num_classes)
+        self.dropout = nn.Dropout(dropout_val)
+        self.gelu = nn.GELU()
+    
+    def forward(self,x):        
+        #x=torch.permute(x,(0,2,1))
+        #x=self.conv1(x)
+        #x=self.dropout(x)
+        #x=torch.permute(x,(0,2,1))
+        output1, (hn1,cn1) = self.rnn1(x) 
+        output1=self.dropout(output1)
+        output2, (hn2) = self.rnn2(output1)
+        hn2 = torch.squeeze(hn2)    
+        hn2 = self.dropout(hn2)            
+        out = self.linear0(hn2)        
+        out = self.gelu(out)
+        out = self.linear1(out)        
+        return out
 
 
 # function to validate model 
@@ -714,6 +775,50 @@ def validation_loss(model,X_test,Y_test,batch_val,val_type):
     recon_error = (recon_error/X_test.shape[0])#.cpu().numpy()
     torch.cuda.empty_cache()
     return loss_val,accuracy,recon_error
+
+# function to validate model 
+def validation_loss_LSTM(model,X_test,Y_test,batch_val,val_type):    
+    crit_classif_val = nn.CrossEntropyLoss(reduction='sum') #if mean, it is over all samples    
+    loss_val=0    
+    accuracy=0    
+    if batch_val > X_test.shape[2]:
+        batch_val = X_test.shape[2]
+    
+    idx=np.arange(0,X_test.shape[2],batch_val)    
+    if idx[-1]<X_test.shape[2]:
+        idx=np.append(idx,X_test.shape[2])
+    else:
+        print('something wrong here')
+    
+    iters=(idx.shape[0]-1)
+    
+    for i in np.arange(iters):
+        x=X_test[:,:,idx[i]:idx[i+1]]        
+        y=Y_test[idx[i]:idx[i+1],:]     
+        with torch.no_grad():                
+            if val_type==1: #validation
+                x=torch.from_numpy(x).to(device).float()
+                x=torch.permute(x,(2,0,1))
+                y=torch.from_numpy(y).to(device).float()
+                model.eval()
+                ypred = model(x)                 
+                loss2 = crit_classif_val(ypred,y)
+                loss_val += loss2.item()
+                model.train()
+            else:
+                ypred = model(x)                 
+                loss2 = crit_classif_val(ypred,y)
+                loss_val +=  loss2.item()
+            
+            ylabels = convert_to_ClassNumbers(y)        
+            ypred_labels = convert_to_ClassNumbers(ypred)     
+            accuracy += torch.sum(ylabels == ypred_labels).item()
+            
+            
+    loss_val=loss_val/X_test.shape[2]
+    accuracy = accuracy/X_test.shape[2]    
+    torch.cuda.empty_cache()
+    return loss_val,accuracy
 
 # TRAINING LOOP
 def training_loop_iAE(model,num_epochs,batch_size,learning_rate,batch_val,
@@ -935,6 +1040,97 @@ def training_loop_mlp(model,num_epochs,batch_size,learning_rate,batch_val,
           print(goat_loss,goat_acc)
           break
     model_goat = mlp_classifier_2Layer(input_size,num_nodes,num_classes)  
+    #model_goat = iAutoencoder_B3(input_size,hidden_size,latent_dims,num_classes)
+    model_goat.load_state_dict(torch.load(filename))
+    model_goat=model_goat.to(device)
+    model_goat.eval()
+    return model_goat, goat_acc
+
+# TRAINING LOOP
+def training_loop_LSTM(model,num_epochs,batch_size,learning_rate,batch_val,
+                      patience,gradient_clipping,filename,
+                      Xtrain,Ytrain,Xtest,Ytest,
+                      input_size,hidden_size,num_classes,
+                      num_layers,dropout_val,fc_nodes):
+    
+    # N,seq_length,Dimensions 
+    
+   
+    num_batches = math.ceil(Xtrain.shape[2]/batch_size)
+    classif_criterion = nn.CrossEntropyLoss(reduction='sum')    
+    opt = torch.optim.Adam(model.parameters(),lr=learning_rate)
+    print('Starting training')
+    goat_loss=99999
+    counter=0
+    model.train()
+    for epoch in range(num_epochs):
+      #shuffle the data    
+      #shuffle the data    
+      idx = rnd.permutation(Xtrain.shape[2]) 
+      idx_split = np.array_split(idx,num_batches)
+      
+      
+      if epoch>round(num_epochs*0.6):
+          for g in opt.param_groups:
+              g['lr']=1e-4
+        
+      for batch in range(num_batches):
+          # get the batch 
+          samples = idx_split[batch]
+          Xtrain_batch = Xtrain[:,:,samples]
+          Ytrain_batch = Ytrain[samples,:]        
+          
+          #push to gpu
+          Xtrain_batch = torch.from_numpy(Xtrain_batch).to(device).float()          
+          Xtrain_batch = torch.permute(Xtrain_batch,(2,0,1)) # N,seq_length,Dimensions      
+          Ytrain_batch = torch.from_numpy(Ytrain_batch).to(device).float()          
+          
+          # forward pass thru network
+          opt.zero_grad() 
+          decodes = model(Xtrain_batch)         
+          
+          # get loss                
+          classif_loss = (classif_criterion(decodes,Ytrain_batch))/Xtrain_batch.shape[0]      
+          loss = classif_loss
+          total_loss = loss.item()
+          #print(classif_loss.item())
+          
+          # compute accuracy
+          ylabels = convert_to_ClassNumbers(Ytrain_batch)        
+          ypred_labels = convert_to_ClassNumbers(decodes)     
+          accuracy = (torch.sum(ylabels == ypred_labels).item())/ylabels.shape[0]
+          
+          # backpropagate thru network 
+          loss.backward()
+          nn.utils.clip_grad_value_(model.parameters(), clip_value=gradient_clipping)
+          opt.step()
+      
+      # get validation losses
+      val_loss,val_acc=validation_loss_LSTM(model,
+                                             Xtest,Ytest,batch_val,1)    
+      #val_loss,val_recon=validation_loss_regression(model,Xtest,Ytest,batch_val,1)    
+      
+      
+      print(f'Epoch [{epoch}/{num_epochs}], Val. Loss {val_loss:.2f}, Train Loss {total_loss:.2f}, Val. Acc {val_acc*100:.2f}, Train Acc {accuracy*100:.2f}')
+      #print(f'Epoch [{epoch}/{num_epochs}], Val. Loss {val_loss:.4f}, Train Loss {total_loss:.4f}')
+      
+      if val_loss<goat_loss:
+          goat_loss = val_loss
+          goat_acc = val_acc*100      
+          counter = 0
+          print('Goat loss, saving model')      
+          torch.save(model.state_dict(), filename)
+      else:
+          counter += 1
+    
+      if counter>=patience:
+          print('Early stoppping point reached')
+          print('Best val loss and val acc  are')
+          print(goat_loss,goat_acc)
+          break
+    #model_goat = iAutoencoder(input_size,hidden_size,latent_dims,num_classes)  
+    model_goat = rnn_gru(num_classes,input_size,hidden_size,num_layers,
+                    dropout_val,fc_nodes)
     #model_goat = iAutoencoder_B3(input_size,hidden_size,latent_dims,num_classes)
     model_goat.load_state_dict(torch.load(filename))
     model_goat=model_goat.to(device)
