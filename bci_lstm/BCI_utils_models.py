@@ -63,6 +63,21 @@ def get_data_lstm(filename,num_classes=7):
         
     return XTrain,YTrain,XTest,YTest
 
+def get_data_lstm_heldout(filename,num_classes=7):
+    
+    # load the file
+    data_dict = mat73.loadmat(filename)
+    
+    # get the testing
+    XTest_tmp = data_dict.get('XTest')
+    YTest = data_dict.get('YTest')
+    XTest = np.zeros((100,506,len(XTest_tmp)))
+    for i in np.arange(len(XTest_tmp)):
+        tmp = XTest_tmp[i][0]
+        XTest[:,:,i] = np.transpose(tmp)
+        
+    return XTest,YTest
+
 
 # get the data 
 def get_data(filename,num_classes=7):
@@ -707,8 +722,9 @@ class rnn_gru(nn.Module):
                           num_layers=num_layers,batch_first=True, bidirectional=False)
         
         self.mlp_input = round(hidden_size/2)
-        self.linear0 = nn.Linear(self.mlp_input,fc_nodes)
-        self.linear1 = nn.Linear(fc_nodes,num_classes)
+        #self.linear0 = nn.Linear(self.mlp_input,fc_nodes)
+        #self.linear1 = nn.Linear(fc_nodes,num_classes)
+        self.linear1 = nn.Linear(self.mlp_input,num_classes)
         self.dropout = nn.Dropout(dropout_val)
         self.gelu = nn.GELU()
     
@@ -721,10 +737,11 @@ class rnn_gru(nn.Module):
         output1=self.dropout(output1)
         output2, (hn2) = self.rnn2(output1)
         hn2 = torch.squeeze(hn2)    
-        hn2 = self.dropout(hn2)            
-        out = self.linear0(hn2)        
-        out = self.gelu(out)
-        out = self.linear1(out)        
+        hn2 = self.dropout(hn2)         
+        out = self.linear1(hn2)        
+        #out = self.linear0(hn2)        
+        #out = self.gelu(out)
+        #out = self.linear1(out)        
         return out
 
 

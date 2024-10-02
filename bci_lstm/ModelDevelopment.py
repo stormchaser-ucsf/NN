@@ -43,6 +43,15 @@ train_data_filename = training_data_path + '/Data_LSTM_253Grid_Arrow_MoreNoiseDa
 
 XTrain,YTrain,XTest,YTest = get_data_lstm(train_data_filename,7)
 
+train_data_filename1 = training_data_path + '/Data_LSTM_253Grid_RobotBatch_MoreNoiseDataAug_0920HeldOut.mat'
+
+XTrain1,YTrain1,XTest1,YTest1 = get_data_lstm(train_data_filename1,7)
+
+XTrain = np.concatenate((XTrain, XTrain1),axis=2)
+XTest = np.concatenate((XTest, XTest1),axis=2)
+YTrain = np.concatenate((YTrain, YTrain1),axis=0)
+YTest = np.concatenate((YTest, YTest1),axis=0)
+
 class_mem = np.empty([0])
 for i in np.arange(7):
     class_mem = np.append(class_mem, np.sum(YTrain==(i)))
@@ -94,7 +103,7 @@ model = rnn_gru(num_classes,input_size,hidden_size,num_layers,
 model = model.to(device) #push to GPU
 
 
-#%% TRAINING AND TESTING 
+#%% TRAINING THE MODEL
 
 # training params 
 num_epochs=150
@@ -108,11 +117,27 @@ lstm_filename = 'LSTM.pth'
 
 model,acc = training_loop_LSTM(model,num_epochs,batch_size,learning_rate,batch_val,
                       patience,gradient_clipping,lstm_filename,
-                      Xtrain,Ytrain,Xtest,Ytest,
-                      input_size,hidden_size,latent_dims,num_classes,
+                      XTrain,Ytrain,XTest,Ytest,
+                      input_size,hidden_size,num_classes,
                       num_layers,dropout_val,fc_nodes)
 
+#%% TESTING ON HELD OUT DATA 
 
+
+test_data_filename = testing_data_path + '/Data_LSTM_253Grid_RobotBatch_MoreNoiseDataAug_0920HeldOut_TestingDataSamples.mat'
+
+X_heldout,Y_heldout = get_data_lstm_heldout(test_data_filename)
+Y_heldout = np.round(Y_heldout)
+
+model.eval()
+x = torch.from_numpy(X_heldout).to(device).float()
+x=torch.permute(x,(2,0,1))
+ypred = model(x)                 
+ypred_labels = convert_to_ClassNumbers(ypred) + 1     
+ypred_labels = ypred_labels.to('cpu').detach().numpy()
+
+heldout_acc = np.sum(Y_heldout == ypred_labels) / len(Y_heldout)
+print(heldout_acc)
 
 
 #%% TESTING STUFF
